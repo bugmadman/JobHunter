@@ -1,0 +1,29 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.php]
+max_line_length = 120
+
+# Nested lists in the docs use 2 spaces; two trailing spaces are a hard line break in Markdown
+[*.md]
+indent_size = 2
+trim_trailing_whitespace = false
+
+# Docker Compose convention; Symfony YAML (config/, Flex recipes) keeps the default 4
+[{compose.yaml,compose.*.yaml}]
+indent_size = 2
+
+# make requires tabs for command lines
+[Makefile]
+indent_style = tab
+
+# caddy fmt indents with tabs (Caddy warns at startup if the Caddyfile is not formatted)
+[Caddyfile]
+indent_style = tab

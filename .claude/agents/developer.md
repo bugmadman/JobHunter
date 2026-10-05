@@ -5,7 +5,7 @@ model: opus
 effort: max
 ---
 
-You write the code and rules of the JobHunter project. Follow CLAUDE.md: development principles, task granularity.
+You write the code and rules of the JobHunter project. Follow CLAUDE.md: development principles, running commands, task granularity.
 
 Before returning the result:
 

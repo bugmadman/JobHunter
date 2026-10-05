@@ -16,7 +16,7 @@ Docker: `.docker/` + `compose.yaml` + Makefile, designed for installation from a
 
 - [x] `git init`
 - [x] `.gitignore`: `.idea/`, `.DS_Store` (Flex will add the Symfony blocks when creating the skeleton)
-- [ ] `.editorconfig`
+- [x] `.editorconfig`
 - [ ] `.docker/php/Dockerfile`: the official FrankenPHP image `dunglas/frankenphp:1-php8.5-alpine`, extensions via `install-php-extensions` (`pdo_pgsql`, `intl`, `opcache`, `apcu`), composer, user via `USER`/`USERID`
 - [ ] `.docker/php/php.ini` — in the repository (not in `.gitignore`, otherwise the build from a fresh clone fails)
 - [ ] `.docker/php/Caddyfile` — in the repository, plain HTTP (HTTPS is terminated by Cloudflare Tunnel)
@@ -24,6 +24,7 @@ Docker: `.docker/` + `compose.yaml` + Makefile, designed for installation from a
 - [ ] `compose.yaml`: `postgres` service with a healthcheck, port not published externally, `depends_on` with `condition: service_healthy`
 - [ ] Docker variables template in `.env` (`APP_NAME`, `APP_PORT`, `APP_USER`, `APP_USERID`, DB credentials)
 - [ ] Makefile: `init` (creates `.env.local` from the template if it doesn't exist; up; composer install; migrations), `upd`, `down`, `ps`, `in`
+- [ ] Remove the "once they exist" clause about Makefile targets from the "Running commands" section of `CLAUDE.md` (the targets now exist)
 - [ ] Create a Symfony 7.4 skeleton inside the container
 - [ ] Enable FrankenPHP worker mode for Symfony
 - [ ] Verify: `make init` from a fresh clone succeeds, the start page opens in the browser

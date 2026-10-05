@@ -23,6 +23,10 @@ Only what the tools don't do themselves goes here. Don't duplicate in the rules 
 
 The exception is line length: 120 characters max. PHPCS only checks it, so it has to be fixed by hand. Write long signatures and calls with one argument per line from the start.
 
+## Running commands
+
+Every project command (`bin/console`, `composer`, tests, linters, etc.) runs only inside Docker: `docker compose exec php ...` or the Makefile targets that wrap it, once they exist. Never use the host's PHP or Composer. Only git runs on the host.
+
 ## Model selection
 
 Work at maximum quality. Switch the model and effort on your own, without asking the user:
