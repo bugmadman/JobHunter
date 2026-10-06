@@ -20,7 +20,7 @@ Docker: `.docker/` + `compose.yaml` + Makefile, designed for installation from a
 - [x] [S] `.docker/php/Dockerfile`: the official FrankenPHP image `dunglas/frankenphp:1-php8.5-alpine`, extensions via `install-php-extensions` (`pdo_pgsql`, `intl`, `apcu`; OPcache is built into PHP 8.5), composer, user via `USER`/`USERID`
 - [x] [S] `.docker/php/php.ini` — in the repository (not in `.gitignore`, otherwise the build from a fresh clone fails)
 - [x] [S] `.docker/php/Caddyfile` — in the repository, plain HTTP (HTTPS is terminated by Cloudflare Tunnel), the admin endpoint stays on `localhost:2019` (the image's healthcheck depends on it)
-- [ ] [S] `compose.yaml`: `php` service (runs FrankenPHP, publishes `APP_PORT`), built from the repository root: `context: .` + `dockerfile: .docker/php/Dockerfile`
+- [x] [S] `compose.yaml`: `php` service (runs FrankenPHP, publishes `APP_PORT`), built from the repository root: `context: .` + `dockerfile: .docker/php/Dockerfile`
 - [ ] [S] `compose.yaml`: `postgres` service with a healthcheck, port not published externally, `depends_on` with `condition: service_healthy`
 - [ ] [S] Docker variables template in `.env` (`APP_NAME`, `APP_PORT`, `APP_USER`, `APP_USERID`, DB credentials), defaults `APP_USER=app`, `APP_USERID=1000`
 - [ ] [S] Makefile: `init` (creates `.env.local` from the template if it doesn't exist, filling `APP_USERID` with the host's `id -u` and stopping with a clear error if it is 0; up; composer install; migrations), `upd`, `down`, `ps`, `in`
