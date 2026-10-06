@@ -3,4 +3,4 @@ services:
   postgres:
     # Bound to localhost: a DB client on the host can connect, the local network can't
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT}:5432"

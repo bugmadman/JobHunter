@@ -23,7 +23,7 @@ Docker: `.docker/` + `compose.yaml` + Makefile, designed for installation from a
 - [x] [S] `compose.yaml`: `php` service (runs FrankenPHP, publishes `APP_PORT`), built from the repository root: `context: .` + `dockerfile: .docker/php/Dockerfile`
 - [x] [S] `compose.yaml`: `postgres` service with a healthcheck, port not published in `compose.yaml`, `depends_on` with `condition: service_healthy`
 - [x] [S] `compose.override.yaml` (dev only): Postgres port on `127.0.0.1:POSTGRES_PORT` for a local DB client
-- [ ] [S] Docker variables template in `.env` (`APP_NAME`, `APP_PORT`, `APP_USER`, `APP_USERID`, DB credentials, `POSTGRES_PORT`), defaults `APP_USER=app`, `APP_USERID=1000`
+- [x] [S] Docker variables template in `.env` (`APP_NAME`, `APP_PORT`, `APP_USER`, `APP_USERID`, DB credentials, `POSTGRES_PORT`), defaults `APP_USER=app`, `APP_USERID=1000`
 - [ ] [S] Makefile: `init` (creates `.env.local` from the template if it doesn't exist, filling `APP_USERID` with the host's `id -u` and stopping with a clear error if it is 0; up; composer install; migrations), `upd`, `down`, `ps`, `in`
 - [ ] [S] Remove the "once they exist" clause about Makefile targets from the "Running commands" section of `CLAUDE.md` (the targets now exist)
 - [ ] [S] Create a Symfony 7.4 skeleton inside the container
