@@ -6,6 +6,6 @@ require dirname(__DIR__).'/vendor/autoload.php';
 
 (new Dotenv())->bootEnv(dirname(__DIR__).'/.env');
 
-if ($_SERVER['APP_DEBUG']) {
+if (filter_var($_SERVER['APP_DEBUG'], FILTER_VALIDATE_BOOL)) {
     umask(0000);
 }
