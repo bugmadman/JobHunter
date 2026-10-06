@@ -35,7 +35,7 @@ Docker: `.docker/` + `compose.yaml` + Makefile, designed for installation from a
 Goal — as many automated checks as possible, so that errors are caught without manual review.
 
 - [x] [S] Install `symfony/maker-bundle`
-- [ ] [S] Install PHPUnit 12, `phpunit.xml.dist` (`failOnWarning`, `failOnDeprecation`), one smoke test green
+- [x] [S] Install PHPUnit 12, `phpunit.dist.xml` (`failOnWarning`, `failOnDeprecation`), one smoke test green
 - [ ] [S] Install PHPStan, `phpstan.dist.neon` at level 10
 - [ ] [S] Install `phpstan/phpstan-strict-rules`
 - [ ] [S] Install `phpstan/phpstan-deprecation-rules`
@@ -125,7 +125,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 - [ ] [C] `JobPosting` pipeline status enum
 - [ ] [C] `JobPosting` entity with transition methods that protect invariants + migration
-- [ ] [C] Unit tests for status transitions (including forbidden ones)
+- [ ] [C] Unit tests for status transitions (including forbidden ones); delete the placeholder `tests/KernelBootTest.php`, real tests now cover the PHPUnit setup
 - [ ] [S] `JobPostingStageLog` entity + migration
 - [ ] [C] Domain events for transitions → written to `JobPostingStageLog`
 
