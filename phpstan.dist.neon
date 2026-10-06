@@ -1,6 +1,8 @@
 includes:
     - vendor/phpstan/phpstan-strict-rules/rules.neon
     - vendor/phpstan/phpstan-deprecation-rules/rules.neon
+    - vendor/phpstan/phpstan-symfony/extension.neon
+    - vendor/phpstan/phpstan-symfony/rules.neon
 
 parameters:
     level: 10
@@ -11,3 +13,6 @@ parameters:
         - src/
         - tests/
     tmpDir: var/phpstan
+    symfony:
+        # Compiled by any bin/console call in dev; gives the real types of services and parameters
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml

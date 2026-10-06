@@ -39,14 +39,14 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Install PHPStan, `phpstan.dist.neon` at level 10
 - [x] [S] Install `phpstan/phpstan-strict-rules`
 - [x] [S] Install `phpstan/phpstan-deprecation-rules`
-- [ ] [S] Install `phpstan/phpstan-symfony`
+- [x] [S] Install `phpstan/phpstan-symfony`
 - [ ] [S] Install PHP-CS-Fixer, a single config `.php-cs-fixer.dist.php` (`@Symfony` + `declare_strict_types` + `blank_line_before_statement` for `return` + `return_assignment`)
 - [ ] [S] Install `squizlabs/php_codesniffer` with only the `Generic.Files.LineLength` rule (120), no other standards — CS-Fixer doesn't check line length
 - [ ] [S] Install Rector, config for PHP 8.5 + Symfony code quality
 - [ ] [S] Install `ergebnis/composer-normalize`, normalize composer.json
 - [ ] [S] Install `symfony/browser-kit` + `symfony/css-selector`
 - [ ] [S] Install `fakerphp/faker`
-- [ ] [S] Install GrumPHP, `grumphp.yml`: composer, composer_normalize, composer audit, PHPStan, PHP-CS-Fixer, PHPCS (line length), Rector (dry-run), PHPUnit, Symfony linters (`lint:yaml`, `lint:container`, `lint:twig`)
+- [ ] [S] Install GrumPHP, `grumphp.yml`: composer, composer_normalize, composer audit, PHPStan, PHP-CS-Fixer, PHPCS (line length), Rector (dry-run), PHPUnit, Symfony linters (`lint:yaml`, `lint:container`, `lint:twig`); the dev container is compiled before PHPStan (`lint:container` runs first or `cache:warmup`), otherwise `phpstan-symfony` silently runs without `var/cache/dev/App_KernelDevDebugContainer.xml`
 - [ ] [S] Add `git` to the `php` image (GrumPHP calls git inside the container)
 - [ ] [S] GrumPHP: run checks via `docker compose exec` (git on the host, PHP in the container)
 - [ ] [S] Verify: a commit with a deliberate error is blocked, a clean one passes
