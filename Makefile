@@ -5,8 +5,9 @@ DC = docker compose --env-file .env $$([ -f .env.local ] && echo --env-file .env
 .PHONY: init upd updb down ps in
 
 init: .env.local
-	$(DC) up -d --build --wait
-	$(DC) exec php composer install
+	$(DC) build
+	$(DC) run --rm --no-deps php composer install
+	$(DC) up -d --wait
 
 # The host's UID goes into the image, so that files the container creates in the project belong to the host user.
 # UID 0 would clash with the image's root and fail the build with an unclear "adduser: uid '0' in use"

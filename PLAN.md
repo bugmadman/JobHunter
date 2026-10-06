@@ -28,7 +28,7 @@ Docker: `.docker/` + `compose.yaml` + Makefile, designed for installation from a
 - [x] [S] Remove the "once they exist" clause about Makefile targets from the "Running commands" section of `CLAUDE.md` (the targets now exist)
 - [x] [S] Create a Symfony 7.4 skeleton inside the container
 - [x] [S] Enable FrankenPHP worker mode for Symfony
-- [ ] [S] Verify: `make init` from a fresh clone succeeds, the start page opens in the browser
+- [x] [S] Verify: `make init` from a fresh clone succeeds, the start page opens in the browser
 
 ## Phase 1 — Dev tooling
 
