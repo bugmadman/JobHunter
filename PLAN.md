@@ -46,7 +46,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Install `ergebnis/composer-normalize`, normalize composer.json
 - [x] [S] Install `symfony/browser-kit` + `symfony/css-selector`
 - [x] [S] Install `fakerphp/faker`
-- [ ] [S] Makefile check targets: `cs` (PHP-CS-Fixer dry-run with diff + PHPCS), `fix` (PHP-CS-Fixer + Rector apply), `stan` (PHPStan), `test` (PHPUnit), `lint` (all checks at once)
+- [x] [S] Makefile check targets: `cs` (PHP-CS-Fixer dry-run with diff + PHPCS), `fix` (PHP-CS-Fixer + Rector apply), `stan` (PHPStan), `test` (PHPUnit), `lint` (all checks at once)
 - [ ] [S] Install GrumPHP, `grumphp.yml`: composer, composer_normalize, composer audit, PHPStan, PHP-CS-Fixer, PHPCS (line length), Rector (dry-run), PHPUnit, Symfony linters (`lint:yaml`, `lint:container`, `lint:twig`); the dev container is compiled before PHPStan (`lint:container` runs first or `cache:warmup`), otherwise `phpstan-symfony` silently runs without `var/cache/dev/App_KernelDevDebugContainer.xml`
 - [ ] [S] Add `git` to the `php` image (GrumPHP calls git inside the container)
 - [ ] [S] GrumPHP: run checks via `docker compose exec` (git on the host, PHP in the container)

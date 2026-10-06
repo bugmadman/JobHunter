@@ -1,8 +1,9 @@
 # docker compose reads only .env by itself; .env.local is passed when it exists, so its values take precedence.
 # Checked by the shell, not $(wildcard): make caches the directory listing and misses the file init creates
 DC = docker compose --env-file .env $$([ -f .env.local ] && echo --env-file .env.local)
+PHP = $(DC) exec php
 
-.PHONY: init upd updb down ps in
+.PHONY: init upd updb down ps in cs fix stan test lint
 
 init: .env.local
 	$(DC) build
@@ -34,3 +35,24 @@ ps:
 
 in:
 	$(DC) exec php sh
+
+# Checks only, nothing is changed
+cs:
+	$(PHP) vendor/bin/php-cs-fixer fix --dry-run --diff
+	$(PHP) vendor/bin/phpcs
+
+# Rector first: CS-Fixer then formats whatever Rector rewrote. Line length is still fixed by hand
+fix:
+	$(PHP) vendor/bin/rector process
+	$(PHP) vendor/bin/php-cs-fixer fix
+
+# lint:container compiles the dev container: without its XML phpstan-symfony silently loses the service types
+stan:
+	$(PHP) bin/console lint:container
+	$(PHP) vendor/bin/phpstan analyse
+
+test:
+	$(PHP) bin/phpunit
+
+lint: cs stan test
+	$(PHP) vendor/bin/rector process --dry-run
