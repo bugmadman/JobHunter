@@ -74,7 +74,9 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 
 - PHP entirely in Docker, no local PHP needed. DB — PostgreSQL.
 - Docker: `.docker/php` + `compose.yaml` + Makefile, a separate `worker` service. Requirements: `php.ini`/`Caddyfile` in the repository, the Makefile doesn't fail without `.env.local`, `depends_on` waits for the Postgres healthcheck, the DB port is not exposed externally, the official `dunglas/frankenphp` image (PHP 8.5, alpine).
+- The `php` container runs as a non-root user with the host user's UID, so that files in the bind-mounted project belong to the host user: `APP_USER`/`APP_USERID` in `.env` (defaults `app`/`1000`); `make init` writes the host's `id -u` into `.env.local` and stops with a clear error on UID 0 (otherwise the image build fails with an unclear `adduser: uid '0' in use`).
 - Web server — FrankenPHP (Caddy + PHP in one container), Symfony in worker mode. Caddy serves plain HTTP: HTTPS is terminated by Cloudflare Tunnel. One container fewer — simpler for a self-hosted install.
+- The `php` image inherits the base image's `HEALTHCHECK` (`curl localhost:2019/metrics`, the Caddy admin endpoint): the Caddyfile keeps the admin endpoint on `localhost:2019`; the `worker` service runs no Caddy, so its healthcheck is disabled.
 - Deployment to a home server, access from a phone.
 - The server is exposed to the internet through the Cloudflare Tunnel the owner already runs (it also serves `madbugs.dev`), subdomain `jobhunter.madbugs.dev`. No ports are opened on the router, Cloudflare provides HTTPS.
 - We don't put `cloudflared` into our `compose.yaml` — it's the infrastructure of a specific server, not of the product. The README gets an example.
@@ -102,6 +104,7 @@ The server is exposed to the internet, so:
 - `symfony/http-client`, `symfony/twig-bundle`, `api-platform/core` are runtime dependencies (`require`), not dev.
 - Package versions — current for the Symfony/PHP version at bootstrap time.
 - All checks (PHPStan, PHPUnit, PHP-CS-Fixer, Symfony linters) run automatically on commit via GrumPHP; the commit doesn't go through if the checks are red.
+- GrumPHP runs inside the `php` container (via `docker compose exec`) and calls `git` there, so the `php` image includes `git`.
 
 ## Development process
 
@@ -123,6 +126,7 @@ The server is exposed to the internet, so:
 - VPN (Tailscale/WireGuard) → the already running Cloudflare Tunnel.
 - Cloudflare Access on top of our login — not enabled.
 - `cloudflared` in our `compose.yaml` → no, it's the infrastructure of a specific server; an example in the README.
+- A volume (or `COMPOSER_CACHE_DIR`) for the Composer cache → not taken: the project is installed once, and losing the cache when the container is recreated costs only an extra minute of `composer install`; a dedicated volume is YAGNI.
 - Storing LLM API keys in the DB as is → encryption, since the server is on the internet.
 - EasyAdmin as the main interface for everything, including job postings → only settings and reference data; work screens are custom pages, responsive for phones.
 - SPA (React/Vue) → Twig + Symfony UX via AssetMapper, without Node.js: an SPA is overkill for a single user.

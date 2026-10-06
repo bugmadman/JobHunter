@@ -17,13 +17,13 @@ Docker: `.docker/` + `compose.yaml` + Makefile, designed for installation from a
 - [x] `git init`
 - [x] `.gitignore`: `.idea/`, `.DS_Store` (Flex will add the Symfony blocks when creating the skeleton)
 - [x] `.editorconfig`
-- [ ] `.docker/php/Dockerfile`: the official FrankenPHP image `dunglas/frankenphp:1-php8.5-alpine`, extensions via `install-php-extensions` (`pdo_pgsql`, `intl`, `opcache`, `apcu`), composer, user via `USER`/`USERID`
+- [x] `.docker/php/Dockerfile`: the official FrankenPHP image `dunglas/frankenphp:1-php8.5-alpine`, extensions via `install-php-extensions` (`pdo_pgsql`, `intl`, `apcu`; OPcache is built into PHP 8.5), composer, user via `USER`/`USERID`
 - [ ] `.docker/php/php.ini` — in the repository (not in `.gitignore`, otherwise the build from a fresh clone fails)
-- [ ] `.docker/php/Caddyfile` — in the repository, plain HTTP (HTTPS is terminated by Cloudflare Tunnel)
+- [ ] `.docker/php/Caddyfile` — in the repository, plain HTTP (HTTPS is terminated by Cloudflare Tunnel), the admin endpoint stays on `localhost:2019` (the image's healthcheck depends on it)
 - [ ] `compose.yaml`: `php` service (runs FrankenPHP, publishes `APP_PORT`)
 - [ ] `compose.yaml`: `postgres` service with a healthcheck, port not published externally, `depends_on` with `condition: service_healthy`
-- [ ] Docker variables template in `.env` (`APP_NAME`, `APP_PORT`, `APP_USER`, `APP_USERID`, DB credentials)
-- [ ] Makefile: `init` (creates `.env.local` from the template if it doesn't exist; up; composer install; migrations), `upd`, `down`, `ps`, `in`
+- [ ] Docker variables template in `.env` (`APP_NAME`, `APP_PORT`, `APP_USER`, `APP_USERID`, DB credentials), defaults `APP_USER=app`, `APP_USERID=1000`
+- [ ] Makefile: `init` (creates `.env.local` from the template if it doesn't exist, filling `APP_USERID` with the host's `id -u` and stopping with a clear error if it is 0; up; composer install; migrations), `upd`, `down`, `ps`, `in`
 - [ ] Remove the "once they exist" clause about Makefile targets from the "Running commands" section of `CLAUDE.md` (the targets now exist)
 - [ ] Create a Symfony 7.4 skeleton inside the container
 - [ ] Enable FrankenPHP worker mode for Symfony
@@ -46,6 +46,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] Install `symfony/browser-kit` + `symfony/css-selector`
 - [ ] Install `fakerphp/faker`
 - [ ] Install GrumPHP, `grumphp.yml`: composer, composer_normalize, composer audit, PHPStan, PHP-CS-Fixer, PHPCS (line length), Rector (dry-run), PHPUnit, Symfony linters (`lint:yaml`, `lint:container`, `lint:twig`)
+- [ ] Add `git` to the `php` image (GrumPHP calls git inside the container)
 - [ ] GrumPHP: run checks via `docker compose exec` (git on the host, PHP in the container)
 - [ ] Verify: a commit with a deliberate error is blocked, a clean one passes
 - [ ] Remove the "once they are installed" clause from the GrumPHP item in `.claude/agents/developer.md` (all checks now actually work)
@@ -139,7 +140,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] Wire the keyword filter into the handler (rejection finalizes the status)
 - [ ] LLM matching using the platform `Prompt`
 - [ ] Wire LLM matching into the handler (like/dislike + reason)
-- [ ] `worker` service in `compose.yaml` (`messenger:consume async`, the same image as `php`)
+- [ ] `worker` service in `compose.yaml` (`messenger:consume async`, the same image as `php`, `healthcheck` disabled: there is no Caddy in it)
 
 ## Phase 11 — Results UI (custom pages, not EasyAdmin)
 
