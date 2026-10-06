@@ -36,7 +36,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 - [x] [S] Install `symfony/maker-bundle`
 - [x] [S] Install PHPUnit 12, `phpunit.dist.xml` (`failOnWarning`, `failOnDeprecation`), one smoke test green
-- [ ] [S] Install PHPStan, `phpstan.dist.neon` at level 10
+- [x] [S] Install PHPStan, `phpstan.dist.neon` at level 10
 - [ ] [S] Install `phpstan/phpstan-strict-rules`
 - [ ] [S] Install `phpstan/phpstan-deprecation-rules`
 - [ ] [S] Install `phpstan/phpstan-symfony`
@@ -168,7 +168,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 ## Phase 13 — Deployment to the home server
 
 - [ ] [S] Prod docker-compose configuration: `compose.prod.yaml`, run with `-f compose.yaml -f compose.prod.yaml` so the dev override isn't merged; on the server `.env.local` sets `COMPOSE_FILE=compose.yaml:compose.prod.yaml`, so a bare `docker compose up` picks the prod set too (`APP_ENV=prod`, no profiler or debug, no DB port)
-- [ ] [S] Prod `php.ini` override: `opcache.validate_timestamps=0`
+- [ ] [S] Prod `php.ini` override: `opcache.validate_timestamps=0`, `zend.assertions=-1`
 - [ ] [S] `trusted_proxies` + `X-Forwarded-*` headers, so that behind the tunnel Symfony sees HTTPS (`https://` links, secure cookies)
 - [ ] [S] Ingress rule in the existing Cloudflare Tunnel: `jobhunter.madbugs.dev` → `localhost:APP_PORT` on the server
 - [ ] [S] Verify from a phone: login, job posting list, POSTing a job posting via the API over HTTPS

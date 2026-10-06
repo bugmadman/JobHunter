@@ -1,4 +1,7 @@
 {
+    "phpstan/phpstan": {
+        "version": "2.3.0"
+    },
     "phpunit/phpunit": {
         "version": "12.5",
         "recipe": {

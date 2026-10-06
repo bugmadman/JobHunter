@@ -101,6 +101,7 @@ The server is exposed to the internet, so:
 
 - Static analysis: PHPStan level 10 + `phpstan-symfony` + strict-rules + deprecation-rules.
 - Tests: PHPUnit 12 + `symfony/phpunit-bridge`. Mocks — standard PHPUnit ones.
+- `assert()` only narrows a type for static analysis where the framework already guarantees it (e.g. `APP_ENV` in `public/index.php`). Never for invariants or input checks: prod runs with `zend.assertions = -1`, where asserts aren't even compiled; domain invariants throw domain exceptions.
 - Style: PHP-CS-Fixer with our own config; the `return` rules (a blank line before `return`, a useless variable before `return`) are covered by it (`blank_line_before_statement`, `return_assignment`) with auto-fixing. PHPCS — only for the 120 line length limit (CS-Fixer doesn't check it).
 - Rector, composer-normalize.
 - `symfony/maker-bundle` — boilerplate generation (`make:entity`, `make:migration`, `make:message-handler`, etc.), a key thing for writing code autonomously.
