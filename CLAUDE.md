@@ -25,7 +25,7 @@ The exception is line length: 120 characters max. PHPCS only checks it, so it ha
 
 ## Running commands
 
-Every project command (`bin/console`, `composer`, tests, linters, etc.) runs only inside Docker: `docker compose exec php ...` or the Makefile targets that wrap it. Bring the stack up only with `make init`/`make upd`: a bare `docker compose up` doesn't read `.env.local` and would rebuild the image with the default UID. Never use the host's PHP or Composer. Only git runs on the host.
+Every project command (`bin/console`, `composer`, tests, linters, etc.) runs only inside Docker: `docker compose exec php ...` or the Makefile targets that wrap it. Bring the stack up only with `make init`/`make upd`/`make updb`: a bare `docker compose up` doesn't read `.env.local` and would rebuild the image with the default UID. Never use the host's PHP or Composer. Only git runs on the host.
 
 ## Model selection
 

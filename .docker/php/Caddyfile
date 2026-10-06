@@ -14,5 +14,12 @@
 	root public/
 	encode zstd br gzip
 
-	php_server
+	php_server {
+		# Symfony Runtime detects the worker by itself (FrankenPhpWorkerRunner): the kernel boots once per worker
+		worker {
+			file ./public/index.php
+			# Dev sets it to "watch" in compose.override.yaml, so that code changes restart the workers
+			{$FRANKENPHP_WORKER_CONFIG}
+		}
+	}
 }

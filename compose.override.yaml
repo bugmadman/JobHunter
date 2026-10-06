@@ -1,5 +1,9 @@
 # Dev only: docker compose merges this file automatically, prod lists its files explicitly and skips it
 services:
+  php:
+    environment:
+      FRANKENPHP_WORKER_CONFIG: watch
+
   postgres:
     # Bound to localhost: a DB client on the host can connect, the local network can't
     ports:

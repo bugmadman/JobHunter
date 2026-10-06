@@ -2,7 +2,7 @@
 # Checked by the shell, not $(wildcard): make caches the directory listing and misses the file init creates
 DC = docker compose --env-file .env $$([ -f .env.local ] && echo --env-file .env.local)
 
-.PHONY: init upd down ps in
+.PHONY: init upd updb down ps in
 
 init: .env.local
 	$(DC) up -d --build --wait
@@ -21,6 +21,9 @@ init: .env.local
 
 upd:
 	$(DC) up -d --wait
+
+updb:
+	$(DC) up -d --build --wait
 
 down:
 	$(DC) down

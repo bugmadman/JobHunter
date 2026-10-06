@@ -24,10 +24,10 @@ Docker: `.docker/` + `compose.yaml` + Makefile, designed for installation from a
 - [x] [S] `compose.yaml`: `postgres` service with a healthcheck, port not published in `compose.yaml`, `depends_on` with `condition: service_healthy`
 - [x] [S] `compose.override.yaml` (dev only): Postgres port on `127.0.0.1:POSTGRES_PORT` for a local DB client
 - [x] [S] Docker variables template in `.env` (`APP_NAME`, `APP_PORT`, `APP_USER`, `APP_USERID`, DB credentials, `POSTGRES_PORT`), defaults `APP_USER=app`, `APP_USERID=1000`
-- [x] [S] Makefile: `init` (creates `.env.local` from the template if it doesn't exist, filling `APP_USERID` with the host's `id -u` and stopping with a clear error if it is 0; up; composer install), `upd`, `down`, `ps`, `in`
+- [x] [S] Makefile: `init` (creates `.env.local` from the template if it doesn't exist, filling `APP_USERID` with the host's `id -u` and stopping with a clear error if it is 0; up; composer install), `upd`, `updb` (up with a rebuild), `down`, `ps`, `in`
 - [x] [S] Remove the "once they exist" clause about Makefile targets from the "Running commands" section of `CLAUDE.md` (the targets now exist)
 - [x] [S] Create a Symfony 7.4 skeleton inside the container
-- [ ] [S] Enable FrankenPHP worker mode for Symfony
+- [x] [S] Enable FrankenPHP worker mode for Symfony
 - [ ] [S] Verify: `make init` from a fresh clone succeeds, the start page opens in the browser
 
 ## Phase 1 — Dev tooling
