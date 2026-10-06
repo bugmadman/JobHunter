@@ -44,7 +44,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Install `squizlabs/php_codesniffer` with only the `Generic.Files.LineLength` rule (120), no other standards — CS-Fixer doesn't check line length
 - [x] [S] Install Rector, config for PHP 8.5 + Symfony code quality
 - [x] [S] Install `ergebnis/composer-normalize`, normalize composer.json
-- [ ] [S] Install `symfony/browser-kit` + `symfony/css-selector`
+- [x] [S] Install `symfony/browser-kit` + `symfony/css-selector`
 - [ ] [S] Install `fakerphp/faker`
 - [ ] [S] Makefile check targets: `cs` (PHP-CS-Fixer dry-run with diff + PHPCS), `fix` (PHP-CS-Fixer + Rector apply), `stan` (PHPStan), `test` (PHPUnit), `lint` (all checks at once)
 - [ ] [S] Install GrumPHP, `grumphp.yml`: composer, composer_normalize, composer audit, PHPStan, PHP-CS-Fixer, PHPCS (line length), Rector (dry-run), PHPUnit, Symfony linters (`lint:yaml`, `lint:container`, `lint:twig`); the dev container is compiled before PHPStan (`lint:container` runs first or `cache:warmup`), otherwise `phpstan-symfony` silently runs without `var/cache/dev/App_KernelDevDebugContainer.xml`
