@@ -43,7 +43,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Install PHP-CS-Fixer, a single config `.php-cs-fixer.dist.php` (`@Symfony` + `declare_strict_types` + `blank_line_before_statement` for `return` + `return_assignment`)
 - [x] [S] Install `squizlabs/php_codesniffer` with only the `Generic.Files.LineLength` rule (120), no other standards — CS-Fixer doesn't check line length
 - [x] [S] Install Rector, config for PHP 8.5 + Symfony code quality
-- [ ] [S] Install `ergebnis/composer-normalize`, normalize composer.json
+- [x] [S] Install `ergebnis/composer-normalize`, normalize composer.json
 - [ ] [S] Install `symfony/browser-kit` + `symfony/css-selector`
 - [ ] [S] Install `fakerphp/faker`
 - [ ] [S] Makefile check targets: `cs` (PHP-CS-Fixer dry-run with diff + PHPCS), `fix` (PHP-CS-Fixer + Rector apply), `stan` (PHPStan), `test` (PHPUnit), `lint` (all checks at once)
