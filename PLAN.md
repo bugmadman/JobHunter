@@ -26,7 +26,7 @@ Docker: `.docker/` + `compose.yaml` + Makefile, designed for installation from a
 - [x] [S] Docker variables template in `.env` (`APP_NAME`, `APP_PORT`, `APP_USER`, `APP_USERID`, DB credentials, `POSTGRES_PORT`), defaults `APP_USER=app`, `APP_USERID=1000`
 - [x] [S] Makefile: `init` (creates `.env.local` from the template if it doesn't exist, filling `APP_USERID` with the host's `id -u` and stopping with a clear error if it is 0; up; composer install), `upd`, `down`, `ps`, `in`
 - [x] [S] Remove the "once they exist" clause about Makefile targets from the "Running commands" section of `CLAUDE.md` (the targets now exist)
-- [ ] [S] Create a Symfony 7.4 skeleton inside the container
+- [x] [S] Create a Symfony 7.4 skeleton inside the container
 - [ ] [S] Enable FrankenPHP worker mode for Symfony
 - [ ] [S] Verify: `make init` from a fresh clone succeeds, the start page opens in the browser
 
