@@ -109,6 +109,7 @@ The server is exposed to the internet, so:
 - `fakerphp/faker` — fake data for fixtures/tests.
 - `symfony/http-client`, `symfony/twig-bundle`, `api-platform/core` are runtime dependencies (`require`), not dev.
 - Package versions — current for the Symfony/PHP version at bootstrap time.
+- Manual check commands are Makefile targets (`make cs`, `make fix`, `make lint`, etc.), not Composer scripts: a short command from the host, one entry point next to `init`/`upd`.
 - All checks (PHPStan, PHPUnit, PHP-CS-Fixer, Symfony linters) run automatically on commit via GrumPHP; the commit doesn't go through if the checks are red.
 - GrumPHP runs inside the `php` container (via `docker compose exec`) and calls `git` there, so the `php` image includes `git`.
 
