@@ -38,7 +38,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Install PHPUnit 12, `phpunit.dist.xml` (`failOnWarning`, `failOnDeprecation`), one smoke test green
 - [x] [S] Install PHPStan, `phpstan.dist.neon` at level 10
 - [x] [S] Install `phpstan/phpstan-strict-rules`
-- [ ] [S] Install `phpstan/phpstan-deprecation-rules`
+- [x] [S] Install `phpstan/phpstan-deprecation-rules`
 - [ ] [S] Install `phpstan/phpstan-symfony`
 - [ ] [S] Install PHP-CS-Fixer, a single config `.php-cs-fixer.dist.php` (`@Symfony` + `declare_strict_types` + `blank_line_before_statement` for `return` + `return_assignment`)
 - [ ] [S] Install `squizlabs/php_codesniffer` with only the `Generic.Files.LineLength` rule (120), no other standards — CS-Fixer doesn't check line length
