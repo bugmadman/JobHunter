@@ -34,7 +34,7 @@ Docker: `.docker/` + `compose.yaml` + Makefile, designed for installation from a
 
 Goal — as many automated checks as possible, so that errors are caught without manual review.
 
-- [ ] [S] Install `symfony/maker-bundle`
+- [x] [S] Install `symfony/maker-bundle`
 - [ ] [S] Install PHPUnit 12, `phpunit.xml.dist` (`failOnWarning`, `failOnDeprecation`), one smoke test green
 - [ ] [S] Install PHPStan, `phpstan.dist.neon` at level 10
 - [ ] [S] Install `phpstan/phpstan-strict-rules`
