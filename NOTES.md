@@ -75,8 +75,9 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 ## Infrastructure and deployment
 
 - PHP entirely in Docker, no local PHP needed. DB — PostgreSQL.
-- Docker: `.docker/php` + `compose.yaml` + Makefile, a separate `worker` service. Requirements: `php.ini`/`Caddyfile` in the repository, the Makefile doesn't fail without `.env.local`, `depends_on` waits for the Postgres healthcheck, the DB port is not exposed externally, the official `dunglas/frankenphp` image (PHP 8.5, alpine).
+- Docker: `.docker/php` + `compose.yaml` + Makefile, a separate `worker` service. Requirements: `php.ini`/`Caddyfile` in the repository, the Makefile doesn't fail without `.env.local`, `depends_on` waits for the Postgres healthcheck, the DB port is published only in dev, the official `dunglas/frankenphp` image (PHP 8.5, alpine).
 - The `php` image is built from the repository root (`context: .`, `dockerfile: .docker/php/Dockerfile`): the Dockerfile copies `.docker/php/php.ini`.
+- The DB port is published in dev only, so that the owner can inspect the DB with a local client: `compose.override.yaml` (merged by docker compose automatically) binds it to `127.0.0.1:POSTGRES_PORT`. Prod runs with `-f compose.yaml -f compose.prod.yaml`, so the override and the port don't get there; the server's `.env.local` sets `COMPOSE_FILE=compose.yaml:compose.prod.yaml`, so a bare `docker compose up` is safe too. The override stays committed (not `.dist`): with any `-f`, compose ignores it, and a `.dist` copy would need a manual step and go stale.
 - `php.ini` is for dev (OPcache timestamp validation stays on); prod overrides it with `opcache.validate_timestamps=0`.
 - The `php` container runs as a non-root user with the host user's UID, so that files in the bind-mounted project belong to the host user: `APP_USER`/`APP_USERID` in `.env` (defaults `app`/`1000`); `make init` writes the host's `id -u` into `.env.local` and stops with a clear error on UID 0 (otherwise the image build fails with an unclear `adduser: uid '0' in use`).
 - Web server — FrankenPHP (Caddy + PHP in one container), Symfony in worker mode. Caddy serves plain HTTP: HTTPS is terminated by Cloudflare Tunnel. One container fewer — simpler for a self-hosted install.
@@ -126,6 +127,7 @@ The server is exposed to the internet, so:
 - One global prompt → a separate prompt for each platform.
 - A per-user API key for job posting intake → one key from the settings.
 - RabbitMQ (`symfony/amqp-messenger`) → the Doctrine transport in PostgreSQL: one container fewer for self-hosted, switched with a single DSN line.
+- The DB port is never published → published in dev only (`compose.override.yaml`, on `127.0.0.1`): the owner inspects the DB with a local client; prod skips the override.
 - nginx + PHP-FPM → FrankenPHP: one container instead of two, the official Symfony Docker setup, worker mode.
 - Synchronous LLM calls in the web request with a raised `set_time_limit` → Messenger: Cloudflare cuts a response after ~100 s anyway, there are no retries, and a long load hangs on the phone.
 - VPN (Tailscale/WireGuard) → the already running Cloudflare Tunnel.

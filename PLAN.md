@@ -21,8 +21,9 @@ Docker: `.docker/` + `compose.yaml` + Makefile, designed for installation from a
 - [x] [S] `.docker/php/php.ini` — in the repository (not in `.gitignore`, otherwise the build from a fresh clone fails)
 - [x] [S] `.docker/php/Caddyfile` — in the repository, plain HTTP (HTTPS is terminated by Cloudflare Tunnel), the admin endpoint stays on `localhost:2019` (the image's healthcheck depends on it)
 - [x] [S] `compose.yaml`: `php` service (runs FrankenPHP, publishes `APP_PORT`), built from the repository root: `context: .` + `dockerfile: .docker/php/Dockerfile`
-- [ ] [S] `compose.yaml`: `postgres` service with a healthcheck, port not published externally, `depends_on` with `condition: service_healthy`
-- [ ] [S] Docker variables template in `.env` (`APP_NAME`, `APP_PORT`, `APP_USER`, `APP_USERID`, DB credentials), defaults `APP_USER=app`, `APP_USERID=1000`
+- [x] [S] `compose.yaml`: `postgres` service with a healthcheck, port not published in `compose.yaml`, `depends_on` with `condition: service_healthy`
+- [x] [S] `compose.override.yaml` (dev only): Postgres port on `127.0.0.1:POSTGRES_PORT` for a local DB client
+- [ ] [S] Docker variables template in `.env` (`APP_NAME`, `APP_PORT`, `APP_USER`, `APP_USERID`, DB credentials, `POSTGRES_PORT`), defaults `APP_USER=app`, `APP_USERID=1000`
 - [ ] [S] Makefile: `init` (creates `.env.local` from the template if it doesn't exist, filling `APP_USERID` with the host's `id -u` and stopping with a clear error if it is 0; up; composer install; migrations), `upd`, `down`, `ps`, `in`
 - [ ] [S] Remove the "once they exist" clause about Makefile targets from the "Running commands" section of `CLAUDE.md` (the targets now exist)
 - [ ] [S] Create a Symfony 7.4 skeleton inside the container
@@ -166,7 +167,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 ## Phase 13 — Deployment to the home server
 
-- [ ] [S] Prod docker-compose configuration (`APP_ENV=prod`, no profiler or debug)
+- [ ] [S] Prod docker-compose configuration: `compose.prod.yaml`, run with `-f compose.yaml -f compose.prod.yaml` so the dev override isn't merged; on the server `.env.local` sets `COMPOSE_FILE=compose.yaml:compose.prod.yaml`, so a bare `docker compose up` picks the prod set too (`APP_ENV=prod`, no profiler or debug, no DB port)
 - [ ] [S] Prod `php.ini` override: `opcache.validate_timestamps=0`
 - [ ] [S] `trusted_proxies` + `X-Forwarded-*` headers, so that behind the tunnel Symfony sees HTTPS (`https://` links, secure cookies)
 - [ ] [S] Ingress rule in the existing Cloudflare Tunnel: `jobhunter.madbugs.dev` → `localhost:APP_PORT` on the server
