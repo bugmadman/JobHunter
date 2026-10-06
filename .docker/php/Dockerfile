@@ -6,6 +6,11 @@ RUN install-php-extensions \
     intl \
     pdo_pgsql
 
+# Sources are relative to the build context, the repository root. conf.d is parsed alphabetically:
+# the zz- prefix puts this file after the docker-php-ext-*.ini ones, so its values take precedence
+# --chmod: COPY keeps the host file's mode, and PHP silently skips an ini file the app user can't read
+COPY --chmod=0644 .docker/php/php.ini ${PHP_INI_DIR}/conf.d/zz-app.ini
+
 COPY --from=composer/composer:2-bin /composer /usr/local/bin/composer
 
 # Pass the host user's name and UID, so that files created in the bind-mounted project belong to that user

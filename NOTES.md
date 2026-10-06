@@ -23,6 +23,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 ## CV and candidate profile
 
 - CV upload format — PDF only. The PDF is passed to the LLM directly (Gemini reads PDFs), without a text extraction library.
+- PHP's `upload_max_filesize` (10M, `.docker/php/php.ini`) is the hard ceiling for the CV upload: the form's limit can be lower, not higher.
 - Flow: the owner uploads the CV → the original file is saved → a cheap LLM analyzes the resume → the result is saved to the DB and shown to the owner.
 - The analysis comes in two versions: in the resume's original language (for the owner to read) and in English (canonical, used for comparison with job postings).
 - One LLM call per CV → both the text analysis (in 2 languages) and structured output following a single fixed schema via structured output/JSON schema in the API, not arbitrary JSON at the model's discretion — otherwise the fields aren't comparable.
@@ -53,6 +54,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 - A cheap model for CV analysis.
 - Keys are stored in the DB encrypted (the server is exposed to the internet) and shown masked in the UI.
 - Each provider has its own adapter behind `LlmClientInterface`. We start with Gemini (free tier for testing).
+- Every LLM call started from the UI (CV analysis, prompt generation, cover letter) runs in Messenger, not in the web request: the UI dispatches a message, the page shows "in progress" and refreshes a Turbo frame until the result is done or failed (a shared `LlmOperationStatus` enum). Reason: PHP's `max_execution_time` (30 s, measured as wall-clock time under FrankenPHP, so waiting for the API counts) and Cloudflare's ~100 s response limit would kill a slow call; the worker has no time limit and retries on API failures. Hence the `worker` service comes together with Messenger, not with the pipeline.
 
 ## Interface
 
@@ -74,6 +76,8 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 
 - PHP entirely in Docker, no local PHP needed. DB — PostgreSQL.
 - Docker: `.docker/php` + `compose.yaml` + Makefile, a separate `worker` service. Requirements: `php.ini`/`Caddyfile` in the repository, the Makefile doesn't fail without `.env.local`, `depends_on` waits for the Postgres healthcheck, the DB port is not exposed externally, the official `dunglas/frankenphp` image (PHP 8.5, alpine).
+- The `php` image is built from the repository root (`context: .`, `dockerfile: .docker/php/Dockerfile`): the Dockerfile copies `.docker/php/php.ini`.
+- `php.ini` is for dev (OPcache timestamp validation stays on); prod overrides it with `opcache.validate_timestamps=0`.
 - The `php` container runs as a non-root user with the host user's UID, so that files in the bind-mounted project belong to the host user: `APP_USER`/`APP_USERID` in `.env` (defaults `app`/`1000`); `make init` writes the host's `id -u` into `.env.local` and stops with a clear error on UID 0 (otherwise the image build fails with an unclear `adduser: uid '0' in use`).
 - Web server — FrankenPHP (Caddy + PHP in one container), Symfony in worker mode. Caddy serves plain HTTP: HTTPS is terminated by Cloudflare Tunnel. One container fewer — simpler for a self-hosted install.
 - The `php` image inherits the base image's `HEALTHCHECK` (`curl localhost:2019/metrics`, the Caddy admin endpoint): the Caddyfile keeps the admin endpoint on `localhost:2019`; the `worker` service runs no Caddy, so its healthcheck is disabled.
@@ -123,6 +127,7 @@ The server is exposed to the internet, so:
 - A per-user API key for job posting intake → one key from the settings.
 - RabbitMQ (`symfony/amqp-messenger`) → the Doctrine transport in PostgreSQL: one container fewer for self-hosted, switched with a single DSN line.
 - nginx + PHP-FPM → FrankenPHP: one container instead of two, the official Symfony Docker setup, worker mode.
+- Synchronous LLM calls in the web request with a raised `set_time_limit` → Messenger: Cloudflare cuts a response after ~100 s anyway, there are no retries, and a long load hangs on the phone.
 - VPN (Tailscale/WireGuard) → the already running Cloudflare Tunnel.
 - Cloudflare Access on top of our login — not enabled.
 - `cloudflared` in our `compose.yaml` → no, it's the infrastructure of a specific server; an example in the README.

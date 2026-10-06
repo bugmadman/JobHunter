@@ -29,11 +29,12 @@ Every project command (`bin/console`, `composer`, tests, linters, etc.) runs onl
 
 ## Model selection
 
-Work at maximum quality. Switch the model and effort on your own, without asking the user:
+Work at high quality, but spend effort in proportion to the task. Switch the model and effort on your own, without asking the user. Every task in `PLAN.md` carries a tier, decided once when the task is planned (the user can change it):
 
-- Any change to code, tests, configs and rules (CLAUDE.md, PLAN.md) is made by the `developer` agent (`.claude/agents/developer.md`: Opus, effort `max`). The main session only orchestrates: reads the plan, assigns the task, accepts the result
-- After `developer` and the automated checks (GrumPHP) — a review by the `reviewer` agent (`.claude/agents/reviewer.md`: Sonnet, effort `max`). The review is done by a different model, otherwise it inherits the author's blind spots. Review findings are fixed by `developer` again
+- `[S]` (simple): configs, Docker, installing packages, docs and rules, simple enums/entities/pages without business logic. The main session does it itself, without agents: they start cold and cost far more than the task. The check is GrumPHP (once installed) and the user's own verification
+- `[C]` (complex): domain model with invariants, pipeline, LLM integration and prompts, security-relevant code, business logic. The `developer` agent (`.claude/agents/developer.md`: Opus, effort `high`) writes it, then the `reviewer` agent (`.claude/agents/reviewer.md`: Sonnet, effort `high`) reviews it. The review is done by a different model, otherwise it inherits the author's blind spots. Small review findings are fixed by the main session; substantial ones go to a new `developer` run with a short focused prompt
 - For architecturally important parts (domain model, pipeline, LLM prompts), additionally suggest `/code-review ultra` to the user: only the user runs it, it is paid
+- Verification is proportional to the task: one build or test run plus a check of the result itself. No exploratory experiments beyond the task; a side consideration goes into the `NOTES.md` inbox as one line, unverified
 - Don't use lightweight models or low effort for code and rules. Don't enable fast mode
 
 ## Language
