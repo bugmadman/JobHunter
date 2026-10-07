@@ -60,7 +60,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Install `doctrine/doctrine-fixtures-bundle`
 - [x] [S] Symfony Messenger + `symfony/doctrine-messenger`, `async` transport in PostgreSQL
 - [x] [S] `worker` service in `compose.yaml` (`messenger:consume async`, the same image as `php`, `healthcheck` disabled: there is no Caddy in it)
-- [ ] [S] Symfony Security
+- [x] [S] Symfony Security
 - [ ] [S] EasyAdminBundle
 - [ ] [S] GrumPHP: add `lint:twig` (Twig now installed with EasyAdmin)
 - [ ] [S] AssetMapper
