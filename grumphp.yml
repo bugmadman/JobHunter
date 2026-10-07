@@ -1,0 +1,29 @@
+grumphp:
+    tasks:
+        composer:
+            no_check_publish: true
+        composer_normalize: ~
+        securitychecker_composeraudit: ~
+
+        lint_container:
+            command: ['lint:container']
+            metadata:
+                task: symfony_console
+                priority: 100
+        lint_yaml:
+            command: ['lint:yaml', 'config', '--parse-tags']
+            triggered_by: ['yaml', 'yml']
+            metadata:
+                task: symfony_console
+
+        phpcsfixer:
+            config: .php-cs-fixer.dist.php
+        phpcs:
+            standard: ['phpcs.xml.dist']
+            ignore_patterns: ['config/reference.php']
+        rector:
+            config: rector.php
+        phpstan:
+            configuration: phpstan.dist.neon
+            use_grumphp_paths: false
+        phpunit: ~

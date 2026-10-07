@@ -47,8 +47,8 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Install `symfony/browser-kit` + `symfony/css-selector`
 - [x] [S] Install `fakerphp/faker`
 - [x] [S] Makefile check targets: `cs` (PHP-CS-Fixer dry-run with diff + PHPCS), `fix` (PHP-CS-Fixer + Rector apply), `stan` (PHPStan), `test` (PHPUnit), `lint` (all checks at once)
-- [ ] [S] Install GrumPHP, `grumphp.yml`: composer, composer_normalize, composer audit, PHPStan, PHP-CS-Fixer, PHPCS (line length), Rector (dry-run), PHPUnit, Symfony linters (`lint:yaml`, `lint:container`, `lint:twig`); the dev container is compiled before PHPStan (`lint:container` runs first or `cache:warmup`), otherwise `phpstan-symfony` silently runs without `var/cache/dev/App_KernelDevDebugContainer.xml`
-- [ ] [S] Add `git` to the `php` image (GrumPHP calls git inside the container)
+- [x] [S] Install GrumPHP, `grumphp.yml`: composer, composer_normalize, composer audit, PHPStan, PHP-CS-Fixer, PHPCS (line length), Rector (dry-run), PHPUnit, Symfony linters (`lint:yaml`, `lint:container`; `lint:twig` comes with Twig); the dev container is compiled before PHPStan (`lint:container` runs first or `cache:warmup`), otherwise `phpstan-symfony` silently runs without `var/cache/dev/App_KernelDevDebugContainer.xml`
+- [x] [S] Add `git` to the `php` image (GrumPHP calls git inside the container)
 - [ ] [S] GrumPHP: run checks via `docker compose exec` (git on the host, PHP in the container)
 - [ ] [S] Verify: a commit with a deliberate error is blocked, a clean one passes
 - [ ] [S] Remove the "once they are installed" clause from the GrumPHP item in `.claude/agents/developer.md` (all checks now actually work)
@@ -62,6 +62,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [S] `worker` service in `compose.yaml` (`messenger:consume async`, the same image as `php`, `healthcheck` disabled: there is no Caddy in it)
 - [ ] [S] Symfony Security
 - [ ] [S] EasyAdminBundle
+- [ ] [S] GrumPHP: add `lint:twig` (Twig now installed with EasyAdmin)
 - [ ] [S] AssetMapper
 - [ ] [S] Symfony UX Turbo
 - [ ] [S] Symfony UX Stimulus
