@@ -68,7 +68,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Symfony UX Turbo
 - [x] [S] Symfony UX Stimulus
 - [x] [S] Bootstrap 5 via importmap
-- [ ] [S] Base layout for custom pages (responsive, shared)
+- [x] [S] Base layout for custom pages (responsive, shared)
 - [ ] [S] Stub home page `/` on the base layout (replaced by the job posting list in Phase 11)
 - [ ] [S] API Platform
 
