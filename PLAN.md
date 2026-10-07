@@ -50,7 +50,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Install GrumPHP, `grumphp.yml`: composer, composer_normalize, composer audit, PHPStan, PHP-CS-Fixer, PHPCS (line length), Rector (dry-run), PHPUnit, Symfony linters (`lint:yaml`, `lint:container`; `lint:twig` comes with Twig); the dev container is compiled before PHPStan (`lint:container` runs first or `cache:warmup`), otherwise `phpstan-symfony` silently runs without `var/cache/dev/App_KernelDevDebugContainer.xml`
 - [x] [S] Add `git` to the `php` image (GrumPHP calls git inside the container)
 - [x] [S] GrumPHP: run checks via `docker compose exec` (git on the host, PHP in the container)
-- [ ] [S] Verify: a commit with a deliberate error is blocked, a clean one passes
+- [x] [S] Verify: a commit with a deliberate error is blocked, a clean one passes
 - [ ] [S] Remove the "once they are installed" clause from the GrumPHP item in `.claude/agents/developer.md` (all checks now actually work)
 
 ## Phase 2 — Bundles
