@@ -12,6 +12,7 @@ A self-hosted single-user job search service: job postings from platforms → ke
 - Domain events for pipeline transitions — they map onto `JobPostingStageLog`, every status transition = an event
 - Pass structured data as classes (DTO/VO), not arrays
 - DRY, KISS, SOLID, YAGNI — don't build abstractions for a hypothetical future
+- Every user-facing string goes through the translator, the product name included: a key in `translations/messages.{en,ru}.yaml`, never literal text in templates or code. Both locales are added in the same change
 
 ## What the tools enforce
 
