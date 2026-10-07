@@ -7,6 +7,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 - A job search service: job postings from platforms → keyword filter → LLM matching against criteria derived from the CV → review and apply in a web interface.
 - Self-hosted, not SaaS: installed via `git clone` + `docker compose up`.
 - A single user: one account, no registration. `Prompt`/`CvProfile`/`JobPosting` are not tied to `User`.
+- A possible future version is multi-user, with two roles: the owner writes the prompt templates, each user sees the final prompt and sets it themselves; a user sets their own LLM keys or uses the owner's, if they're fine with a different model. Not now: the current version stays single-user, EasyAdmin is that user's settings screen.
 - All the code is written by Claude with minimal manual involvement from the owner — so the code must be verified automatically, without a manual review at every step (see "Dev tooling and quality", "Development process").
 - The result is written only to the DB.
 

@@ -199,3 +199,4 @@ Goal — as many automated checks as possible, so that errors are caught without
 - Job posting deduplication
 - Automatic prompt adjustment based on user comments
 - Migrating the API layer to Go
+- Multi-user version: owner and user roles, prompt templates from the owner, per-user prompts and LLM keys (see NOTES, "Product and concept")
