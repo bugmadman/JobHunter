@@ -70,7 +70,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Bootstrap 5 via importmap
 - [x] [S] Base layout for custom pages (responsive, shared)
 - [x] [S] Stub home page `/` on the base layout (replaced by the job posting list in Phase 11)
-- [ ] [S] GrumPHP: fail when a `messages` key is missing in `en` or `ru` (`debug:translation --only-missing --domain=messages` for each locale)
+- [x] [S] GrumPHP: fail when a `messages` key is missing in `en` or `ru` (`debug:translation --only-missing --domain=messages` for each locale)
 - [ ] [S] API Platform
 
 ## Phase 3 — User and login

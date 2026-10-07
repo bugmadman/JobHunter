@@ -22,6 +22,16 @@ grumphp:
             triggered_by: ['twig']
             metadata:
                 task: symfony_console
+        translations_en:
+            command: ['debug:translation', 'en', '--only-missing', '--domain=messages']
+            triggered_by: ['php', 'twig', 'yaml']
+            metadata:
+                task: symfony_console
+        translations_ru:
+            command: ['debug:translation', 'ru', '--only-missing', '--domain=messages']
+            triggered_by: ['php', 'twig', 'yaml']
+            metadata:
+                task: symfony_console
 
         phpcsfixer:
             config: .php-cs-fixer.dist.php
