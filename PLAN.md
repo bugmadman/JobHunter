@@ -67,7 +67,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] AssetMapper
 - [x] [S] Symfony UX Turbo
 - [x] [S] Symfony UX Stimulus
-- [ ] [S] Bootstrap 5 via importmap
+- [x] [S] Bootstrap 5 via importmap
 - [ ] [S] Base layout for custom pages (responsive, shared)
 - [ ] [S] Stub home page `/` on the base layout (replaced by the job posting list in Phase 11)
 - [ ] [S] API Platform
