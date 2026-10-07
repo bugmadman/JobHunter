@@ -5,6 +5,9 @@
         "php": ">=8.5",
         "ext-ctype": "*",
         "ext-iconv": "*",
+        "doctrine/doctrine-bundle": "^3.3",
+        "doctrine/doctrine-migrations-bundle": "^4.0",
+        "doctrine/orm": "^3.7",
         "symfony/console": "~7.4.0",
         "symfony/dotenv": "~7.4.0",
         "symfony/flex": "^2",
@@ -68,6 +71,7 @@
     "extra": {
         "symfony": {
             "allow-contrib": false,
+            "docker": "false",
             "require": "7.4.*"
         }
     },

@@ -55,7 +55,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 ## Phase 2 — Bundles
 
-- [ ] [S] Doctrine ORM + Migrations, connection to PostgreSQL (`doctrine:database:create` succeeds); add `doctrine:migrations:migrate` to `make init`
+- [x] [S] Doctrine ORM + Migrations, connection to PostgreSQL (`doctrine:database:create` succeeds); add `doctrine:migrations:migrate` to `make init`
 - [ ] [S] Install `phpstan/phpstan-doctrine`
 - [ ] [S] Install `doctrine/doctrine-fixtures-bundle`
 - [ ] [S] Symfony Messenger + `symfony/doctrine-messenger`, `async` transport in PostgreSQL
