@@ -22,7 +22,7 @@ grumphp:
             config: .php-cs-fixer.dist.php
         phpcs:
             standard: ['phpcs.xml.dist']
-            ignore_patterns: ['config/reference.php']
+            ignore_patterns: ['config/reference.php', 'migrations/']
         rector:
             config: rector.php
         phpstan:

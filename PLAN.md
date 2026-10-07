@@ -58,7 +58,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Doctrine ORM + Migrations, connection to PostgreSQL (`doctrine:database:create` succeeds); add `doctrine:migrations:migrate` to `make init`
 - [x] [S] Install `phpstan/phpstan-doctrine`
 - [x] [S] Install `doctrine/doctrine-fixtures-bundle`
-- [ ] [S] Symfony Messenger + `symfony/doctrine-messenger`, `async` transport in PostgreSQL
+- [x] [S] Symfony Messenger + `symfony/doctrine-messenger`, `async` transport in PostgreSQL
 - [ ] [S] `worker` service in `compose.yaml` (`messenger:consume async`, the same image as `php`, `healthcheck` disabled: there is no Caddy in it)
 - [ ] [S] Symfony Security
 - [ ] [S] EasyAdminBundle
