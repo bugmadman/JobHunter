@@ -63,7 +63,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Symfony Security
 - [x] [S] EasyAdminBundle
 - [x] [S] GrumPHP: add `lint:twig` (Twig now installed with EasyAdmin)
-- [ ] [S] Translator: `default_locale: en`, `enabled_locales: [en, ru]`
+- [x] [S] Translator: `default_locale: en`, `enabled_locales: [en, ru]`
 - [ ] [S] AssetMapper
 - [ ] [S] Symfony UX Turbo
 - [ ] [S] Symfony UX Stimulus
