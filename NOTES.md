@@ -60,6 +60,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 
 - EasyAdmin — for settings and reference data (keys, models, platforms, prompts).
 - Job posting work screens (a list of cards, a job posting card with letter/CV buttons) — custom Twig pages on Symfony UX (Turbo/Stimulus) via AssetMapper, without Node.js, responsive for phones.
+- CSS for the custom pages — Bootstrap 5 via importmap: EasyAdmin is built on it too, so the work screens and the admin look alike; no build step; ready components (cards, badges, buttons, forms, a responsive grid).
 - What the interface must do:
   - clearly sort/filter job postings;
   - view a job posting's processing history and the LLM decisions, manually correct LLM decisions;
@@ -140,6 +141,7 @@ The server is exposed to the internet, so:
 - Storing LLM API keys in the DB as is → encryption, since the server is on the internet.
 - EasyAdmin as the main interface for everything, including job postings → only settings and reference data; work screens are custom pages, responsive for phones.
 - Choosing the interface language by `Accept-Language` or a URL prefix (`/en/`, `/ru/`) → a user setting in the DB: the same language on every device, no routing complexity for a single user.
+- Tailwind / Pico CSS / own CSS → Bootstrap 5: Tailwind without Node.js needs `tailwind-bundle` with its own binary and a `--watch` process, and would look different from the Bootstrap-based EasyAdmin; Pico is niche and may stall; own CSS means writing everything by hand.
 - SPA (React/Vue) → Twig + Symfony UX via AssetMapper, without Node.js: an SPA is overkill for a single user.
 - A CSV tracker → only the DB.
 - Sending every job posting to the LLM → a keyword filter first, saves tokens.

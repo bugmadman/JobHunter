@@ -67,7 +67,9 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] AssetMapper
 - [x] [S] Symfony UX Turbo
 - [x] [S] Symfony UX Stimulus
-- [ ] [S] Base layout for custom pages (responsive, shared, with navigation to the admin)
+- [ ] [S] Bootstrap 5 via importmap
+- [ ] [S] Base layout for custom pages (responsive, shared)
+- [ ] [S] Stub home page `/` on the base layout (replaced by the job posting list in Phase 11)
 - [ ] [S] API Platform
 
 ## Phase 3 — User and login
@@ -77,6 +79,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [S] Form login, the whole UI is behind the login
 - [ ] [S] `login_throttling` — brute-force protection for the login
 - [ ] [S] Empty EasyAdmin dashboard, opens after login
+- [ ] [S] Link to the admin in the base layout navigation
 - [ ] [S] `User.locale` (a `Locale` enum: `en`, `ru`; default `en`) + migration
 - [ ] [S] The request locale is taken from the logged-in user's `locale` (EasyAdmin included)
 - [ ] [S] Language switcher in the interface, saves `User.locale`
