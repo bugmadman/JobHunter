@@ -160,5 +160,3 @@ The server is exposed to the internet, so:
 ## Inbox
 
 The owner writes new thoughts here as is, without structure. After discussion they are moved into the sections above (superseded decisions go to "Rejected alternatives" with the reason), and this section is cleared.
-
-- Later, after Phase 1: extract the Docker + dev tooling setup (FrankenPHP, compose, Makefile, PHPStan/CS-Fixer/PHPCS/Rector/GrumPHP) into a separate public Symfony skeleton repository, so new projects don't repeat this work; possibly a LinkedIn post about it.
