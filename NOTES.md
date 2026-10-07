@@ -165,3 +165,4 @@ The owner writes new thoughts here as is, without structure. After discussion th
 
 - `composer` inside the `php` container prints "detected dubious ownership in repository at '/app'" (its `git branch` call for the root version), though plain `git` there works: harmless, unverified why.
 - Messenger has no `failed` transport: after the retries (3 by default) a failed message is lost. For LLM calls it may be worth keeping them to inspect and retry (`failure_transport` + `doctrine://default?queue_name=failed`).
+- Mercure (built into FrankenPHP) is undecided: it could push live updates to the page (an LLM operation finished, new job postings arrived) instead of refreshing a Turbo frame until done. Turbo's Mercure parts are off for now (`assets/controllers.json`).
