@@ -62,7 +62,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] `worker` service in `compose.yaml` (`messenger:consume async`, the same image as `php`, `healthcheck` disabled: there is no Caddy in it)
 - [x] [S] Symfony Security
 - [x] [S] EasyAdminBundle
-- [ ] [S] GrumPHP: add `lint:twig` (Twig now installed with EasyAdmin)
+- [x] [S] GrumPHP: add `lint:twig` (Twig now installed with EasyAdmin)
 - [ ] [S] Translator: `default_locale: en`, `enabled_locales: [en, ru]`
 - [ ] [S] AssetMapper
 - [ ] [S] Symfony UX Turbo

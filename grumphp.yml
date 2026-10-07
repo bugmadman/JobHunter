@@ -17,6 +17,11 @@ grumphp:
             triggered_by: ['yaml', 'yml']
             metadata:
                 task: symfony_console
+        lint_twig:
+            command: ['lint:twig', 'templates']
+            triggered_by: ['twig']
+            metadata:
+                task: symfony_console
 
         phpcsfixer:
             config: .php-cs-fixer.dist.php
