@@ -63,6 +63,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Symfony Security
 - [x] [S] EasyAdminBundle
 - [ ] [S] GrumPHP: add `lint:twig` (Twig now installed with EasyAdmin)
+- [ ] [S] Translator: `default_locale: en`, `enabled_locales: [en, ru]`
 - [ ] [S] AssetMapper
 - [ ] [S] Symfony UX Turbo
 - [ ] [S] Symfony UX Stimulus
@@ -76,6 +77,9 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [S] Form login, the whole UI is behind the login
 - [ ] [S] `login_throttling` — brute-force protection for the login
 - [ ] [S] Empty EasyAdmin dashboard, opens after login
+- [ ] [S] `User.locale` (a `Locale` enum: `en`, `ru`; default `en`) + migration
+- [ ] [S] The request locale is taken from the logged-in user's `locale` (EasyAdmin included)
+- [ ] [S] Language switcher in the interface, saves `User.locale`
 
 ## Phase 4 — LLM settings
 

@@ -66,6 +66,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
   - add comments to a job posting;
   - mark "applied / not applied" — a separate field, not the same as like/dislike.
 - Login — form login (Symfony Security), the account is created with a console command.
+- Interface languages: English (the default) and Russian. Every UI string goes through the Symfony translator (`translations/`), no hardcoded texts in templates or code; EasyAdmin ships its own Russian translations. The language is a setting of the user stored in the DB (one field on `User`, a switcher in the UI): the same on the phone and the computer, unlike `Accept-Language`; no URL prefix, there's no SEO to serve. The language of generated texts (cover letter) is a separate decision, made in Phase 12.
 
 ## Applications
 
@@ -138,6 +139,7 @@ The server is exposed to the internet, so:
 - A volume (or `COMPOSER_CACHE_DIR`) for the Composer cache → not taken: the project is installed once, and losing the cache when the container is recreated costs only an extra minute of `composer install`; a dedicated volume is YAGNI.
 - Storing LLM API keys in the DB as is → encryption, since the server is on the internet.
 - EasyAdmin as the main interface for everything, including job postings → only settings and reference data; work screens are custom pages, responsive for phones.
+- Choosing the interface language by `Accept-Language` or a URL prefix (`/en/`, `/ru/`) → a user setting in the DB: the same language on every device, no routing complexity for a single user.
 - SPA (React/Vue) → Twig + Symfony UX via AssetMapper, without Node.js: an SPA is overkill for a single user.
 - A CSV tracker → only the DB.
 - Sending every job posting to the LLM → a keyword filter first, saves tokens.
