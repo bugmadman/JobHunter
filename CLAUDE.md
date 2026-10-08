@@ -12,6 +12,7 @@ A self-hosted single-user job search service: job postings from platforms → ke
 - Domain events for pipeline transitions — they map onto `JobPostingStageLog`, every status transition = an event
 - Pass structured data as classes (DTO/VO), not arrays
 - DRY, KISS, SOLID, YAGNI — don't build abstractions for a hypothetical future
+- Code structure: what Symfony has a folder for stays there (`src/Entity`, `src/Repository`, `src/Controller`, `src/Command`, `src/MessageHandler`, `src/ApiResource`); framework-free domain code (VOs, domain exceptions, enums, domain events, ports) goes to `src/Domain/<Area>/`, an exception next to what it belongs to; adapters implementing the ports go to `src/Infrastructure/`. No `Application` layer
 - Every user-facing string goes through the translator, the product name included: a key in `translations/messages.{en,ru}.yaml`, never literal text in templates or code. Both locales are added in the same change
 
 ## What the tools enforce

@@ -78,6 +78,9 @@ Goal — as many automated checks as possible, so that errors are caught without
 ## Phase 3 — User and login
 
 - [x] [S] `User` entity (email, password hash) + migration
+- [x] [S] Code structure rule in CLAUDE.md
+- [ ] [S] Move `Email` and `InvalidEmail` to `src/Domain/Shared/` (see NOTES, "Code structure")
+- [ ] [S] PHP-CS-Fixer `final_internal_class` (empty `include`/`exclude`, `consider_absent_docblock_as_internal_class`): every non-abstract class `final`, Doctrine entities included; a line in CLAUDE.md "What the tools enforce"; in NOTES why entities can be final (`enable_native_lazy_objects: true`)
 - [ ] [S] Console command to create a user
 - [ ] [S] Form login, the whole UI is behind the login
 - [ ] [S] `login_throttling` — brute-force protection for the login

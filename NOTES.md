@@ -127,6 +127,13 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - Tests are written by Claude too, in the same "code → checks → review" cycle. A test is mandatory for every business branch/rule (`JobPostingStageLog` status transitions, keyword filter edge cases, CV schema validation, prompt generation, LLM integration via mocks at the boundary). The coverage % is a signal for ourselves, not a hard threshold.
 - CLAUDE.md holds only what the tools don't do: `strict_types`, style, `readonly`, `mixed` are covered by CS-Fixer/Rector/PHPStan — we don't duplicate them in the rules.
 
+## Code structure
+
+- What Symfony has a convention for stays where Symfony puts it: `src/Entity`, `src/Repository`, `src/Controller`, `src/Command`, `src/MessageHandler`, `src/ApiResource`, `src/DataFixtures`. maker-bundle and the recipes keep working without extra configuration.
+- `src/Domain` — framework-free domain code Symfony has no place for: Value Objects, domain exceptions, status enums, domain events, ports (`LlmClientInterface`, `PlatformClientInterface`). Grouped by area, an exception next to what it belongs to: `Domain/Shared/Email.php` + `InvalidEmail.php`, `Domain/JobPosting/JobPostingStatus.php`.
+- `src/Infrastructure` — adapters implementing the domain ports: the Gemini client, platform clients, key encryption. Ideally extractable into a PHP package later (its ports would go along, or into a contract package).
+- No `Application` layer: use-case orchestration lives in Symfony's own places (Messenger handlers, console commands, controllers, API Platform processors). The trade-off: entities belong to the domain but stay in `src/Entity`, apart from their VOs and exceptions.
+
 ## Rejected alternatives
 
 - Multi-user with registration and platforms/prompts/job postings tied to the user → a single user, self-hosted.
@@ -146,6 +153,9 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - EasyAdmin as the main interface for everything, including job postings → only settings and reference data; work screens are custom pages, responsive for phones.
 - Choosing the interface language by `Accept-Language` or a URL prefix (`/en/`, `/ru/`) → a user setting in the DB: the same language on every device, no routing complexity for a single user.
 - Tailwind / Pico CSS / own CSS → Bootstrap 5: Tailwind without Node.js needs `tailwind-bundle` with its own binary and a `--watch` process, and would look different from the Bootstrap-based EasyAdmin; Pico is niche and may stall; own CSS means writing everything by hand.
+- Code split by type only (`src/ValueObject`, `src/Exception`) → `src/Domain` grouped by area: exceptions of every area would pile up in one folder.
+- Full modules (`src/User/`, `src/JobPosting/` with entities inside) → Symfony's own folders stay: maker-bundle, recipes and Doctrine/API Platform mapping expect them.
+- Full DDD layers with `src/Application` → no: an extra layer of use-case classes adds no value at this size; Symfony handlers, commands and controllers orchestrate.
 - SPA (React/Vue) → Twig + Symfony UX via AssetMapper, without Node.js: an SPA is overkill for a single user.
 - A CSV tracker → only the DB.
 - Sending every job posting to the LLM → a keyword filter first, saves tokens.
@@ -172,3 +182,5 @@ The owner writes new thoughts here as is, without structure. After discussion th
 - Messenger has no `failed` transport: after the retries (3 by default) a failed message is lost. For LLM calls it may be worth keeping them to inspect and retry (`failure_transport` + `doctrine://default?queue_name=failed`).
 - Mercure (built into FrankenPHP) is undecided: it could push live updates to the page (an LLM operation finished, new job postings arrived) instead of refreshing a Turbo frame until done. Turbo's Mercure parts are off for now (`assets/controllers.json`).
 - Unused translation keys (in `translations/messages.*.yaml` but used nowhere) aren't caught: `debug:translation --only-unused` lists them, but keys built dynamically in code (e.g. from an enum value) would show up as unused too. Decide whether to check this and how.
+- Enforce the layer boundaries with a tool (`src/Domain` must not use `Symfony\*`, `Doctrine\*`, `App\Infrastructure\*`): PHPat (a PHPStan extension) or Deptrac (has a GrumPHP task). Decide later, once there is working code to see how the services shape up.
+- Urgent: rework CLAUDE.md so it doesn't depend on NOTES.md / PLAN.md. "Model selection", "Language" (the `ru/NOTES.ru.md` example) and the whole "Workflow" section describe the NOTES/PLAN process; CLAUDE.md should stay valid if it moves to another project or the notes and plan are deleted (e.g. the process part in its own section that can be dropped as a whole).
