@@ -15,7 +15,8 @@ COPY --chmod=0644 .docker/php/Caddyfile /etc/frankenphp/Caddyfile
 
 COPY --from=composer/composer:2-bin /composer /usr/local/bin/composer
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git \
+    && git config --system --add safe.directory /app
 
 # Pass the host user's name and UID, so that files created in the bind-mounted project belong to that user
 ARG USER=app

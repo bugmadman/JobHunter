@@ -73,6 +73,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] GrumPHP: fail when a `messages` key is missing in `en` or `ru` (`debug:translation --only-missing --domain=messages` for each locale)
 - [x] [S] API Platform
 - [x] [S] API version prefix `/api/v1`
+- [x] [S] Mark `/app` as a git `safe.directory` in the `php` image (Composer warned "dubious ownership")
 
 ## Phase 3 — User and login
 
