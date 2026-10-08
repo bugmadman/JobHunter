@@ -100,6 +100,8 @@ The server is exposed to the internet, so:
 - `trusted_proxies` behind the tunnel;
 - prod without debug.
 
+The API docs (`/api/docs`) stay public in prod, as a guide to sending job postings: the repository is public anyway, and the intake is protected by the API key and the rate limiter, not by hiding the endpoints. Only the intake API goes into the docs; any internal endpoint is hidden from them or put behind the login.
+
 ## Dev tooling and quality
 
 - Static analysis: PHPStan level 10 + `phpstan-symfony` + strict-rules + deprecation-rules.
