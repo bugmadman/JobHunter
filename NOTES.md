@@ -15,7 +15,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 
 - Platforms: Upwork, LinkedIn, glassdoor.com, indeed.com.
 - Platforms are stored in the DB (a "platform" entity), so they can be added/removed without a code release.
-- Each platform has its own context file in `platforms/` (similar to CLAUDE.md): decisions about what and how to code for accessing it (API? RSS? scraping? parsing specifics) are written down before implementing it and along the way. This is dev documentation, not a user setting.
+- Each platform has its own context file in `platforms/` (similar to AGENTS.md): decisions about what and how to code for accessing it (API? RSS? scraping? parsing specifics) are written down before implementing it and along the way. This is dev documentation, not a user setting.
 - For now, job postings are collected by Claude Code manually: the owner runs Claude → Claude itself accesses the platform (browser/API) → writes raw job postings to the DB via our API.
 - Postponed (a separate phase): a "Check job postings" button in the UI → a headless browser on the server (Panther/Playwright) collects job postings by itself. Start with the simplest platform, not LinkedIn.
 - Postponed: cron/webhook — once an automatic source appears (email or periodic scraping).
@@ -125,7 +125,8 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - Model switching happens without manual actions by the owner: the main orchestrator session delegates to subagents itself. The owner just asks to do a task.
 - Claude can't run `/code-review ultra` (multi-agent cloud review) itself — the owner runs it (paid); Claude only suggests it for important parts.
 - Tests are written by Claude too, in the same "code → checks → review" cycle. A test is mandatory for every business branch/rule (`JobPostingStageLog` status transitions, keyword filter edge cases, CV schema validation, prompt generation, LLM integration via mocks at the boundary). The coverage % is a signal for ourselves, not a hard threshold.
-- CLAUDE.md holds only what the tools don't do: `strict_types`, style, `readonly`, `mixed` are covered by CS-Fixer/Rector/PHPStan — we don't duplicate them in the rules.
+- Rule files: `AGENTS.md` is the single source of the project rules, for people and any AI tool; `WORKFLOW.md` is the project-independent working method; `CLAUDE.md` is only the Claude Code entry point (imports both, plus the Claude-only model and agent rules); `CONTRIBUTING.md` is a pointer for people. The owner's personal rules (chat language, local translations of the docs) live in an uncommitted `CLAUDE.local.md`, which Claude Code loads by itself.
+- AGENTS.md holds only what the tools don't do: `strict_types`, style, `readonly`, `mixed` are covered by CS-Fixer/Rector/PHPStan — we don't duplicate them in the rules.
 
 ## Code structure
 
@@ -156,6 +157,9 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - Code split by type only (`src/ValueObject`, `src/Exception`) → `src/Domain` grouped by area: exceptions of every area would pile up in one folder.
 - Full modules (`src/User/`, `src/JobPosting/` with entities inside) → Symfony's own folders stay: maker-bundle, recipes and Doctrine/API Platform mapping expect them.
 - Full DDD layers with `src/Application` → no: an extra layer of use-case classes adds no value at this size; Symfony handlers, commands and controllers orchestrate.
+- Project rules in `CLAUDE.md` → `AGENTS.md`: only Claude Code reads `CLAUDE.md`, while `AGENTS.md` is the common file of AI tools and readable by people.
+- `CONTRIBUTING.md` as the source of the rules → a pointer: agents load `AGENTS.md` as content but only see a link to another file.
+- The owner's personal rules in a committed file → `CLAUDE.local.md`: anyone cloning the public repository would get them in their AI tool.
 - SPA (React/Vue) → Twig + Symfony UX via AssetMapper, without Node.js: an SPA is overkill for a single user.
 - A CSV tracker → only the DB.
 - Sending every job posting to the LLM → a keyword filter first, saves tokens.
@@ -173,7 +177,7 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - Prophecy (`jangregor/phpstan-prophecy`, `phpspec/prophecy-phpunit`) → standard PHPUnit mocks.
 - A formal coverage % as a hard gate → a mandatory test for every business rule: a % breeds useless tests on getters/DTOs/configs.
 - "Cheap writer / expensive reviewer" or the other way round; a review by the same model that wrote the code → a strong model writes, a different independent model reviews.
-- Duplicating in CLAUDE.md what the tools check → not duplicated.
+- Duplicating in the rules (AGENTS.md) what the tools check → not duplicated.
 
 ## Inbox
 
@@ -183,4 +187,3 @@ The owner writes new thoughts here as is, without structure. After discussion th
 - Mercure (built into FrankenPHP) is undecided: it could push live updates to the page (an LLM operation finished, new job postings arrived) instead of refreshing a Turbo frame until done. Turbo's Mercure parts are off for now (`assets/controllers.json`).
 - Unused translation keys (in `translations/messages.*.yaml` but used nowhere) aren't caught: `debug:translation --only-unused` lists them, but keys built dynamically in code (e.g. from an enum value) would show up as unused too. Decide whether to check this and how.
 - Enforce the layer boundaries with a tool (`src/Domain` must not use `Symfony\*`, `Doctrine\*`, `App\Infrastructure\*`): PHPat (a PHPStan extension) or Deptrac (has a GrumPHP task). Decide later, once there is working code to see how the services shape up.
-- Urgent: rework CLAUDE.md so it doesn't depend on NOTES.md / PLAN.md. "Model selection", "Language" (the `ru/NOTES.ru.md` example) and the whole "Workflow" section describe the NOTES/PLAN process; CLAUDE.md should stay valid if it moves to another project or the notes and plan are deleted (e.g. the process part in its own section that can be dropped as a whole).
