@@ -51,7 +51,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Add `git` to the `php` image (GrumPHP calls git inside the container)
 - [x] [S] GrumPHP: run checks via `docker compose exec` (git on the host, PHP in the container)
 - [x] [S] Verify: a commit with a deliberate error is blocked, a clean one passes
-- [ ] [S] Remove the "once they are installed" clause from the GrumPHP item in `.claude/agents/developer.md` (all checks now actually work)
+- [x] [S] Remove the "once they are installed" clause from the GrumPHP item in `.claude/agents/developer.md` (all checks now actually work)
 
 ## Phase 2 — Bundles
 
