@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\ValueObject;
+namespace App\Tests\Domain\Shared;
 
-use App\Exception\InvalidEmail;
-use App\ValueObject\Email;
+use App\Domain\Shared\Email;
+use App\Domain\Shared\InvalidEmail;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
