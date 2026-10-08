@@ -77,7 +77,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 ## Phase 3 — User and login
 
-- [ ] [S] `User` entity (email, password hash) + migration
+- [x] [S] `User` entity (email, password hash) + migration
 - [ ] [S] Console command to create a user
 - [ ] [S] Form login, the whole UI is behind the login
 - [ ] [S] `login_throttling` — brute-force protection for the login
