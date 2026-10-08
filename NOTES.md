@@ -44,6 +44,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 ## Processing pipeline
 
 - Job posting intake: an API Platform endpoint, protected by a key from the settings. Requests are tested with curl.
+- The API is versioned in the URL: `/api/v1`. Free while there are no clients; once the address is in the Claude Code instructions (and, in a multi-user version, in other people's setups), adding it would break them. An incompatible change gets `/api/v2` next to it; compatible changes (new fields, deprecations) stay in `v1`.
 - Queue: Symfony Messenger on the Doctrine transport (queue in PostgreSQL). Intake via the API → dispatching a message → a separate worker process (`messenger:consume`, the `worker` service) runs the handler.
 - The filter has two stages, regardless of the source (email/browser/API): first a rough keyword filter (stack, etc.), and only what passes goes to the LLM via the API — saves tokens.
 - LLM matching uses the platform prompt; the result is like/dislike with a reason.
@@ -100,7 +101,7 @@ The server is exposed to the internet, so:
 - `trusted_proxies` behind the tunnel;
 - prod without debug.
 
-The API docs (`/api/docs`) stay public in prod, as a guide to sending job postings: the repository is public anyway, and the intake is protected by the API key and the rate limiter, not by hiding the endpoints. Only the intake API goes into the docs; any internal endpoint is hidden from them or put behind the login.
+The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job postings: the repository is public anyway, and the intake is protected by the API key and the rate limiter, not by hiding the endpoints. Only the intake API goes into the docs; any internal endpoint is hidden from them or put behind the login.
 
 ## Dev tooling and quality
 
