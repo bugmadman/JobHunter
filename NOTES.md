@@ -70,6 +70,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
   - mark "applied / not applied" — a separate field, not the same as like/dislike.
 - Login — form login (Symfony Security), the account is created with a console command.
 - Interface languages: English (the default) and Russian. Every UI string goes through the Symfony translator (`translations/`), no hardcoded texts in templates or code; EasyAdmin ships its own Russian translations. The language is a setting of the user stored in the DB (one field on `User`, a switcher in the UI): the same on the phone and the computer, unlike `Accept-Language`; no URL prefix, there's no SEO to serve. The language of generated texts (cover letter) is a separate decision, made in Phase 12.
+- Console command output is English only, not through the translator: the CLI has no user locale, so a `ru` key would never be shown.
 
 ## Applications
 
@@ -107,6 +108,8 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 
 - Static analysis: PHPStan level 10 + `phpstan-symfony` + strict-rules + deprecation-rules.
 - Tests: PHPUnit 12 + `symfony/phpunit-bridge`. Mocks — standard PHPUnit ones.
+- What gets tested is logic, not data containers: a VO with validation or normalization is tested, a VO or DTO without logic isn't. Area services: unit tests with every dependency (repositories, adapters) mocked. Controllers and console commands: functional tests with the area service mocked in the container.
+- A test database only where a mock can't check anything: repository queries and mapping. A separate `_test` DB filled from fixtures and rolled back after each test (`dama/doctrine-test-bundle`); set up once the first such query appears. Tests never touch real (dev or prod) data.
 - `assert()` only narrows a type for static analysis where the framework already guarantees it (e.g. `APP_ENV` in `public/index.php`). Never for invariants or input checks: prod runs with `zend.assertions = -1`, where asserts aren't even compiled; domain invariants throw domain exceptions.
 - Style: PHP-CS-Fixer with our own config; the `return` rules (a blank line before `return`, a useless variable before `return`) are covered by it (`blank_line_before_statement`, `return_assignment`) with auto-fixing. PHPCS — only for the 120 line length limit (CS-Fixer doesn't check it).
 - Every non-abstract class is `final`, enforced by PHP-CS-Fixer `final_internal_class` (empty `include`/`exclude`, `consider_absent_docblock_as_internal_class`). Entities included: Doctrine uses native PHP lazy objects (always on in DoctrineBundle 3 on PHP 8.4+) instead of proxies that subclass the entity, so `final` doesn't break lazy loading.
@@ -132,9 +135,13 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 ## Code structure
 
 - What Symfony has a convention for stays where Symfony puts it: `src/Entity`, `src/Repository`, `src/Controller`, `src/Command`, `src/MessageHandler`, `src/ApiResource`, `src/DataFixtures`. maker-bundle and the recipes keep working without extra configuration.
-- `src/Domain` — framework-free domain code Symfony has no place for: Value Objects, domain exceptions, status enums, domain events, ports (`LlmClientInterface`, `PlatformClientInterface`). Grouped by area, an exception next to what it belongs to: `Domain/Shared/Email.php` + `InvalidEmail.php`, `Domain/JobPosting/JobPostingStatus.php`.
-- `src/Infrastructure` — adapters implementing the domain ports: the Gemini client, platform clients, key encryption. Ideally extractable into a PHP package later (its ports would go along, or into a contract package).
-- No `Application` layer: use-case orchestration lives in Symfony's own places (Messenger handlers, console commands, controllers, API Platform processors). The trade-off: entities belong to the domain but stay in `src/Entity`, apart from their VOs and exceptions.
+- `src/Domain` — framework-free domain code Symfony has no place for, grouped by area: Value Objects, domain exceptions, status enums, domain events, area services. An exception sits next to what it belongs to: `Domain/Shared/Email.php` + `InvalidEmail.php`, `Domain/JobPosting/JobPostingStatus.php`.
+- One service per area: `src/Domain/<Area>/<Area>Service` (`Domain/User/UserService`). It holds the operations that need something outside the entity: the DB, the password hasher, the LLM, several entities at once. An entity's own behavior and invariants stay in the entity: the service calls `$posting->markFiltered()`, it doesn't set the status itself. One large service per area rather than a class per use case: one standard for the whole project and fewer files at this size; an area service is split only once it actually gets in the way.
+- Every data change (create, update, delete) goes through the area service. Controllers, console commands, Messenger handlers and API Platform processors are thin: parse the input, call the service, render the result. Reading for display may go straight to a repository.
+- Repositories: queries plus `save()` (`persist` + `flush`), no logic. Whatever has to change on save (a status, for example) is decided by the service and the entity before `save()`, never inside the repository.
+- An interface lives next to its implementation: `UserServiceInterface` next to `UserService`, `UserRepositoryInterface` next to `UserRepository` in `src/Repository/`, an adapter's interface next to the adapter in `src/Infrastructure/`. Dependents (controllers, commands, services) use the interface. Reason: every class is `final`, and PHPUnit can't double a final class, so whatever gets mocked needs an interface.
+- `src/Infrastructure` — adapters for external integrations: the Gemini client, platform clients, key encryption, the password hasher. Ideally extractable into a PHP package later.
+- No `Application` layer: use cases live in the area services. The trade-off: entities belong to the domain but stay in `src/Entity`, apart from their VOs and exceptions.
 
 ## Rejected alternatives
 
@@ -157,7 +164,13 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - Tailwind / Pico CSS / own CSS → Bootstrap 5: Tailwind without Node.js needs `tailwind-bundle` with its own binary and a `--watch` process, and would look different from the Bootstrap-based EasyAdmin; Pico is niche and may stall; own CSS means writing everything by hand.
 - Code split by type only (`src/ValueObject`, `src/Exception`) → `src/Domain` grouped by area: exceptions of every area would pile up in one folder.
 - Full modules (`src/User/`, `src/JobPosting/` with entities inside) → Symfony's own folders stay: maker-bundle, recipes and Doctrine/API Platform mapping expect them.
-- Full DDD layers with `src/Application` → no: an extra layer of use-case classes adds no value at this size; Symfony handlers, commands and controllers orchestrate.
+- Full DDD layers with `src/Application` → no: an extra layer of use-case classes adds no value at this size; the area service orchestrates.
+- Use-case orchestration in controllers, console commands and Messenger handlers → in the area service: entry points stay thin, the logic is unit-tested with mocks.
+- A class per use case (`CreateUser`, `ChangePassword`) → one service per area: one standard and fewer files at this size.
+- Ports in `src/Domain` (`LlmClientInterface` in the domain) → an interface next to its implementation: one rule for services, repositories and adapters, easier to find.
+- A service depending on concrete repositories, tested against a test DB → interfaces and mocks: a `final` class can't be doubled, and a test DB is only for queries.
+- Repositories for reading only, saving through `EntityManager` in the service → `save()` in the repository, without logic: otherwise Doctrine ends up in the domain service.
+- Tests on every VO and DTO → only on the ones with logic.
 - Project rules in `CLAUDE.md` → `AGENTS.md`: only Claude Code reads `CLAUDE.md`, while `AGENTS.md` is the common file of AI tools and readable by people.
 - `CONTRIBUTING.md` as the source of the rules → a pointer: agents load `AGENTS.md` as content but only see a link to another file.
 - The owner's personal rules in a committed file → `CLAUDE.local.md`: anyone cloning the public repository would get them in their AI tool.
@@ -187,4 +200,4 @@ The owner writes new thoughts here as is, without structure. After discussion th
 - Messenger has no `failed` transport: after the retries (3 by default) a failed message is lost. For LLM calls it may be worth keeping them to inspect and retry (`failure_transport` + `doctrine://default?queue_name=failed`).
 - Mercure (built into FrankenPHP) is undecided: it could push live updates to the page (an LLM operation finished, new job postings arrived) instead of refreshing a Turbo frame until done. Turbo's Mercure parts are off for now (`assets/controllers.json`).
 - Unused translation keys (in `translations/messages.*.yaml` but used nowhere) aren't caught: `debug:translation --only-unused` lists them, but keys built dynamically in code (e.g. from an enum value) would show up as unused too. Decide whether to check this and how.
-- Enforce the layer boundaries with a tool (`src/Domain` must not use `Symfony\*`, `Doctrine\*`, `App\Infrastructure\*`): PHPat (a PHPStan extension) or Deptrac (has a GrumPHP task). Decide later, once there is working code to see how the services shape up.
+- Enforce the layer boundaries with a tool (`src/Domain` must not use `Symfony\*`, `Doctrine\*` or implementations from `App\Repository\*`/`App\Infrastructure\*`, only their interfaces): PHPat (a PHPStan extension) or Deptrac (has a GrumPHP task). Decide later, once there is working code to see how the services shape up.
