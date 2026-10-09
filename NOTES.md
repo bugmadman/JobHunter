@@ -109,6 +109,7 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - Tests: PHPUnit 12 + `symfony/phpunit-bridge`. Mocks — standard PHPUnit ones.
 - `assert()` only narrows a type for static analysis where the framework already guarantees it (e.g. `APP_ENV` in `public/index.php`). Never for invariants or input checks: prod runs with `zend.assertions = -1`, where asserts aren't even compiled; domain invariants throw domain exceptions.
 - Style: PHP-CS-Fixer with our own config; the `return` rules (a blank line before `return`, a useless variable before `return`) are covered by it (`blank_line_before_statement`, `return_assignment`) with auto-fixing. PHPCS — only for the 120 line length limit (CS-Fixer doesn't check it).
+- Every non-abstract class is `final`, enforced by PHP-CS-Fixer `final_internal_class` (empty `include`/`exclude`, `consider_absent_docblock_as_internal_class`). Entities included: Doctrine uses native PHP lazy objects (always on in DoctrineBundle 3 on PHP 8.4+) instead of proxies that subclass the entity, so `final` doesn't break lazy loading.
 - Rector, composer-normalize.
 - `symfony/maker-bundle` — boilerplate generation (`make:entity`, `make:migration`, `make:message-handler`, etc.), a key thing for writing code autonomously.
 - `symfony/browser-kit` + `symfony/css-selector` — functional tests of HTTP endpoints and pages (including EasyAdmin).

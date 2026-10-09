@@ -20,6 +20,11 @@ return new PhpCsFixer\Config()
         'declare_strict_types' => true,
         'blank_line_before_statement' => ['statements' => ['return']],
         'return_assignment' => true,
+        'final_internal_class' => [
+            'include' => [],
+            'exclude' => [],
+            'consider_absent_docblock_as_internal_class' => true,
+        ],
     ])
     ->setFinder($finder)
 ;

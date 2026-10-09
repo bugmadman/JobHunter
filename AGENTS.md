@@ -23,6 +23,7 @@ A self-hosted single-user job search service: job postings from platforms → ke
 Only what the tools don't do themselves goes here. Don't duplicate in the rules what is already configured in the tools:
 
 - PHP-CS-Fixer fixes the style, including `declare(strict_types=1)`
+- PHP-CS-Fixer makes every non-abstract class `final`, Doctrine entities included
 - Rector brings the code up to modern PHP (including `readonly` where a property doesn't change)
 - PHPStan level 10 + strict-rules forbids unsafe handling of `mixed`, loose comparisons, etc.
 - GrumPHP runs all the checks on every commit (`make lint` runs them by hand)
