@@ -83,7 +83,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Split the rule files: `AGENTS.md` (project rules), `CLAUDE.md` (Claude Code entry point + Claude-only rules), `CONTRIBUTING.md` (pointer for people), the owner's personal rules in the uncommitted `CLAUDE.local.md`; clean up the agent files; check that the imports reach the subagents
 - [x] [S] Move `Email` and `InvalidEmail` to `src/Domain/Shared/` (see NOTES, "Code structure")
 - [x] [S] PHP-CS-Fixer `final_internal_class` (empty `include`/`exclude`, `consider_absent_docblock_as_internal_class`): every non-abstract class `final`, Doctrine entities included; a line in AGENTS.md "What the tools enforce"; in NOTES why entities can be final (`enable_native_lazy_objects: true`)
-- [ ] [C] `UserService::create()` + `UserServiceInterface` in `src/Domain/User/`: rejects a second user (`UserAlreadyExists`) and an empty password; depends on `UserRepositoryInterface` (`exists()`, `save()`) and a password hasher interface + adapter in `src/Infrastructure/Security/`; unit tests with mocks
+- [x] [C] `UserService::create()` + `UserServiceInterface` in `src/Domain/User/`: rejects a second user (`UserAlreadyExists`) and an empty password; depends on `UserRepositoryInterface` (`exists()`, `save()`) and a password hasher interface + adapter in `src/Infrastructure/Security/`; unit tests with mocks
 - [ ] [S] Console command `app:user:create`: thin, calls `UserServiceInterface`; functional test with the service mocked
 - [ ] [S] Form login, the whole UI is behind the login
 - [ ] [S] `login_throttling` — brute-force protection for the login
