@@ -11,7 +11,7 @@ final readonly class PlainPassword
      */
     private function __construct(
         #[\SensitiveParameter]
-        public string $value,
+        private string $value,
     ) {
     }
 
@@ -22,5 +22,13 @@ final readonly class PlainPassword
         }
 
         return new self($password);
+    }
+
+    /**
+     * @return non-empty-string
+     */
+    public function value(): string
+    {
+        return $this->value;
     }
 }

@@ -17,6 +17,6 @@ final readonly class PasswordHasher implements PasswordHasherInterface
 
     public function hash(PlainPassword $password): string
     {
-        return $this->hasherFactory->getPasswordHasher(User::class)->hash($password->value);
+        return $this->hasherFactory->getPasswordHasher(User::class)->hash($password->value());
     }
 }

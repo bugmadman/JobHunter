@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Domain\User;
 
-use App\Domain\Shared\InvalidEmail;
-use App\Domain\User\EmptyPassword;
+use App\Domain\Shared\Email;
 use App\Domain\User\PlainPassword;
 use App\Domain\User\UserAlreadyExists;
 use App\Domain\User\UserService;
@@ -18,6 +17,8 @@ final class UserServiceTest extends TestCase
 {
     public function testCreatesAndSavesTheUser(): void
     {
+        $password = PlainPassword::fromString('secret');
+
         $users = $this->createMock(UserRepositoryInterface::class);
         $users->method('exists')->willReturn(false);
         $users->expects(self::once())
@@ -28,12 +29,9 @@ final class UserServiceTest extends TestCase
             ));
 
         $hasher = $this->createMock(PasswordHasherInterface::class);
-        $hasher->expects(self::once())
-            ->method('hash')
-            ->with(self::callback(static fn (PlainPassword $password): bool => ' secret ' === $password->value))
-            ->willReturn('hashed-secret');
+        $hasher->expects(self::once())->method('hash')->with($password)->willReturn('hashed-secret');
 
-        $user = new UserService($users, $hasher)->create('  Owner@Example.COM ', ' secret ');
+        $user = new UserService($users, $hasher)->create(Email::fromString('owner@example.com'), $password);
 
         self::assertSame('owner@example.com', $user->getUserIdentifier());
         self::assertSame('hashed-secret', $user->getPassword());
@@ -50,34 +48,9 @@ final class UserServiceTest extends TestCase
 
         $this->expectException(UserAlreadyExists::class);
 
-        new UserService($users, $hasher)->create('owner@example.com', 'secret');
-    }
-
-    public function testRejectsAnInvalidEmail(): void
-    {
-        $users = $this->createMock(UserRepositoryInterface::class);
-        $users->method('exists')->willReturn(false);
-        $users->expects(self::never())->method('save');
-
-        $hasher = $this->createMock(PasswordHasherInterface::class);
-        $hasher->expects(self::never())->method('hash');
-
-        $this->expectException(InvalidEmail::class);
-
-        new UserService($users, $hasher)->create('not-an-email', 'secret');
-    }
-
-    public function testRejectsAnEmptyPassword(): void
-    {
-        $users = $this->createMock(UserRepositoryInterface::class);
-        $users->method('exists')->willReturn(false);
-        $users->expects(self::never())->method('save');
-
-        $hasher = $this->createMock(PasswordHasherInterface::class);
-        $hasher->expects(self::never())->method('hash');
-
-        $this->expectException(EmptyPassword::class);
-
-        new UserService($users, $hasher)->create('owner@example.com', '');
+        new UserService($users, $hasher)->create(
+            Email::fromString('owner@example.com'),
+            PlainPassword::fromString('secret'),
+        );
     }
 }
