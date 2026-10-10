@@ -100,7 +100,8 @@ The server is exposed to the internet, so:
 - a rate limiter on the job posting intake API;
 - encryption of LLM API keys in the DB;
 - `trusted_proxies` behind the tunnel;
-- prod without debug.
+- prod without debug;
+- passwords and secrets (LLM API keys) travel as VOs (`PlainPassword`), and the parameters that take them are marked `#[\SensitiveParameter]`, so they don't end up in stack traces and error logs.
 
 The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job postings: the repository is public anyway, and the intake is protected by the API key and the rate limiter, not by hiding the endpoints. Only the intake API goes into the docs; any internal endpoint is hidden from them or put behind the login.
 
@@ -138,7 +139,7 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - `src/Domain` — framework-free domain code Symfony has no place for, grouped by area: Value Objects, domain exceptions, status enums, domain events, area services. An exception sits next to what it belongs to: `Domain/Shared/Email.php` + `InvalidEmail.php`, `Domain/JobPosting/JobPostingStatus.php`.
 - One service per area: `src/Domain/<Area>/<Area>Service` (`Domain/User/UserService`). It holds the operations that need something outside the entity: the DB, the password hasher, the LLM, several entities at once. An entity's own behavior and invariants stay in the entity: the service calls `$posting->markFiltered()`, it doesn't set the status itself. One large service per area rather than a class per use case: one standard for the whole project and fewer files at this size; an area service is split only once it actually gets in the way.
 - Every data change (create, update, delete) goes through the area service. Controllers, console commands, Messenger handlers and API Platform processors are thin: parse the input, call the service, render the result. Reading for display may go straight to a repository.
-- Repositories: queries plus `save()` (`persist` + `flush`), no logic. Whatever has to change on save (a status, for example) is decided by the service and the entity before `save()`, never inside the repository.
+- Repositories: queries plus `save()` (`persist` + `flush`), no logic. Whatever has to change on save (a status, for example) is decided by the service and the entity before `save()`, never inside the repository. `save()` covers both create and update: Doctrine ignores `persist()` on an already managed entity, and `flush()` writes the changes; there is no separate `update()`.
 - An interface lives next to its implementation: `UserServiceInterface` next to `UserService`, `UserRepositoryInterface` next to `UserRepository` in `src/Repository/`, an adapter's interface next to the adapter in `src/Infrastructure/`. Dependents (controllers, commands, services) use the interface. Reason: every class is `final`, and PHPUnit can't double a final class, so whatever gets mocked needs an interface.
 - `src/Infrastructure` — adapters for external integrations: the Gemini client, platform clients, key encryption, the password hasher. Ideally extractable into a PHP package later.
 - No `Application` layer: use cases live in the area services. The trade-off: entities belong to the domain but stay in `src/Entity`, apart from their VOs and exceptions.

@@ -14,5 +14,5 @@ interface UserServiceInterface
      * @throws InvalidEmail
      * @throws EmptyPassword
      */
-    public function create(string $email, string $plainPassword): User;
+    public function create(string $email, #[\SensitiveParameter] string $plainPassword): User;
 }

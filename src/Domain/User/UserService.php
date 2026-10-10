@@ -17,7 +17,7 @@ final readonly class UserService implements UserServiceInterface
     ) {
     }
 
-    public function create(string $email, string $plainPassword): User
+    public function create(string $email, #[\SensitiveParameter] string $plainPassword): User
     {
         if ($this->users->exists()) {
             throw UserAlreadyExists::create();
