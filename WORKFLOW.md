@@ -26,6 +26,7 @@ Example: not "Bootstrap the project", but separately — "Initialize the project
 
 - Spend effort in proportion to the task, and stay within it.
 - Verify in proportion: one build or test run plus a check of the result itself. No exploratory experiments or research beyond what the task needs; a side consideration goes to the inbox (step 4 of the cycle).
+- When the session's context has grown large, say so at a natural break (right after a commit), name the next task and suggest continuing in a new session: the decisions are already in NOTES.md and PLAN.md, so nothing is lost. Put it as a separate, visually prominent block at the very end of the reply (a quote with a ⚠️ sign between horizontal rules), not as a sentence in the text, so it can't be missed.
 
 ## Commits
 
