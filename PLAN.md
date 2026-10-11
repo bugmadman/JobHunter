@@ -85,13 +85,18 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] PHP-CS-Fixer `final_internal_class` (empty `include`/`exclude`, `consider_absent_docblock_as_internal_class`): every non-abstract class `final`, Doctrine entities included; a line in AGENTS.md "What the tools enforce"; in NOTES why entities can be final (`enable_native_lazy_objects: true`)
 - [x] [C] `UserService::create()` + `UserServiceInterface` in `src/Domain/User/`: rejects a second user (`UserAlreadyExists`) and an empty password; depends on `UserRepositoryInterface` (`exists()`, `save()`) and a password hasher interface + adapter in `src/Infrastructure/Security/`; unit tests with mocks
 - [x] [S] Console command `app:user:create`: thin, calls `UserServiceInterface`; functional test with the service mocked
-- [x] [S] Form login, the whole UI is behind the login
+- [x] [C] Form login, the whole UI is behind the login
 - [ ] [S] `app:user:create` asks for the email when the argument is missing (`#[Ask]`); functional test
 - [ ] [S] Install `symfony/web-profiler-bundle` (dev only): debug toolbar and profiler in dev
 - [ ] [S] AGENTS.md comment rule: it covers comments added by Flex recipes too (doc links, "uncomment this", examples); a comment says why it is done this way, not what the setting does
 - [ ] [S] Remove the recipe and obvious comments from configs, `.env*`, compose, Makefile and code (not the generated `config/reference.php`), keeping only real traps
 - [ ] [S] AGENTS.md repository naming rule: `find…` returns null when nothing is found, `get…` throws; methods required by a framework interface (`loadUserByIdentifier()`) keep their names
-- [ ] [C] `login_throttling` — brute-force protection for the login
+- [ ] [S] Test DB: a separate `_test` database filled from fixtures and rolled back after each test (`dama/doctrine-test-bundle`)
+- [ ] [C] Login tests against the DB: `UserRepository::loadUserByIdentifier()` finds a user by a mixed-case email and returns null for an unknown one; a functional login as a fixture user through the entity provider (drop the in-memory provider from `when@test`)
+- [ ] [C] CSRF tests for cross-site requests: POST `/login` and `/logout` with `Sec-Fetch-Site: cross-site` and a well-formed token are rejected (login error, 403)
+- [ ] [C] `User::__serialize()` puts the crc32c of the password hash into the session instead of the hash itself; entity test
+- [ ] [C] Narrow the public API access to the docs: `^/api/v1/docs` (with its format variants) is public, everything else under `/api/v1` falls under `^/ → ROLE_USER`; `ApiDocsTest` checks that the docs open without login and the entrypoint, `contexts/`, `errors/`, `.well-known/` redirect to `/login`
+- [ ] [C] `login_throttling` — brute-force protection for the login; also make an unknown email take as long as a wrong password (a dummy hash check), so the owner's email can't be confirmed by timing
 - [ ] [S] Empty EasyAdmin dashboard, opens after login
 - [ ] [S] Link to the admin in the base layout navigation
 - [ ] [S] `User.locale` (a `Locale` enum: `en`, `ru`; default `en`) + migration
