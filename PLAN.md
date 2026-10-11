@@ -94,7 +94,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Test DB: a separate `_test` database filled from fixtures and rolled back after each test (`dama/doctrine-test-bundle`)
 - [x] [C] Login tests against the DB: `UserRepository::loadUserByIdentifier()` finds a user by a mixed-case email and returns null for an unknown one; a functional login as a fixture user through the entity provider (drop the in-memory provider from `when@test`)
 - [x] [C] CSRF tests for cross-site requests: POST `/login` and `/logout` with `Sec-Fetch-Site: cross-site` and a well-formed token are rejected (login error, 403)
-- [ ] [C] `User::__serialize()` puts the crc32c of the password hash into the session instead of the hash itself; entity test
+- [x] [C] `User::__serialize()` puts the crc32c of the password hash into the session instead of the hash itself; entity test
 - [ ] [C] Narrow the public API access to the docs: `^/api/v1/docs` (with its format variants) is public, everything else under `/api/v1` falls under `^/ → ROLE_USER`; `ApiDocsTest` checks that the docs open without login and the entrypoint, `contexts/`, `errors/`, `.well-known/` redirect to `/login`
 - [ ] [C] `login_throttling` — brute-force protection for the login; also make an unknown email take as long as a wrong password (a dummy hash check), so the owner's email can't be confirmed by timing
 - [ ] [S] Empty EasyAdmin dashboard, opens after login
