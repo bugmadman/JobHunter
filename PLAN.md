@@ -91,7 +91,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [S] AGENTS.md comment rule: it covers comments added by Flex recipes too (doc links, "uncomment this", examples); a comment says why it is done this way, not what the setting does
 - [ ] [S] Remove the recipe and obvious comments from configs, `.env*`, compose, Makefile and code (not the generated `config/reference.php`), keeping only real traps
 - [ ] [S] AGENTS.md repository naming rule: `find…` returns null when nothing is found, `get…` throws; methods required by a framework interface (`loadUserByIdentifier()`) keep their names
-- [ ] [S] `login_throttling` — brute-force protection for the login
+- [ ] [C] `login_throttling` — brute-force protection for the login
 - [ ] [S] Empty EasyAdmin dashboard, opens after login
 - [ ] [S] Link to the admin in the base layout navigation
 - [ ] [S] `User.locale` (a `Locale` enum: `en`, `ru`; default `en`) + migration
@@ -103,10 +103,10 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [S] `LlmProvider` enum (only Gemini for now)
 - [ ] [S] `LlmTask` enum (CV analysis / prompt generation / matching)
 - [ ] [S] `LlmOperationStatus` enum (pending / done / failed): the state of an LLM call started from the UI and running in Messenger
-- [ ] [S] Provider key entity (provider → apiKey) + migration
+- [ ] [C] Provider key entity (provider → apiKey) + migration
 - [ ] [S] Per-task model selection entity (task → provider + model) + migration
 - [ ] [C] Encryption of LLM API keys in the DB (`sodium`, encryption key in `.env.local`)
-- [ ] [S] EasyAdmin CRUD for keys, the key is shown masked
+- [ ] [C] EasyAdmin CRUD for keys, the key is shown masked
 - [ ] [S] EasyAdmin CRUD for model selection
 - [ ] [C] `LlmClientInterface` + request/response DTOs
 - [ ] [C] `GeminiClient`: text request
@@ -129,16 +129,16 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [C] CV upload form (PDF only, form limit ≤ 10M: PHP's `upload_max_filesize`), saving the original file
 - [ ] [C] CV analysis JSON schema + validation via `justinrainbow/json-schema`
 - [ ] [C] CV analysis service: PDF directly into the LLM call (no text extraction) → validation → saving to `CvProfile`/`CvLanguage`/`Skill`
-- [ ] [S] CV upload dispatches the analysis message; the Messenger handler runs the analysis service and sets the status (done / failed)
+- [ ] [C] CV upload dispatches the analysis message; the Messenger handler runs the analysis service and sets the status (done / failed)
 - [ ] [S] Analysis view page: shows the status, the Turbo frame refreshes until the analysis is done or failed
 
 ## Phase 7 — Per-platform prompts
 
 - [ ] [S] Prompt source enum (generated / manually edited)
-- [ ] [S] `Prompt` entity (platform, text, source, generation status) + migration
+- [ ] [C] `Prompt` entity (platform, text, source, generation status) + migration
 - [ ] [C] Generating a draft prompt from `CvProfile` for a platform (LLM call in a Messenger handler)
 - [ ] [S] "Generate prompt" button: dispatches the message, the Turbo frame refreshes until the draft is ready
-- [ ] [S] Manual prompt editing in EasyAdmin
+- [ ] [C] Manual prompt editing in EasyAdmin
 - [ ] [S] `platforms/upwork.md`
 - [ ] [S] `platforms/linkedin.md`
 - [ ] [S] `platforms/glassdoor.md`
@@ -154,9 +154,9 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 ## Phase 9 — Job posting intake (API Platform)
 
-- [ ] [S] Generating/regenerating the API key in the settings
+- [ ] [C] Generating/regenerating the API key in the settings
 - [ ] [C] API key authenticator (header)
-- [ ] [S] Rate limiter on the job posting intake endpoint
+- [ ] [C] Rate limiter on the job posting intake endpoint
 - [ ] [C] POST endpoint for creating a `JobPosting` (DTO with Assert)
 - [ ] [C] Dispatching a message to Messenger on creation
 - [ ] [S] Verify the endpoint with curl
@@ -177,7 +177,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [S] Job posting card: pipeline history (`JobPostingStageLog`)
 - [ ] [C] Manually override the LLM like/dislike decision in the job posting card (via Turbo, without a reload)
 - [ ] [S] User comment on a job posting (saved via Turbo, without a reload)
-- [ ] [S] "Applied / not applied" status (toggled via Turbo)
+- [ ] [C] "Applied / not applied" status (toggled via Turbo)
 - [ ] [S] Verify the list and the card on a phone (375px width)
 
 ## Phase 12 — Cover letter
@@ -190,9 +190,9 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 ## Phase 13 — Deployment to the home server
 
-- [ ] [S] Prod docker-compose configuration: `compose.prod.yaml`, run with `-f compose.yaml -f compose.prod.yaml` so the dev override isn't merged; on the server `.env.local` sets `COMPOSE_FILE=compose.yaml:compose.prod.yaml`, so a bare `docker compose up` picks the prod set too (`APP_ENV=prod`, no profiler or debug, no DB port)
+- [ ] [C] Prod docker-compose configuration: `compose.prod.yaml`, run with `-f compose.yaml -f compose.prod.yaml` so the dev override isn't merged; on the server `.env.local` sets `COMPOSE_FILE=compose.yaml:compose.prod.yaml`, so a bare `docker compose up` picks the prod set too (`APP_ENV=prod`, no profiler or debug, no DB port)
 - [ ] [S] Prod `php.ini` override: `opcache.validate_timestamps=0`, `zend.assertions=-1`
-- [ ] [S] `trusted_proxies` + `X-Forwarded-*` headers, so that behind the tunnel Symfony sees HTTPS (`https://` links, secure cookies)
+- [ ] [C] `trusted_proxies` + `X-Forwarded-*` headers, so that behind the tunnel Symfony sees HTTPS (`https://` links, secure cookies)
 - [ ] [S] Ingress rule in the existing Cloudflare Tunnel: `jobhunter.madbugs.dev` → `localhost:APP_PORT` on the server
 - [ ] [S] Verify from a phone: login, job posting list, POSTing a job posting via the API over HTTPS
 - [ ] [S] README: installation and first run
