@@ -14,6 +14,8 @@ final class SecurityControllerTest extends WebTestCase
     use LogsInAsOwner;
 
     private const array SAME_ORIGIN = ['HTTP_SEC_FETCH_SITE' => 'same-origin'];
+    private const array CROSS_SITE = ['HTTP_SEC_FETCH_SITE' => 'cross-site'];
+    private const string WELL_FORMED_TOKEN = 'b8L2Vq9xR4mT7nK1wZ3cY6pA';
 
     public function testLoginPageRendersTheForm(): void
     {
@@ -72,6 +74,32 @@ final class SecurityControllerTest extends WebTestCase
         self::assertSelectorTextContains('.alert-danger', 'Invalid CSRF token.');
     }
 
+    public function testSameOriginLoginWithWellFormedTokenOpensTheHomePage(): void
+    {
+        $client = self::createClient();
+        $this->submitLogin($client, AppFixtures::OWNER_EMAIL, AppFixtures::OWNER_PASSWORD, self::WELL_FORMED_TOKEN);
+
+        self::assertResponseRedirects('/');
+    }
+
+    public function testCrossSiteLoginWithWellFormedTokenShowsAnError(): void
+    {
+        $client = self::createClient();
+        $this->submitLogin(
+            $client,
+            AppFixtures::OWNER_EMAIL,
+            AppFixtures::OWNER_PASSWORD,
+            self::WELL_FORMED_TOKEN,
+            self::CROSS_SITE,
+        );
+
+        self::assertResponseRedirects('/login');
+        $client->followRedirect();
+        self::assertSelectorTextContains('.alert-danger', 'Invalid CSRF token.');
+        $client->request('GET', '/');
+        self::assertResponseRedirects('/login');
+    }
+
     public function testLogoutFormLogsTheUserOut(): void
     {
         $client = self::createClient();
@@ -94,11 +122,38 @@ final class SecurityControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testSameOriginLogoutWithWellFormedTokenLogsTheUserOut(): void
+    {
+        $client = self::createClient();
+        $this->logInAsOwner($client);
+        $client->request('GET', '/');
+        $client->submitForm('Log out', ['_csrf_token' => self::WELL_FORMED_TOKEN], 'POST', self::SAME_ORIGIN);
+        $client->request('GET', '/');
+
+        self::assertResponseRedirects('/login');
+    }
+
+    public function testCrossSiteLogoutWithWellFormedTokenKeepsTheUserLoggedIn(): void
+    {
+        $client = self::createClient();
+        $this->logInAsOwner($client);
+        $client->request('GET', '/');
+        $client->submitForm('Log out', ['_csrf_token' => self::WELL_FORMED_TOKEN], 'POST', self::CROSS_SITE);
+
+        self::assertResponseStatusCodeSame(403);
+        $client->request('GET', '/');
+        self::assertResponseIsSuccessful();
+    }
+
+    /**
+     * @param array<string, string> $server
+     */
     private function submitLogin(
         KernelBrowser $client,
         string $email,
         string $password,
         ?string $csrfToken = null,
+        array $server = self::SAME_ORIGIN,
     ): void {
         $client->request('GET', '/login');
         $values = ['_username' => $email, '_password' => $password];
@@ -106,6 +161,6 @@ final class SecurityControllerTest extends WebTestCase
             $values['_csrf_token'] = $csrfToken;
         }
 
-        $client->submitForm('Log in', $values, 'POST', self::SAME_ORIGIN);
+        $client->submitForm('Log in', $values, 'POST', $server);
     }
 }
