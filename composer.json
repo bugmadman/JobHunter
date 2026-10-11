@@ -26,6 +26,7 @@
         "symfony/yaml": "~7.4.0"
     },
     "require-dev": {
+        "dama/doctrine-test-bundle": "^8.7",
         "doctrine/doctrine-fixtures-bundle": "^4.3",
         "ergebnis/composer-normalize": "^2.54",
         "fakerphp/faker": "^1.24",

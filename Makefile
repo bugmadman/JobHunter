@@ -3,13 +3,14 @@
 DC = docker compose --env-file .env $$([ -f .env.local ] && echo --env-file .env.local)
 PHP = $(DC) exec php
 
-.PHONY: init upd updb down ps in cs fix stan test lint
+.PHONY: init upd updb down ps in cs fix stan test test-db lint
 
 init: .env.local
 	$(DC) build
 	$(DC) run --rm --no-deps php composer install
 	$(DC) up -d --wait
 	$(PHP) bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+	$(MAKE) test-db
 
 # The host's UID goes into the image, so that files the container creates in the project belong to the host user.
 # UID 0 would clash with the image's root and fail the build with an unclear "adduser: uid '0' in use"
@@ -53,6 +54,13 @@ stan:
 
 test:
 	$(PHP) bin/phpunit
+
+# Not run by test, to keep it fast: rerun after a new migration or a fixture change, or tests hit a stale schema
+test-db:
+	$(PHP) bin/console doctrine:database:drop --env=test --force --if-exists
+	$(PHP) bin/console doctrine:database:create --env=test
+	$(PHP) bin/console doctrine:migrations:migrate --env=test --no-interaction --allow-no-migration
+	$(PHP) bin/console doctrine:fixtures:load --env=test --no-interaction
 
 lint: cs stan test
 	$(PHP) vendor/bin/rector process --dry-run

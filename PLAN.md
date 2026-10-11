@@ -91,7 +91,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] AGENTS.md comment rule: it covers comments added by Flex recipes too (doc links, "uncomment this", examples); a comment says why it is done this way, not what the setting does
 - [x] [S] Remove the recipe and obvious comments from configs, `.env*`, compose, Makefile and code (not the generated `config/reference.php`), keeping only real traps
 - [x] [S] AGENTS.md repository naming rule: `find…` returns null when nothing is found, `get…` throws; methods required by a framework interface (`loadUserByIdentifier()`) keep their names
-- [ ] [S] Test DB: a separate `_test` database filled from fixtures and rolled back after each test (`dama/doctrine-test-bundle`)
+- [x] [S] Test DB: a separate `_test` database filled from fixtures and rolled back after each test (`dama/doctrine-test-bundle`)
 - [ ] [C] Login tests against the DB: `UserRepository::loadUserByIdentifier()` finds a user by a mixed-case email and returns null for an unknown one; a functional login as a fixture user through the entity provider (drop the in-memory provider from `when@test`)
 - [ ] [C] CSRF tests for cross-site requests: POST `/login` and `/logout` with `Sec-Fetch-Site: cross-site` and a well-formed token are rejected (login error, 403)
 - [ ] [C] `User::__serialize()` puts the crc32c of the password hash into the session instead of the hash itself; entity test

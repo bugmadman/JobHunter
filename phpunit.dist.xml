@@ -43,5 +43,6 @@
             <parameter name="clock-mock-namespaces" value="App" />
             <parameter name="dns-mock-namespaces" value="App" />
         </bootstrap>
+        <bootstrap class="DAMA\DoctrineTestBundle\PHPUnit\PHPUnitExtension" />
     </extensions>
 </phpunit>
