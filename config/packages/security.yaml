@@ -18,6 +18,9 @@ security:
                 login_path: app_login
                 check_path: app_login
                 enable_csrf: true
+            login_throttling:
+                max_attempts: 5
+                interval: '15 minutes'
             logout:
                 path: /logout
                 enable_csrf: true
@@ -28,7 +31,15 @@ security:
         - { path: ^/, roles: ROLE_USER }
 
 when@test:
+    services:
+        test.login_throttling.storage:
+            class: Symfony\Component\RateLimiter\Storage\InMemoryStorage
+
     security:
+        firewalls:
+            main:
+                login_throttling:
+                    storage_service: test.login_throttling.storage
         password_hashers:
             App\Entity\User:
                 algorithm: auto

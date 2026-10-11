@@ -1,0 +1,4 @@
+# The vendor translation is a "|" plural string, which needs a %count% the throttling exception doesn't pass
+'Too many failed login attempts, please try again in %minutes% minutes.': >-
+    Слишком много неудачных попыток входа, повторите попытку через
+    {minutes, plural, one {# минуту} few {# минуты} other {# минут}}.

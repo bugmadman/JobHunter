@@ -96,7 +96,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 
 The server is exposed to the internet, so:
 
-- `login_throttling` on the login form;
+- `login_throttling` on the login form: 5 failed attempts per 15 minutes per email + IP, 25 per IP (Symfony's global limiter), with `symfony/lock`, so concurrent failed attempts aren't lost in a read-modify-write race of the limiter state. An unknown email costs a password hash (of a dummy password, with the configured hasher), so it answers as slowly as a wrong password and the owner's email can't be confirmed by timing. Hashing rather than verifying a stored dummy hash: it costs the same and always follows the configured algorithm and cost;
 - a rate limiter on the job posting intake API;
 - encryption of LLM API keys in the DB;
 - `trusted_proxies` behind the tunnel;
@@ -194,6 +194,7 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - A formal coverage % as a hard gate → a mandatory test for every business rule: a % breeds useless tests on getters/DTOs/configs.
 - "Cheap writer / expensive reviewer" or the other way round; a review by the same model that wrote the code → a strong model writes, a different independent model reviews.
 - Duplicating in the rules (AGENTS.md) what the tools check → not duplicated.
+- Testing Symfony's own login limiter behavior (a different email from the same IP isn't blocked by the per-email limit, a successful login resets the counter) → not tested. Tests cover our logic, not the framework's: the key and the reset live in `DefaultLoginRateLimiter`, which Symfony tests itself, and such tests would break on a Symfony upgrade with no change in our code. What is ours is the config (5 attempts, 15 minutes, on `main`, blocks even the right password), and that is tested. A custom limiter (e.g. a different key for a multi-user version) would be our code and gets tested.
 
 ## Inbox
 
@@ -205,3 +206,5 @@ The owner writes new thoughts here as is, without structure. After discussion th
 - Enforce the layer boundaries with a tool (`src/Domain` must not use `Symfony\*`, `Doctrine\*` or implementations from `App\Repository\*`/`App\Infrastructure\*`, only their interfaces): PHPat (a PHPStan extension) or Deptrac (has a GrumPHP task). Decide later, once there is working code to see how the services shape up.
 - Building a VO from raw input needs a `try/catch` at every entry point (`Email::fromString()` throws `InvalidEmail`; the login loader `UserRepository::loadUserByIdentifier()` must return null, not 500). It is easy to forget at a new entry point. Options: `Email::tryFromString(): ?self` where invalid means "not found"; a shared exception listener mapping domain validation errors (`InvalidEmail`, etc.) to 422 for the API; DTOs validated by `Assert\Email` before the VO is built. Decide once forms/API DTOs appear.
 - Dev demo data, once there is domain data (postings, CV, criteria): a separate `DevFixtures` with `#[When(env: 'dev')]` and a `make demo` target loading it with `--append` (never purges; `UserService` refuses if a user exists). A bare `doctrine:fixtures:load` in dev still purges, so decide explicitly that the dev instance holds no real data (the owner uses a separate prod deployment).
+- The login limiter keys on the client IP: until `trusted_proxies` is set, every request behind the tunnel comes from the `cloudflared` address, so the per-IP limit (25 failures per 15 minutes) is shared by everyone and an attacker can lock the owner out of the login. Check this when doing the `trusted_proxies` task; that task must land before any deployment.
+- The login limiter counters live in the filesystem cache (`cache.app`) and the lock is `flock`: fine for one `php` container and a single user. For a multi-user version, or as soon as there is more than one PHP instance (replicas behind a balancer, a separate container also serving HTTP), each instance would count and lock on its own, multiplying the limit and losing the race protection. Then move the limiter storage (`login_throttling.cache_pool`) and `LOCK_DSN` to a shared store: Redis, or PostgreSQL (`cache.adapter.doctrine_dbal` + a DBAL lock) without a new service. Config only, no code changes.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\DataFixtures\AppFixtures;
+use App\Infrastructure\Security\PasswordHasherInterface;
 use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -16,6 +17,7 @@ final class SecurityControllerTest extends WebTestCase
     private const array SAME_ORIGIN = ['HTTP_SEC_FETCH_SITE' => 'same-origin'];
     private const array CROSS_SITE = ['HTTP_SEC_FETCH_SITE' => 'cross-site'];
     private const string WELL_FORMED_TOKEN = 'b8L2Vq9xR4mT7nK1wZ3cY6pA';
+    private const string THROTTLED = 'Too many failed login attempts, please try again in 15 minutes.';
 
     public function testLoginPageRendersTheForm(): void
     {
@@ -61,6 +63,41 @@ final class SecurityControllerTest extends WebTestCase
         $client->followRedirect();
         self::assertSelectorTextContains('.alert-danger', 'Invalid credentials.');
         $client->request('GET', '/');
+        self::assertResponseRedirects('/login');
+    }
+
+    public function testLoginIsThrottledAfterFiveFailedAttemptsEvenWithTheRightPassword(): void
+    {
+        $client = self::createClient();
+        // A reboot would rebuild the container and drop the in-memory limiter state between the attempts
+        $client->disableReboot();
+        for ($attempt = 1; $attempt <= 5; ++$attempt) {
+            $this->submitLogin($client, AppFixtures::OWNER_EMAIL, 'wrong');
+            $client->followRedirect();
+            self::assertSelectorTextContains('.alert-danger', 'Invalid credentials.');
+        }
+
+        $this->submitLogin($client, AppFixtures::OWNER_EMAIL, AppFixtures::OWNER_PASSWORD);
+
+        self::assertResponseRedirects('/login');
+        $client->followRedirect();
+        self::assertSelectorTextContains('.alert-danger', self::THROTTLED);
+        $client->request('GET', '/');
+        self::assertResponseRedirects('/login');
+    }
+
+    #[TestWith(['nobody@example.com', 1])]
+    #[TestWith([AppFixtures::OWNER_EMAIL, 0])]
+    public function testOnlyAnUnknownEmailCostsADummyPasswordHash(string $email, int $dummyHashes): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        $hasher = $this->createMock(PasswordHasherInterface::class);
+        $hasher->expects(self::exactly($dummyHashes))->method('hash');
+        self::getContainer()->set(PasswordHasherInterface::class, $hasher);
+
+        $this->submitLogin($client, $email, 'wrong');
+
         self::assertResponseRedirects('/login');
     }
 
