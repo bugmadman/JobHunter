@@ -4,3 +4,12 @@ app:
 home:
     title: Job postings
     placeholder: The job posting list will be here.
+
+nav:
+    logout: Log out
+
+login:
+    title: Log in
+    email: Email
+    password: Password
+    submit: Log in

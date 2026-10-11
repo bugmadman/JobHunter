@@ -85,7 +85,12 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] PHP-CS-Fixer `final_internal_class` (empty `include`/`exclude`, `consider_absent_docblock_as_internal_class`): every non-abstract class `final`, Doctrine entities included; a line in AGENTS.md "What the tools enforce"; in NOTES why entities can be final (`enable_native_lazy_objects: true`)
 - [x] [C] `UserService::create()` + `UserServiceInterface` in `src/Domain/User/`: rejects a second user (`UserAlreadyExists`) and an empty password; depends on `UserRepositoryInterface` (`exists()`, `save()`) and a password hasher interface + adapter in `src/Infrastructure/Security/`; unit tests with mocks
 - [x] [S] Console command `app:user:create`: thin, calls `UserServiceInterface`; functional test with the service mocked
-- [ ] [S] Form login, the whole UI is behind the login
+- [x] [S] Form login, the whole UI is behind the login
+- [ ] [S] `app:user:create` asks for the email when the argument is missing (`#[Ask]`); functional test
+- [ ] [S] Install `symfony/web-profiler-bundle` (dev only): debug toolbar and profiler in dev
+- [ ] [S] AGENTS.md comment rule: it covers comments added by Flex recipes too (doc links, "uncomment this", examples); a comment says why it is done this way, not what the setting does
+- [ ] [S] Remove the recipe and obvious comments from configs, `.env*`, compose, Makefile and code (not the generated `config/reference.php`), keeping only real traps
+- [ ] [S] AGENTS.md repository naming rule: `find…` returns null when nothing is found, `get…` throws; methods required by a framework interface (`loadUserByIdentifier()`) keep their names
 - [ ] [S] `login_throttling` — brute-force protection for the login
 - [ ] [S] Empty EasyAdmin dashboard, opens after login
 - [ ] [S] Link to the admin in the base layout navigation

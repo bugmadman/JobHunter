@@ -4,3 +4,12 @@ app:
 home:
     title: Вакансии
     placeholder: Здесь будет список вакансий.
+
+nav:
+    logout: Выйти
+
+login:
+    title: Вход
+    email: Эл. почта
+    password: Пароль
+    submit: Войти
