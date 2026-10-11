@@ -34,6 +34,20 @@ final class CreateUserCommandTest extends KernelTestCase
         self::assertStringContainsString('User owner@example.com created.', $tester->getDisplay());
     }
 
+    public function testAsksForTheEmailWhenTheArgumentIsMissing(): void
+    {
+        $userService = $this->createMock(UserServiceInterface::class);
+        $userService->expects(self::once())
+            ->method('create')
+            ->with(self::callback(static fn (Email $email): bool => 'owner@example.com' === $email->value))
+            ->willReturn(new User(Email::fromString('owner@example.com'), 'hash'));
+
+        $tester = $this->commandTester($userService, 'owner@example.com', 'secret');
+
+        self::assertSame(Command::SUCCESS, $tester->execute([]));
+        self::assertStringContainsString('Email', $tester->getDisplay());
+    }
+
     public function testShowsTheErrorWhenTheUserExists(): void
     {
         $userService = self::createStub(UserServiceInterface::class);
@@ -61,13 +75,13 @@ final class CreateUserCommandTest extends KernelTestCase
         self::assertStringContainsString($error, $tester->getDisplay());
     }
 
-    private function commandTester(UserServiceInterface $userService, string $password): CommandTester
+    private function commandTester(UserServiceInterface $userService, string ...$inputs): CommandTester
     {
         $kernel = self::bootKernel();
         self::getContainer()->set(UserServiceInterface::class, $userService);
 
         $tester = new CommandTester(new Application($kernel)->find('app:user:create'));
-        $tester->setInputs([$password]);
+        $tester->setInputs(array_values($inputs));
 
         return $tester;
     }

@@ -12,6 +12,7 @@ use App\Domain\User\UserAlreadyExists;
 use App\Domain\User\UserServiceInterface;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Attribute\Ask;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -23,8 +24,11 @@ final readonly class CreateUserCommand
     ) {
     }
 
-    public function __invoke(SymfonyStyle $io, #[Argument('The email to log in with')] string $email): int
-    {
+    public function __invoke(
+        SymfonyStyle $io,
+        #[Argument('The email to log in with'), Ask('Email')]
+        string $email,
+    ): int {
         $password = $io->askHidden('Password');
 
         try {
