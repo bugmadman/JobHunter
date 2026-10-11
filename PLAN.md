@@ -89,7 +89,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] `app:user:create` asks for the email when the argument is missing (`#[Ask]`); functional test
 - [x] [S] Install `symfony/web-profiler-bundle` (dev only): debug toolbar and profiler in dev
 - [x] [S] AGENTS.md comment rule: it covers comments added by Flex recipes too (doc links, "uncomment this", examples); a comment says why it is done this way, not what the setting does
-- [ ] [S] Remove the recipe and obvious comments from configs, `.env*`, compose, Makefile and code (not the generated `config/reference.php`), keeping only real traps
+- [x] [S] Remove the recipe and obvious comments from configs, `.env*`, compose, Makefile and code (not the generated `config/reference.php`), keeping only real traps
 - [ ] [S] AGENTS.md repository naming rule: `find…` returns null when nothing is found, `get…` throws; methods required by a framework interface (`loadUserByIdentifier()`) keep their names
 - [ ] [S] Test DB: a separate `_test` database filled from fixtures and rolled back after each test (`dama/doctrine-test-bundle`)
 - [ ] [C] Login tests against the DB: `UserRepository::loadUserByIdentifier()` finds a user by a mixed-case email and returns null for an unknown one; a functional login as a fixture user through the entity provider (drop the in-memory provider from `when@test`)

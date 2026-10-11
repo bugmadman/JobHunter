@@ -37,7 +37,6 @@ ps:
 in:
 	$(DC) exec php sh
 
-# Checks only, nothing is changed
 cs:
 	$(PHP) vendor/bin/php-cs-fixer fix --dry-run --diff
 	$(PHP) vendor/bin/phpcs

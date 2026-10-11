@@ -1,6 +1,3 @@
-# https://frankenphp.dev/docs/config
-# https://caddyserver.com/docs/caddyfile
-
 {
 	# The image's HEALTHCHECK polls localhost:2019/metrics
 	admin localhost:2019
