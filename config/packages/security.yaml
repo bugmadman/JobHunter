@@ -37,16 +37,3 @@ when@test:
                 cost: 4
                 time_cost: 3
                 memory_cost: 10
-            Symfony\Component\Security\Core\User\InMemoryUser: plaintext
-
-        # Functional tests log in with loginUser(), and the entity provider would refresh that user from the DB.
-        # The password must match the one passed to loginUser(): InMemoryUser::isEqualTo() compares them
-        providers:
-            test_users:
-                memory:
-                    users:
-                        owner@example.com: { password: owner, roles: [ROLE_USER] }
-
-        firewalls:
-            main:
-                provider: test_users

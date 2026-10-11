@@ -92,7 +92,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Remove the recipe and obvious comments from configs, `.env*`, compose, Makefile and code (not the generated `config/reference.php`), keeping only real traps
 - [x] [S] AGENTS.md repository naming rule: `find…` returns null when nothing is found, `get…` throws; methods required by a framework interface (`loadUserByIdentifier()`) keep their names
 - [x] [S] Test DB: a separate `_test` database filled from fixtures and rolled back after each test (`dama/doctrine-test-bundle`)
-- [ ] [C] Login tests against the DB: `UserRepository::loadUserByIdentifier()` finds a user by a mixed-case email and returns null for an unknown one; a functional login as a fixture user through the entity provider (drop the in-memory provider from `when@test`)
+- [x] [C] Login tests against the DB: `UserRepository::loadUserByIdentifier()` finds a user by a mixed-case email and returns null for an unknown one; a functional login as a fixture user through the entity provider (drop the in-memory provider from `when@test`)
 - [ ] [C] CSRF tests for cross-site requests: POST `/login` and `/logout` with `Sec-Fetch-Site: cross-site` and a well-formed token are rejected (login error, 403)
 - [ ] [C] `User::__serialize()` puts the crc32c of the password hash into the session instead of the hash itself; entity test
 - [ ] [C] Narrow the public API access to the docs: `^/api/v1/docs` (with its format variants) is public, everything else under `/api/v1` falls under `^/ → ROLE_USER`; `ApiDocsTest` checks that the docs open without login and the entrypoint, `contexts/`, `errors/`, `.well-known/` redirect to `/login`

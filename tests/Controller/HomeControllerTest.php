@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Security\Core\User\InMemoryUser;
 
 final class HomeControllerTest extends WebTestCase
 {
+    use LogsInAsOwner;
+
     public function testHomePageRendersOnTheBaseLayout(): void
     {
         $client = self::createClient();
-        $client->loginUser(new InMemoryUser('owner@example.com', 'owner', ['ROLE_USER']));
+        $this->logInAsOwner($client);
         $client->request('GET', '/');
 
         self::assertResponseIsSuccessful();

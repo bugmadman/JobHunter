@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller;
 
+use App\DataFixtures\AppFixtures;
+use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Security\Core\User\InMemoryUser;
 
 final class SecurityControllerTest extends WebTestCase
 {
+    use LogsInAsOwner;
+
     private const array SAME_ORIGIN = ['HTTP_SEC_FETCH_SITE' => 'same-origin'];
 
     public function testLoginPageRendersTheForm(): void
@@ -26,16 +29,18 @@ final class SecurityControllerTest extends WebTestCase
     public function testLoginPageRedirectsLoggedInUserHome(): void
     {
         $client = self::createClient();
-        $client->loginUser(new InMemoryUser('owner@example.com', 'owner', ['ROLE_USER']));
+        $this->logInAsOwner($client);
         $client->request('GET', '/login');
 
         self::assertResponseRedirects('/');
     }
 
-    public function testLoginWithValidCredentialsOpensTheHomePage(): void
+    #[TestWith([AppFixtures::OWNER_EMAIL])]
+    #[TestWith(['Owner@Example.COM'])]
+    public function testLoginWithValidCredentialsOpensTheHomePage(string $email): void
     {
         $client = self::createClient();
-        $this->submitLogin($client, 'owner@example.com', 'owner');
+        $this->submitLogin($client, $email, AppFixtures::OWNER_PASSWORD);
 
         self::assertResponseRedirects('/');
         $client->followRedirect();
@@ -43,20 +48,24 @@ final class SecurityControllerTest extends WebTestCase
         self::assertSelectorExists('form[action^="/logout"]');
     }
 
-    public function testLoginWithWrongPasswordShowsAnError(): void
+    #[TestWith([AppFixtures::OWNER_EMAIL, 'wrong'])]
+    #[TestWith(['nobody@example.com', AppFixtures::OWNER_PASSWORD])]
+    public function testLoginWithWrongCredentialsShowsAnError(string $email, string $password): void
     {
         $client = self::createClient();
-        $this->submitLogin($client, 'owner@example.com', 'wrong');
+        $this->submitLogin($client, $email, $password);
 
         self::assertResponseRedirects('/login');
         $client->followRedirect();
         self::assertSelectorTextContains('.alert-danger', 'Invalid credentials.');
+        $client->request('GET', '/');
+        self::assertResponseRedirects('/login');
     }
 
     public function testLoginWithInvalidCsrfTokenShowsAnError(): void
     {
         $client = self::createClient();
-        $this->submitLogin($client, 'owner@example.com', 'owner', 'invalid');
+        $this->submitLogin($client, AppFixtures::OWNER_EMAIL, AppFixtures::OWNER_PASSWORD, 'invalid');
 
         self::assertResponseRedirects('/login');
         $client->followRedirect();
@@ -66,7 +75,7 @@ final class SecurityControllerTest extends WebTestCase
     public function testLogoutFormLogsTheUserOut(): void
     {
         $client = self::createClient();
-        $client->loginUser(new InMemoryUser('owner@example.com', 'owner', ['ROLE_USER']));
+        $this->logInAsOwner($client);
         $client->request('GET', '/');
         $client->submitForm('Log out', [], 'POST', self::SAME_ORIGIN);
         $client->request('GET', '/');
@@ -77,7 +86,7 @@ final class SecurityControllerTest extends WebTestCase
     public function testLogoutByGetWithoutCsrfTokenKeepsTheUserLoggedIn(): void
     {
         $client = self::createClient();
-        $client->loginUser(new InMemoryUser('owner@example.com', 'owner', ['ROLE_USER']));
+        $this->logInAsOwner($client);
         $client->request('GET', '/logout');
 
         self::assertResponseStatusCodeSame(403);
