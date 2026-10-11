@@ -88,12 +88,14 @@ final class SecurityControllerTest extends WebTestCase
 
     #[TestWith(['nobody@example.com', 1])]
     #[TestWith([AppFixtures::OWNER_EMAIL, 0])]
-    public function testOnlyAnUnknownEmailCostsADummyPasswordHash(string $email, int $dummyHashes): void
-    {
+    public function testOnlyAnUnknownEmailVerifiesThePasswordAgainstTheDummyHash(
+        string $email,
+        int $dummyVerifications,
+    ): void {
         $client = self::createClient();
         $client->disableReboot();
         $hasher = $this->createMock(PasswordHasherInterface::class);
-        $hasher->expects(self::exactly($dummyHashes))->method('hash');
+        $hasher->expects(self::exactly($dummyVerifications))->method('verify')->with(self::anything(), 'wrong');
         self::getContainer()->set(PasswordHasherInterface::class, $hasher);
 
         $this->submitLogin($client, $email, 'wrong');

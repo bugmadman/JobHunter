@@ -97,6 +97,8 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] `User::__serialize()` puts the crc32c of the password hash into the session instead of the hash itself; entity test
 - [x] [C] Narrow the public API access to the docs: `^/api/v1/docs` (with its format variants) is public, everything else under `/api/v1` falls under `^/ → ROLE_USER`; `ApiDocsTest` checks that the docs open without login and the entrypoint, `contexts/`, `errors/`, `.well-known/` redirect to `/login`
 - [x] [C] `login_throttling` — brute-force protection for the login; also make an unknown email take as long as a wrong password (a dummy hash check), so the owner's email can't be confirmed by timing
+- [x] [C] `UnknownUserLoginListener`: only on the `main` firewall; verify the submitted password against a dummy hash made by the configured hasher (regenerated when it needs a rehash) instead of hashing a constant, so a password over 4096 bytes is rejected as fast as for a known email; find `UserNotFoundException` anywhere in the exception chain; tests
+- [ ] [C] Rehash the owner's password on login when the hasher config changes (`PasswordUpgraderInterface`), so a wrong password and the dummy check cost the same; tests
 - [ ] [S] Empty EasyAdmin dashboard, opens after login
 - [ ] [S] Link to the admin in the base layout navigation
 - [ ] [S] `User.locale` (a `Locale` enum: `en`, `ru`; default `en`) + migration
