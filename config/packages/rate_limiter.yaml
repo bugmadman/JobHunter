@@ -1,0 +1,18 @@
+framework:
+    rate_limiter:
+        intake_api:
+            policy: token_bucket
+            limit: 120
+            rate: { interval: '1 second', amount: 1 }
+
+when@test:
+    services:
+        test.intake_api_limiter.storage:
+            class: Symfony\Component\RateLimiter\Storage\InMemoryStorage
+
+    framework:
+        rate_limiter:
+            intake_api:
+                limit: 3
+                rate: { interval: '1 minute', amount: 1 }
+                storage_service: test.intake_api_limiter.storage

@@ -3,6 +3,7 @@ app:
 
 api:
     unauthorized: A valid API key is required.
+    too_many_requests: Too many requests. Try again later.
 
 home:
     title: Job postings

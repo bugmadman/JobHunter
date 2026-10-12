@@ -3,6 +3,7 @@ app:
 
 api:
     unauthorized: Нужен действующий API-ключ.
+    too_many_requests: Слишком много запросов, повторите позже.
 
 home:
     title: Вакансии
