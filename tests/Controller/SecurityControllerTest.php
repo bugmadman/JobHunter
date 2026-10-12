@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\DataFixtures\AppFixtures;
+use App\Entity\User;
 use App\Infrastructure\Security\PasswordHasherInterface;
+use App\Repository\UserRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -50,6 +53,27 @@ final class SecurityControllerTest extends WebTestCase
         $client->followRedirect();
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('form[action^="/logout"]');
+    }
+
+    public function testLoginRehashesAPasswordHashedWithAnOutdatedHasherConfig(): void
+    {
+        $client = self::createClient();
+        $outdatedHash = password_hash(AppFixtures::OWNER_PASSWORD, \PASSWORD_BCRYPT, ['cost' => 5]);
+        $owner = $this->owner();
+        $owner->changePasswordHash($outdatedHash);
+        $this->users()->save($owner);
+        self::assertTrue($this->hasher()->needsRehash($outdatedHash));
+
+        $this->submitLogin($client, AppFixtures::OWNER_EMAIL, AppFixtures::OWNER_PASSWORD);
+
+        self::assertResponseRedirects('/');
+        $this->entityManager()->clear();
+        $upgradedHash = $this->owner()->getPassword();
+        self::assertNotSame($outdatedHash, $upgradedHash);
+        self::assertFalse($this->hasher()->needsRehash($upgradedHash));
+        self::assertTrue($this->hasher()->verify($upgradedHash, AppFixtures::OWNER_PASSWORD));
+        $client->followRedirect();
+        self::assertResponseIsSuccessful();
     }
 
     #[TestWith([AppFixtures::OWNER_EMAIL, 'wrong'])]
@@ -182,6 +206,38 @@ final class SecurityControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         $client->request('GET', '/');
         self::assertResponseIsSuccessful();
+    }
+
+    private function owner(): User
+    {
+        $owner = $this->users()->loadUserByIdentifier(AppFixtures::OWNER_EMAIL);
+        self::assertInstanceOf(User::class, $owner);
+
+        return $owner;
+    }
+
+    private function users(): UserRepository
+    {
+        $users = self::getContainer()->get(UserRepository::class);
+        self::assertInstanceOf(UserRepository::class, $users);
+
+        return $users;
+    }
+
+    private function hasher(): PasswordHasherInterface
+    {
+        $hasher = self::getContainer()->get(PasswordHasherInterface::class);
+        self::assertInstanceOf(PasswordHasherInterface::class, $hasher);
+
+        return $hasher;
+    }
+
+    private function entityManager(): EntityManagerInterface
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+
+        return $entityManager;
     }
 
     /**

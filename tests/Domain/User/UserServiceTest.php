@@ -53,4 +53,20 @@ final class UserServiceTest extends TestCase
             PlainPassword::fromString('secret'),
         );
     }
+
+    public function testUpgradedPasswordHashIsSaved(): void
+    {
+        $user = new User(Email::fromString('owner@example.com'), 'old-hash');
+
+        $users = $this->createMock(UserRepositoryInterface::class);
+        $users->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static fn (User $saved): bool => $saved === $user
+                && 'new-hash' === $saved->getPassword()));
+
+        $hasher = $this->createMock(PasswordHasherInterface::class);
+        $hasher->expects(self::never())->method('hash');
+
+        new UserService($users, $hasher)->upgradePasswordHash($user, 'new-hash');
+    }
 }

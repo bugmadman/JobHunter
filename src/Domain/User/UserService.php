@@ -28,4 +28,10 @@ final readonly class UserService implements UserServiceInterface
 
         return $user;
     }
+
+    public function upgradePasswordHash(User $user, #[\SensitiveParameter] string $passwordHash): void
+    {
+        $user->changePasswordHash($passwordHash);
+        $this->users->save($user);
+    }
 }

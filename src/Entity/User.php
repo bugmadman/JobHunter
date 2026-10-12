@@ -25,14 +25,10 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private string $password;
 
-    public function __construct(Email $email, string $passwordHash)
+    public function __construct(Email $email, #[\SensitiveParameter] string $passwordHash)
     {
-        if ('' === $passwordHash) {
-            throw new \InvalidArgumentException('The password hash must not be empty.');
-        }
-
         $this->email = $email->value;
-        $this->password = $passwordHash;
+        $this->password = self::nonEmptyHash($passwordHash);
     }
 
     public function getId(): ?int
@@ -60,6 +56,11 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->password;
     }
 
+    public function changePasswordHash(#[\SensitiveParameter] string $passwordHash): void
+    {
+        $this->password = self::nonEmptyHash($passwordHash);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -69,6 +70,15 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
         $data["\0".self::class."\0password"] = hash('crc32c', $this->password);
 
         return $data;
+    }
+
+    private static function nonEmptyHash(#[\SensitiveParameter] string $passwordHash): string
+    {
+        if ('' === $passwordHash) {
+            throw new \InvalidArgumentException('The password hash must not be empty.');
+        }
+
+        return $passwordHash;
     }
 
     #[\Deprecated]

@@ -25,6 +25,27 @@ final class UserTest extends TestCase
         new User(Email::fromString('owner@example.com'), '');
     }
 
+    public function testPasswordHashIsChanged(): void
+    {
+        $user = new User(Email::fromString('owner@example.com'), 'old-hash');
+
+        $user->changePasswordHash('new-hash');
+
+        self::assertSame('new-hash', $user->getPassword());
+    }
+
+    public function testChangeToAnEmptyPasswordHashIsRejected(): void
+    {
+        $user = new User(Email::fromString('owner@example.com'), 'old-hash');
+
+        try {
+            $user->changePasswordHash('');
+            self::fail('An empty password hash was accepted.');
+        } catch (\InvalidArgumentException) {
+            self::assertSame('old-hash', $user->getPassword());
+        }
+    }
+
     public function testSessionKeepsTheCrc32cOfThePasswordHashInsteadOfTheHash(): void
     {
         $hash = '$2y$13$abcdefghijklmnopqrstuuJ5hZ0bS9Qm7m3p3Yc8eGqkqJt9w1x2y';
