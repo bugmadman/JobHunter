@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Domain\Skill\SkillName;
 use App\Repository\SkillRepository;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -17,10 +18,12 @@ final class Skill
     #[ORM\Column]
     private ?int $id = null;
 
-    public function __construct(
-        #[ORM\Column(length: self::MAX_NAME_LENGTH, unique: true)]
-        private string $name,
-    ) {
+    #[ORM\Column(length: self::MAX_NAME_LENGTH, unique: true)]
+    private string $name;
+
+    public function __construct(SkillName $name)
+    {
+        $this->name = $name->value;
     }
 
     public function getId(): ?int

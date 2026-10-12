@@ -135,7 +135,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] `CvProfile` ↔ `Skill` relation (many-to-many) + migration
 - [x] [C] CV upload form (PDF only, form limit ≤ 10M: PHP's `upload_max_filesize`), saving the original file
 - [x] [C] CV analysis JSON schema + validation via `justinrainbow/json-schema`
-- [ ] [C] CV analysis service: PDF directly into the LLM call (no text extraction) → validation → saving to `CvProfile`/`CvLanguage`/`Skill`
+- [x] [C] CV analysis service: PDF directly into the LLM call (no text extraction) → validation → saving to `CvProfile`/`CvLanguage`/`Skill`
 - [ ] [C] CV upload dispatches the analysis message; the Messenger handler runs the analysis service and sets the status (done / failed)
 - [ ] [S] Analysis view page: shows the status, the Turbo frame refreshes until the analysis is done or failed
 

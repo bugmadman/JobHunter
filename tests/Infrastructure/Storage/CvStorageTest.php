@@ -6,6 +6,7 @@ namespace App\Tests\Infrastructure\Storage;
 
 use App\Domain\Cv\CvFile;
 use App\Domain\Cv\CvUpload;
+use App\Infrastructure\Storage\CvFileUnreadable;
 use App\Infrastructure\Storage\CvStorage;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Filesystem\Exception\IOException;
@@ -60,5 +61,22 @@ final class CvStorageTest extends TestCase
         } catch (IOException) {
             self::assertStringEqualsFile($directory.'/3f9a1c.pdf', 'stored');
         }
+    }
+
+    public function testReadsAStoredFile(): void
+    {
+        $this->filesystem->dumpFile($this->root.'/3f9a1c.pdf', '%PDF-1.4');
+
+        self::assertSame(
+            '%PDF-1.4',
+            new CvStorage($this->root, $this->filesystem)->read(CvFile::create('3f9a1c.pdf', 'cv.pdf')),
+        );
+    }
+
+    public function testMissingFileCannotBeRead(): void
+    {
+        $this->expectException(CvFileUnreadable::class);
+
+        new CvStorage($this->root, $this->filesystem)->read(CvFile::create('3f9a1c.pdf', 'cv.pdf'));
     }
 }

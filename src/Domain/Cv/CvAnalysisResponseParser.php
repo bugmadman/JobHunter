@@ -118,6 +118,7 @@ final readonly class CvAnalysisResponseParser implements CvAnalysisResponseParse
             ]),
             'languages' => [
                 'type' => 'array',
+                'description' => 'Spoken human languages with a CEFR level, not programming languages',
                 'items' => $object([
                     'language' => [
                         'type' => 'string',

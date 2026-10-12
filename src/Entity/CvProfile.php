@@ -169,7 +169,10 @@ final class CvProfile
         $this->rawLlmResponse = $rawLlmResponse;
     }
 
-    private function assertAnalysisPending(): void
+    /**
+     * @throws CvAnalysisAlreadyFinished
+     */
+    public function assertAnalysisPending(): void
     {
         if (LlmOperationStatus::Pending !== $this->analysisStatus) {
             throw CvAnalysisAlreadyFinished::withStatus($this->analysisStatus);

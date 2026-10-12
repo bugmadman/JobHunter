@@ -7,6 +7,7 @@ namespace App\Infrastructure\Storage;
 use App\Domain\Cv\CvFile;
 use App\Domain\Cv\CvUpload;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 
 final readonly class CvStorage implements CvStorageInterface
@@ -22,5 +23,14 @@ final readonly class CvStorage implements CvStorageInterface
     {
         $this->filesystem->mkdir($this->directory, 0o700);
         $this->filesystem->rename($upload->path, $this->directory.'/'.$file->storedName);
+    }
+
+    public function read(CvFile $file): string
+    {
+        try {
+            return $this->filesystem->readFile($this->directory.'/'.$file->storedName);
+        } catch (IOException $exception) {
+            throw CvFileUnreadable::create($file->storedName, $exception);
+        }
     }
 }

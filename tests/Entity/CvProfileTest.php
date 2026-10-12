@@ -12,6 +12,7 @@ use App\Domain\Cv\LanguageProficiency;
 use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Cv\Seniority;
 use App\Domain\Llm\LlmOperationStatus;
+use App\Domain\Skill\SkillName;
 use App\Entity\CvProfile;
 use App\Entity\Skill;
 use PHPUnit\Framework\TestCase;
@@ -32,8 +33,8 @@ final class CvProfileTest extends TestCase
     public function testDoneAnalysisIsStored(): void
     {
         $profile = self::pendingProfile();
-        $php = new Skill('PHP');
-        $symfony = new Skill('Symfony');
+        $php = new Skill(SkillName::fromString('PHP'));
+        $symfony = new Skill(SkillName::fromString('Symfony'));
 
         $profile->markAnalysisDone(
             new CvAnalysis(

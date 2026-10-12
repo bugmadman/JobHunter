@@ -16,4 +16,9 @@ interface CvStorageInterface
      * @throws IOException
      */
     public function store(CvUpload $upload, CvFile $file): void;
+
+    /**
+     * @throws CvFileUnreadable
+     */
+    public function read(CvFile $file): string;
 }
