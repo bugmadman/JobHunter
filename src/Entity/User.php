@@ -50,6 +50,11 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->locale;
     }
 
+    public function changeLocale(Locale $locale): void
+    {
+        $this->locale = $locale;
+    }
+
     public function getUserIdentifier(): string
     {
         return $this->getEmail()->value;
