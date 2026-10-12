@@ -7,6 +7,7 @@ namespace App\Entity;
 use App\Domain\JobPosting\InvalidJobPostingTransition;
 use App\Domain\JobPosting\JobPostingDetails;
 use App\Domain\JobPosting\JobPostingStatus;
+use App\Domain\JobPosting\JobPostingStatusChanged;
 use App\Domain\JobPosting\JobPostingVerdict;
 use App\Domain\JobPosting\StatusReason;
 use Doctrine\DBAL\Types\Types;
@@ -15,6 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * A posting goes raw → rejected or filtered → evaluated, and fails for good from raw or filtered. The reason is set
  * together with every final status and the verdict only with `evaluated`, so neither can disagree with the status.
+ * The arrival and every transition are recorded as events, which JobPostingStageLogWriter logs on flush.
  */
 #[ORM\Entity]
 final class JobPosting
@@ -48,6 +50,11 @@ final class JobPosting
     #[ORM\Column(length: 32, nullable: true, enumType: JobPostingVerdict::class)]
     private ?JobPostingVerdict $verdict = null;
 
+    /**
+     * @var list<JobPostingStatusChanged>
+     */
+    private array $events = [];
+
     public function __construct(
         #[ORM\ManyToOne(targetEntity: Platform::class)]
         #[ORM\JoinColumn(nullable: false)]
@@ -61,6 +68,8 @@ final class JobPosting
         $this->url = $details->url;
         $this->company = $details->company;
         $this->location = $details->location;
+
+        $this->events[] = new JobPostingStatusChanged(null, JobPostingStatus::Raw, null, $createdAt);
     }
 
     public function getId(): ?int
@@ -129,11 +138,9 @@ final class JobPosting
      *
      * @throws InvalidJobPostingTransition
      */
-    public function markRejected(StatusReason $reason): void
+    public function markRejected(StatusReason $reason, \DateTimeImmutable $at): void
     {
-        $this->transition(JobPostingStatus::Rejected, JobPostingStatus::Raw);
-
-        $this->statusReason = $reason->value;
+        $this->transition(JobPostingStatus::Rejected, $reason, $at, JobPostingStatus::Raw);
     }
 
     /**
@@ -141,9 +148,9 @@ final class JobPosting
      *
      * @throws InvalidJobPostingTransition
      */
-    public function markFiltered(): void
+    public function markFiltered(\DateTimeImmutable $at): void
     {
-        $this->transition(JobPostingStatus::Filtered, JobPostingStatus::Raw);
+        $this->transition(JobPostingStatus::Filtered, null, $at, JobPostingStatus::Raw);
     }
 
     /**
@@ -151,12 +158,11 @@ final class JobPosting
      *
      * @throws InvalidJobPostingTransition
      */
-    public function markEvaluated(JobPostingVerdict $verdict, StatusReason $reason): void
+    public function markEvaluated(JobPostingVerdict $verdict, StatusReason $reason, \DateTimeImmutable $at): void
     {
-        $this->transition(JobPostingStatus::Evaluated, JobPostingStatus::Filtered);
+        $this->transition(JobPostingStatus::Evaluated, $reason, $at, JobPostingStatus::Filtered);
 
         $this->verdict = $verdict;
-        $this->statusReason = $reason->value;
     }
 
     /**
@@ -164,19 +170,42 @@ final class JobPosting
      *
      * @throws InvalidJobPostingTransition
      */
-    public function markFailed(StatusReason $reason): void
+    public function markFailed(StatusReason $reason, \DateTimeImmutable $at): void
     {
-        $this->transition(JobPostingStatus::Failed, JobPostingStatus::Raw, JobPostingStatus::Filtered);
-
-        $this->statusReason = $reason->value;
+        $this->transition(
+            JobPostingStatus::Failed,
+            $reason,
+            $at,
+            JobPostingStatus::Raw,
+            JobPostingStatus::Filtered,
+        );
     }
 
-    private function transition(JobPostingStatus $to, JobPostingStatus ...$allowedFrom): void
+    /**
+     * The arrival and the transitions since the last call, oldest first; each is returned once.
+     *
+     * @return list<JobPostingStatusChanged>
+     */
+    public function releaseEvents(): array
     {
+        $events = $this->events;
+        $this->events = [];
+
+        return $events;
+    }
+
+    private function transition(
+        JobPostingStatus $to,
+        ?StatusReason $reason,
+        \DateTimeImmutable $at,
+        JobPostingStatus ...$allowedFrom,
+    ): void {
         if (!\in_array($this->status, $allowedFrom, true)) {
             throw InvalidJobPostingTransition::create($this->status, $to);
         }
 
+        $this->events[] = new JobPostingStatusChanged($this->status, $to, $reason, $at);
         $this->status = $to;
+        $this->statusReason = $reason?->value;
     }
 }

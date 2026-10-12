@@ -157,7 +157,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] `JobPosting` entity with transition methods that protect invariants + migration
 - [x] [C] Unit tests for status transitions (including forbidden ones); delete the placeholder `tests/KernelBootTest.php`, real tests now cover the PHPUnit setup
 - [x] [S] `JobPostingStageLog` entity + migration
-- [ ] [C] Domain events for transitions → written to `JobPostingStageLog`
+- [x] [C] Domain events for transitions → written to `JobPostingStageLog`
 
 ## Phase 9 — Job posting intake (API Platform)
 
