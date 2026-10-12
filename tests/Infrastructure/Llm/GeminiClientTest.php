@@ -97,22 +97,34 @@ final class GeminiClientTest extends TestCase
         self::assertSame('Hello, world', self::generate($response, new LlmRequest('Say hello'))->text);
     }
 
-    public function testRejectsAResponseSchemaUntilStructuredOutputIsSupported(): void
+    public function testRequestsJsonMatchingTheSchema(): void
     {
-        $httpClient = new MockHttpClient(self::success('Hello'));
+        $schema = '{"type":"object","properties":{"name":{"type":"string"},"tags":{}},"required":["name"]}';
+        $response = self::success('{"name":"Ann"}');
 
-        try {
-            new GeminiClient($httpClient)->generate(
-                new LlmRequest('Say hello', responseSchema: JsonSchema::fromString('{}')),
-                LlmModel::fromString('gemini-2.5-flash'),
-                ApiKey::fromString(self::API_KEY),
-            );
-            self::fail('The request must fail.');
-        } catch (LlmRequestFailed $exception) {
-            self::assertStringContainsString('structured output is not supported', $exception->getMessage());
-        }
+        $result = self::generate($response, new LlmRequest('Extract', responseSchema: JsonSchema::fromString($schema)));
 
-        self::assertSame(0, $httpClient->getRequestsCount());
+        $body = $response->getRequestOptions()['body'] ?? null;
+        self::assertIsString($body);
+        $decoded = json_decode($body, flags: \JSON_THROW_ON_ERROR);
+        self::assertInstanceOf(\stdClass::class, $decoded);
+        $generationConfig = $decoded->generationConfig ?? null;
+        self::assertSame(
+            '{"responseMimeType":"application/json","responseJsonSchema":'.$schema.'}',
+            json_encode($generationConfig, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES),
+        );
+        self::assertSame('{"name":"Ann"}', $result->text);
+    }
+
+    public function testFailsWhenTheTextIsNotTheRequestedJson(): void
+    {
+        $this->expectException(LlmRequestFailed::class);
+        $this->expectExceptionMessage('The gemini request failed: the response is not valid JSON');
+
+        self::generate(
+            self::success('Sure! {"name":"Ann"}'),
+            new LlmRequest('Extract', responseSchema: JsonSchema::fromString('{"type":"object"}')),
+        );
     }
 
     /**

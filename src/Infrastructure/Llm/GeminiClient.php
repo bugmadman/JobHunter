@@ -27,10 +27,6 @@ final readonly class GeminiClient implements LlmClientInterface
 
     public function generate(LlmRequest $request, LlmModel $model, ApiKey $apiKey): LlmResponse
     {
-        if (null !== $request->responseSchema) {
-            throw $this->failure('structured output is not supported yet', $apiKey);
-        }
-
         try {
             $response = $this->httpClient->request('POST', \sprintf(self::URL, rawurlencode($model->value)), [
                 'headers' => ['x-goog-api-key' => $apiKey->value()],
@@ -55,7 +51,13 @@ final readonly class GeminiClient implements LlmClientInterface
             throw $this->failure('malformed JSON response', $apiKey);
         }
 
-        return new LlmResponse($this->text($payload, $apiKey));
+        $text = $this->text($payload, $apiKey);
+
+        if (null !== $request->responseSchema && !json_validate($text)) {
+            throw $this->failure('the response is not valid JSON', $apiKey);
+        }
+
+        return new LlmResponse($text);
     }
 
     /**
@@ -79,6 +81,14 @@ final readonly class GeminiClient implements LlmClientInterface
 
         if (null !== $request->systemInstruction) {
             $body['systemInstruction'] = ['parts' => [['text' => $request->systemInstruction]]];
+        }
+
+        if (null !== $request->responseSchema) {
+            $body['generationConfig'] = [
+                'responseMimeType' => 'application/json',
+                // Decoded to objects, not arrays: an empty `{}` in the schema would otherwise be sent as `[]`.
+                'responseJsonSchema' => json_decode($request->responseSchema->value, flags: \JSON_THROW_ON_ERROR),
+            ];
         }
 
         return $body;

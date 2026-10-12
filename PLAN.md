@@ -117,7 +117,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] EasyAdmin CRUD for model selection
 - [x] [C] `LlmClientInterface` + request/response DTOs
 - [x] [C] `GeminiClient`: text request
-- [ ] [C] `GeminiClient`: structured output via JSON schema
+- [x] [C] `GeminiClient`: structured output via JSON schema
 - [ ] [C] Resolver "task → client + model" from the settings
 - [ ] [S] Console command to check a key (test request to the model)
 
