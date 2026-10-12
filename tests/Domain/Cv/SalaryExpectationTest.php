@@ -49,6 +49,8 @@ final class SalaryExpectationTest extends TestCase
         yield 'no amount' => [null, null, 'USD'];
         yield 'zero minimum' => [0, 5000, 'USD'];
         yield 'negative maximum' => [null, -1, 'USD'];
+        yield 'minimum too large' => [SalaryExpectation::MAX_AMOUNT + 1, null, 'USD'];
+        yield 'maximum too large' => [null, SalaryExpectation::MAX_AMOUNT + 1, 'USD'];
         yield 'minimum above maximum' => [6000, 5000, 'USD'];
         yield 'empty currency' => [5000, null, ''];
         yield 'currency symbol' => [5000, null, '$'];

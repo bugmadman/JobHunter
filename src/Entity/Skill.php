@@ -10,13 +10,15 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: SkillRepository::class)]
 final class Skill
 {
+    public const int MAX_NAME_LENGTH = 100;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
     public function __construct(
-        #[ORM\Column(length: 100, unique: true)]
+        #[ORM\Column(length: self::MAX_NAME_LENGTH, unique: true)]
         private string $name,
     ) {
     }

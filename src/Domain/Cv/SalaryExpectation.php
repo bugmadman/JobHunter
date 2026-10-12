@@ -6,6 +6,8 @@ namespace App\Domain\Cv;
 
 final readonly class SalaryExpectation
 {
+    public const int MAX_AMOUNT = 2_000_000_000;
+
     /**
      * @param positive-int|null $min
      * @param positive-int|null $max
@@ -26,6 +28,10 @@ final readonly class SalaryExpectation
 
         if ((null !== $min && $min <= 0) || (null !== $max && $max <= 0)) {
             throw InvalidSalaryExpectation::nonPositiveAmount();
+        }
+
+        if ((null !== $min && $min > self::MAX_AMOUNT) || (null !== $max && $max > self::MAX_AMOUNT)) {
+            throw InvalidSalaryExpectation::amountTooLarge();
         }
 
         if (null !== $min && null !== $max && $min > $max) {

@@ -16,6 +16,11 @@ final class InvalidSalaryExpectation extends \DomainException
         return new self('A salary amount must be positive.');
     }
 
+    public static function amountTooLarge(): self
+    {
+        return new self(\sprintf('A salary amount must not exceed %d.', SalaryExpectation::MAX_AMOUNT));
+    }
+
     public static function minAboveMax(int $min, int $max): self
     {
         return new self(\sprintf('The minimum salary %d is above the maximum %d.', $min, $max));
