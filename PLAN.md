@@ -146,7 +146,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] Generating a draft prompt from `CvProfile` for a platform (LLM call in a Messenger handler)
 - [x] [S] "Generate prompt" button: dispatches the message, the Turbo frame refreshes until the draft is ready
 - [x] [C] Manual prompt editing in EasyAdmin
-- [ ] [S] `platforms/upwork.md`
+- [x] [S] `platforms/upwork.md`
 - [ ] [S] `platforms/linkedin.md`
 - [ ] [S] `platforms/glassdoor.md`
 - [ ] [S] `platforms/indeed.md`
