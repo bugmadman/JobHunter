@@ -10,12 +10,14 @@ use App\Domain\Cv\InvalidCvFile;
 use App\Form\CvUploadData;
 use App\Form\CvUploadType;
 use App\Message\AnalyzeCv;
+use App\Repository\CvProfileRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CvController extends AbstractController
@@ -24,6 +26,7 @@ final class CvController extends AbstractController
         private readonly CvServiceInterface $cvService,
         private readonly TranslatorInterface $translator,
         private readonly MessageBusInterface $bus,
+        private readonly CvProfileRepositoryInterface $cvProfiles,
     ) {
     }
 
@@ -47,7 +50,7 @@ final class CvController extends AbstractController
                 $this->bus->dispatch(new AnalyzeCv($cvProfileId));
                 $this->addFlash('success', 'cv.upload.uploaded');
 
-                return $this->redirectToRoute('app_cv_upload');
+                return $this->redirectToRoute('app_cv_show', ['id' => $cvProfileId]);
             } catch (InvalidCvFile) {
                 $error = $this->translator->trans('cv.upload.invalid_file_name');
                 $form->get('file')->addError(new FormError($error));
@@ -55,5 +58,13 @@ final class CvController extends AbstractController
         }
 
         return $this->render('cv/upload.html.twig', ['form' => $form]);
+    }
+
+    #[Route('/cv/{id}', name: 'app_cv_show', requirements: ['id' => Requirement::POSITIVE_INT], methods: ['GET'])]
+    public function show(int $id): Response
+    {
+        $cvProfile = $this->cvProfiles->findById($id) ?? throw $this->createNotFoundException();
+
+        return $this->render('cv/show.html.twig', ['cvProfile' => $cvProfile]);
     }
 }

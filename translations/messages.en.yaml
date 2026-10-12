@@ -44,6 +44,32 @@ cv:
         submit: Upload
         uploaded: The CV is uploaded.
         invalid_file_name: This file name can't be used. Rename the file and upload it again.
+    show:
+        title: CV analysis
+        pending: The CV is being analysed. This page updates by itself.
+        failed: The analysis failed. Check the CV analysis model and key in the settings, then upload the CV again.
+        unknown: Not stated
+        years_experience: Experience, years
+        seniority: Seniority
+        salary: Salary expectation
+        per_month: per month
+        languages: Languages
+        skills: Skills
+        analysis_original: Analysis in the CV's language
+        analysis_english: Analysis in English
+    seniority:
+        junior: Junior
+        middle: Middle
+        senior: Senior
+        lead: Lead
+    language_level:
+        a1: A1
+        a2: A2
+        b1: B1
+        b2: B2
+        c1: C1
+        c2: C2
+        native: Native
 
 llm:
     provider:

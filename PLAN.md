@@ -137,7 +137,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] CV analysis JSON schema + validation via `justinrainbow/json-schema`
 - [x] [C] CV analysis service: PDF directly into the LLM call (no text extraction) → validation → saving to `CvProfile`/`CvLanguage`/`Skill`
 - [x] [C] CV upload dispatches the analysis message; the Messenger handler runs the analysis service and sets the status (done / failed)
-- [ ] [S] Analysis view page: shows the status, the Turbo frame refreshes until the analysis is done or failed
+- [x] [S] Analysis view page: shows the status, the Turbo frame refreshes until the analysis is done or failed
 
 ## Phase 7 — Per-platform prompts
 

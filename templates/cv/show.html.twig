@@ -1,0 +1,67 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'cv.show.title'|trans }}{% endblock %}
+
+{% block body %}
+    <h1 class="h3">{{ 'cv.show.title'|trans }}</h1>
+    <p class="text-body-secondary">{{ cvProfile.file.originalName }}</p>
+
+    <turbo-frame id="cv-analysis">
+        {% set status = cvProfile.analysisStatus.value %}
+        {% if status == 'pending' %}
+            <div class="alert alert-info" role="status" data-controller="frame-reload"
+                 data-frame-reload-url-value="{{ path('app_cv_show', {id: cvProfile.id}) }}">
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                {{- 'cv.show.pending'|trans -}}
+            </div>
+        {% elseif status == 'failed' %}
+            <div class="alert alert-danger" role="alert">{{ 'cv.show.failed'|trans }}</div>
+        {% else %}
+            {% set analysis = cvProfile.analysis %}
+            <dl class="row">
+                <dt class="col-sm-3">{{ 'cv.show.years_experience'|trans }}</dt>
+                <dd class="col-sm-9">{{ analysis.yearsExperience ?? 'cv.show.unknown'|trans }}</dd>
+
+                <dt class="col-sm-3">{{ 'cv.show.seniority'|trans }}</dt>
+                <dd class="col-sm-9">
+                    {{- analysis.seniority ? ('cv.seniority.' ~ analysis.seniority.value)|trans : 'cv.show.unknown'|trans -}}
+                </dd>
+
+                <dt class="col-sm-3">{{ 'cv.show.salary'|trans }}</dt>
+                <dd class="col-sm-9">
+                    {%- set salary = analysis.salaryExpectation -%}
+                    {%- if salary -%}
+                        {{ salary.min ?? '…' }} – {{ salary.max ?? '…' }} {{ salary.currency }} {{ 'cv.show.per_month'|trans }}
+                    {%- else -%}
+                        {{ 'cv.show.unknown'|trans }}
+                    {%- endif -%}
+                </dd>
+
+                <dt class="col-sm-3">{{ 'cv.show.languages'|trans }}</dt>
+                <dd class="col-sm-9">
+                    {%- for language in analysis.languages -%}
+                        {{ language.language|upper }} ({{ ('cv.language_level.' ~ language.level.value)|trans }})
+                        {{- not loop.last ? ', ' -}}
+                    {%- else -%}
+                        {{ 'cv.show.unknown'|trans }}
+                    {%- endfor -%}
+                </dd>
+
+                <dt class="col-sm-3">{{ 'cv.show.skills'|trans }}</dt>
+                <dd class="col-sm-9">
+                    {%- for skill in cvProfile.skills -%}
+                        <span class="badge text-bg-secondary me-1">{{ skill.name }}</span>
+                    {%- else -%}
+                        {{ 'cv.show.unknown'|trans }}
+                    {%- endfor -%}
+                </dd>
+            </dl>
+
+            <h2 class="h5">{{ 'cv.show.analysis_original'|trans }}</h2>
+            <p>{{ analysis.originalLanguageText|nl2br }}</p>
+
+            <h2 class="h5">{{ 'cv.show.analysis_english'|trans }}</h2>
+            <p>{{ analysis.englishText|nl2br }}</p>
+        {% endif %}
+    </turbo-frame>
+{% endblock %}

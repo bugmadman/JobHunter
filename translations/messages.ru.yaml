@@ -44,6 +44,32 @@ cv:
         submit: Загрузить
         uploaded: Резюме загружено.
         invalid_file_name: Это имя файла не подходит. Переименуйте файл и загрузите его снова.
+    show:
+        title: Анализ резюме
+        pending: Резюме анализируется. Страница обновится сама.
+        failed: Анализ не удался. Проверьте модель и ключ для анализа резюме в настройках и загрузите резюме снова.
+        unknown: Не указано
+        years_experience: Опыт, лет
+        seniority: Уровень
+        salary: Ожидания по зарплате
+        per_month: в месяц
+        languages: Языки
+        skills: Навыки
+        analysis_original: Анализ на языке резюме
+        analysis_english: Анализ на английском
+    seniority:
+        junior: Junior
+        middle: Middle
+        senior: Senior
+        lead: Lead
+    language_level:
+        a1: A1
+        a2: A2
+        b1: B1
+        b2: B2
+        c1: C1
+        c2: C2
+        native: Родной
 
 llm:
     provider:

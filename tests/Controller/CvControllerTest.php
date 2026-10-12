@@ -4,13 +4,22 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller;
 
+use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvFile;
 use App\Domain\Cv\CvServiceInterface;
 use App\Domain\Cv\CvUpload;
 use App\Domain\Cv\InvalidCvFile;
+use App\Domain\Cv\LanguageLevel;
+use App\Domain\Cv\LanguageProficiency;
+use App\Domain\Cv\SalaryExpectation;
+use App\Domain\Cv\Seniority;
+use App\Domain\Skill\SkillName;
 use App\Entity\CvProfile;
+use App\Entity\Skill;
 use App\Message\AnalyzeCv;
+use App\Repository\CvProfileRepositoryInterface;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Field\FileFormField;
@@ -60,6 +69,7 @@ final class CvControllerTest extends WebTestCase
         new \ReflectionProperty(CvProfile::class, 'id')->setValue($profile, 42);
 
         $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findById')->willReturnMap([[42, $profile]]);
         $this->mockCvService($client)
             ->expects(self::once())
             ->method('upload')
@@ -71,7 +81,7 @@ final class CvControllerTest extends WebTestCase
 
         $this->submit($client, $this->pdf('My CV.pdf'));
 
-        self::assertResponseRedirects(self::URL);
+        self::assertResponseRedirects('/cv/42');
         self::assertEquals([new AnalyzeCv(42)], $this->queuedMessages($client));
         $client->followRedirect();
         self::assertSelectorTextContains('#flash-messages .alert-success', 'The CV is uploaded.');
@@ -143,6 +153,77 @@ final class CvControllerTest extends WebTestCase
         self::assertSame([], $this->queuedMessages($client));
     }
 
+    public function testShowsAPendingAnalysisInAFrameThatReloadsItself(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findById')->willReturnMap([[7, $this->profile(7)]]);
+
+        $client->request('GET', '/cv/7');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('main', 'My CV.pdf');
+        self::assertSelectorExists(
+            'turbo-frame#cv-analysis [data-controller="frame-reload"][data-frame-reload-url-value="/cv/7"]',
+        );
+        self::assertSelectorTextContains('turbo-frame#cv-analysis', 'The CV is being analysed.');
+    }
+
+    public function testShowsAFailedAnalysisWithoutReloading(): void
+    {
+        $profile = $this->profile(7);
+        $profile->markAnalysisFailed();
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findById')->willReturn($profile);
+
+        $client->request('GET', '/cv/7');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('turbo-frame#cv-analysis .alert-danger', 'The analysis failed.');
+        self::assertSelectorNotExists('[data-controller="frame-reload"]');
+    }
+
+    public function testShowsADoneAnalysis(): void
+    {
+        $profile = $this->profile(7);
+        $profile->markAnalysisDone(
+            new CvAnalysis(
+                "Backend developer.\nLoves PHP.",
+                'Backend developer.',
+                12,
+                Seniority::Senior,
+                SalaryExpectation::create(5000, null, 'EUR'),
+                [LanguageProficiency::create('en', LanguageLevel::C1)],
+            ),
+            [new Skill(SkillName::fromString('PHP'))],
+            '{}',
+        );
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findById')->willReturn($profile);
+
+        $client->request('GET', '/cv/7');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('[data-controller="frame-reload"]');
+        $frame = $client->getCrawler()->filter('turbo-frame#cv-analysis');
+        $text = $frame->text();
+        self::assertStringContainsString('12', $text);
+        self::assertStringContainsString('Senior', $text);
+        self::assertStringContainsString('5000 – … EUR per month', $text);
+        self::assertStringContainsString('EN (C1)', $text);
+        self::assertSame('php', $frame->filter('.badge')->text());
+        self::assertStringContainsString('Backend developer.<br>', $frame->html());
+    }
+
+    public function testShowReturns404ForAnUnknownProfile(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findById')->willReturn(null);
+
+        $client->request('GET', '/cv/999');
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
     public function testRedirectsAnonymousToLogin(): void
     {
         $client = self::createClient();
@@ -197,6 +278,22 @@ final class CvControllerTest extends WebTestCase
             static fn (Envelope $envelope): object => $envelope->getMessage(),
             [...$transport->getSent()],
         ));
+    }
+
+    private function profile(int $id): CvProfile
+    {
+        $profile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
+        new \ReflectionProperty(CvProfile::class, 'id')->setValue($profile, $id);
+
+        return $profile;
+    }
+
+    private function stubCvProfiles(KernelBrowser $client): CvProfileRepositoryInterface&Stub
+    {
+        $cvProfiles = self::createStub(CvProfileRepositoryInterface::class);
+        $client->getContainer()->set(CvProfileRepositoryInterface::class, $cvProfiles);
+
+        return $cvProfiles;
     }
 
     private function mockCvService(KernelBrowser $client): CvServiceInterface&MockObject
