@@ -24,9 +24,23 @@ final class LlmModelSelectionRepository extends ServiceEntityRepository implemen
         return $this->findOneBy(['task' => $task]);
     }
 
+    public function findConfiguredTasks(): array
+    {
+        return array_map(
+            static fn (LlmModelSelection $selection): LlmTask => $selection->getTask(),
+            $this->findAll(),
+        );
+    }
+
     public function save(LlmModelSelection $selection): void
     {
         $this->getEntityManager()->persist($selection);
+        $this->getEntityManager()->flush();
+    }
+
+    public function remove(LlmModelSelection $selection): void
+    {
+        $this->getEntityManager()->remove($selection);
         $this->getEntityManager()->flush();
     }
 }

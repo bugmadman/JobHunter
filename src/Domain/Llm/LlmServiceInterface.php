@@ -11,4 +11,8 @@ interface LlmServiceInterface
     public function findApiKey(LlmProvider $provider): ?ApiKey;
 
     public function deleteApiKey(LlmProvider $provider): void;
+
+    public function selectModel(LlmTask $task, LlmProvider $provider, LlmModel $model): void;
+
+    public function deleteModelSelection(LlmTask $task): void;
 }

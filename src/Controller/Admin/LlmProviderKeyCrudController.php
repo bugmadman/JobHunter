@@ -153,7 +153,7 @@ final class LlmProviderKeyCrudController extends AbstractCrudController
      */
     private function renderForm(FormInterface $form, TranslatableMessage $title): Response
     {
-        return $this->render('admin/llm_provider_key/form.html.twig', [
+        return $this->render('admin/form.html.twig', [
             'form' => $form,
             'title' => $title,
             'index_url' => $this->indexUrl(),

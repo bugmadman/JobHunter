@@ -34,6 +34,11 @@ final class DashboardController extends AbstractDashboardController
     {
         yield MenuItem::linkToDashboard('admin.menu.dashboard', 'fa fa-gauge');
         yield MenuItem::linkTo(LlmProviderKeyCrudController::class, 'admin.menu.llm_provider_keys', 'fa fa-key');
+        yield MenuItem::linkTo(
+            LlmModelSelectionCrudController::class,
+            'admin.menu.llm_model_selections',
+            'fa fa-microchip',
+        );
         yield MenuItem::linkToRoute('admin.menu.back_to_app', 'fa fa-arrow-left', 'app_home');
     }
 }

@@ -11,5 +11,12 @@ interface LlmModelSelectionRepositoryInterface
 {
     public function findByTask(LlmTask $task): ?LlmModelSelection;
 
+    /**
+     * @return list<LlmTask>
+     */
+    public function findConfiguredTasks(): array;
+
     public function save(LlmModelSelection $selection): void;
+
+    public function remove(LlmModelSelection $selection): void;
 }

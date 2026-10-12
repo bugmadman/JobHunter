@@ -6,11 +6,15 @@ namespace App\Tests\Domain\Llm;
 
 use App\Domain\Llm\ApiKey;
 use App\Domain\Llm\EncryptedApiKey;
+use App\Domain\Llm\LlmModel;
 use App\Domain\Llm\LlmProvider;
 use App\Domain\Llm\LlmService;
+use App\Domain\Llm\LlmTask;
+use App\Entity\LlmModelSelection;
 use App\Entity\LlmProviderKey;
 use App\Infrastructure\Security\ApiKeyEncryptorInterface;
 use App\Infrastructure\Security\InvalidEncryptionKey;
+use App\Repository\LlmModelSelectionRepositoryInterface;
 use App\Repository\LlmProviderKeyRepositoryInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -34,7 +38,7 @@ final class LlmServiceTest extends TestCase
             ->with($apiKey)
             ->willReturn(new EncryptedApiKey('ciphertext'));
 
-        new LlmService($providerKeys, $encryptor)->saveApiKey(LlmProvider::Gemini, $apiKey);
+        self::service($providerKeys, $encryptor)->saveApiKey(LlmProvider::Gemini, $apiKey);
     }
 
     public function testReplacesTheKeyOfAnExistingProviderKey(): void
@@ -52,7 +56,7 @@ final class LlmServiceTest extends TestCase
         $encryptor = $this->createMock(ApiKeyEncryptorInterface::class);
         $encryptor->method('encrypt')->with($apiKey)->willReturn(new EncryptedApiKey('new-ciphertext'));
 
-        new LlmService($providerKeys, $encryptor)->saveApiKey(LlmProvider::Gemini, $apiKey);
+        self::service($providerKeys, $encryptor)->saveApiKey(LlmProvider::Gemini, $apiKey);
     }
 
     public function testFindsTheDecryptedKey(): void
@@ -69,7 +73,7 @@ final class LlmServiceTest extends TestCase
             ->with(self::callback(static fn (EncryptedApiKey $key): bool => 'ciphertext' === $key->value()))
             ->willReturn(ApiKey::fromString('AIza-secret'));
 
-        $apiKey = new LlmService($providerKeys, $encryptor)->findApiKey(LlmProvider::Gemini);
+        $apiKey = self::service($providerKeys, $encryptor)->findApiKey(LlmProvider::Gemini);
 
         self::assertSame('AIza-secret', $apiKey?->value());
     }
@@ -82,7 +86,7 @@ final class LlmServiceTest extends TestCase
         $encryptor = $this->createMock(ApiKeyEncryptorInterface::class);
         $encryptor->expects(self::never())->method('decrypt');
 
-        self::assertNull(new LlmService($providerKeys, $encryptor)->findApiKey(LlmProvider::Gemini));
+        self::assertNull(self::service($providerKeys, $encryptor)->findApiKey(LlmProvider::Gemini));
     }
 
     public function testSavesNothingWhenEncryptionFails(): void
@@ -95,7 +99,7 @@ final class LlmServiceTest extends TestCase
 
         $this->expectException(InvalidEncryptionKey::class);
 
-        new LlmService($providerKeys, $encryptor)->saveApiKey(LlmProvider::Gemini, ApiKey::fromString('AIza-secret'));
+        self::service($providerKeys, $encryptor)->saveApiKey(LlmProvider::Gemini, ApiKey::fromString('AIza-secret'));
     }
 
     public function testDeletesTheProviderKey(): void
@@ -106,8 +110,7 @@ final class LlmServiceTest extends TestCase
         $providerKeys->method('findByProvider')->with(LlmProvider::Gemini)->willReturn($providerKey);
         $providerKeys->expects(self::once())->method('remove')->with($providerKey);
 
-        new LlmService($providerKeys, self::createStub(ApiKeyEncryptorInterface::class))
-            ->deleteApiKey(LlmProvider::Gemini);
+        self::service($providerKeys)->deleteApiKey(LlmProvider::Gemini);
     }
 
     public function testDeletingTheKeyOfAnUnconfiguredProviderDoesNothing(): void
@@ -116,7 +119,66 @@ final class LlmServiceTest extends TestCase
         $providerKeys->method('findByProvider')->willReturn(null);
         $providerKeys->expects(self::never())->method('remove');
 
-        new LlmService($providerKeys, self::createStub(ApiKeyEncryptorInterface::class))
-            ->deleteApiKey(LlmProvider::Gemini);
+        self::service($providerKeys)->deleteApiKey(LlmProvider::Gemini);
+    }
+
+    public function testSelectsAModelForANewTask(): void
+    {
+        $modelSelections = $this->createMock(LlmModelSelectionRepositoryInterface::class);
+        $modelSelections->method('findByTask')->with(LlmTask::Matching)->willReturn(null);
+        $modelSelections->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static fn (LlmModelSelection $saved): bool => LlmTask::Matching === $saved->getTask()
+                && 'gemini-2.5-flash' === $saved->getModel()->value));
+
+        self::service(modelSelections: $modelSelections)
+            ->selectModel(LlmTask::Matching, LlmProvider::Gemini, LlmModel::fromString('gemini-2.5-flash'));
+    }
+
+    public function testChangesTheModelOfAConfiguredTask(): void
+    {
+        $selection = new LlmModelSelection(LlmTask::Matching, LlmProvider::Gemini, LlmModel::fromString('old-model'));
+
+        $modelSelections = $this->createMock(LlmModelSelectionRepositoryInterface::class);
+        $modelSelections->method('findByTask')->with(LlmTask::Matching)->willReturn($selection);
+        $modelSelections->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static fn (LlmModelSelection $saved): bool => $saved === $selection
+                && 'new-model' === $saved->getModel()->value));
+
+        self::service(modelSelections: $modelSelections)
+            ->selectModel(LlmTask::Matching, LlmProvider::Gemini, LlmModel::fromString('new-model'));
+    }
+
+    public function testDeletesTheModelSelection(): void
+    {
+        $selection = new LlmModelSelection(LlmTask::Matching, LlmProvider::Gemini, LlmModel::fromString('model'));
+
+        $modelSelections = $this->createMock(LlmModelSelectionRepositoryInterface::class);
+        $modelSelections->method('findByTask')->with(LlmTask::Matching)->willReturn($selection);
+        $modelSelections->expects(self::once())->method('remove')->with($selection);
+
+        self::service(modelSelections: $modelSelections)->deleteModelSelection(LlmTask::Matching);
+    }
+
+    public function testDeletingAnUnconfiguredTaskDoesNothing(): void
+    {
+        $modelSelections = $this->createMock(LlmModelSelectionRepositoryInterface::class);
+        $modelSelections->method('findByTask')->willReturn(null);
+        $modelSelections->expects(self::never())->method('remove');
+
+        self::service(modelSelections: $modelSelections)->deleteModelSelection(LlmTask::Matching);
+    }
+
+    private static function service(
+        ?LlmProviderKeyRepositoryInterface $providerKeys = null,
+        ?ApiKeyEncryptorInterface $encryptor = null,
+        ?LlmModelSelectionRepositoryInterface $modelSelections = null,
+    ): LlmService {
+        return new LlmService(
+            $providerKeys ?? self::createStub(LlmProviderKeyRepositoryInterface::class),
+            $encryptor ?? self::createStub(ApiKeyEncryptorInterface::class),
+            $modelSelections ?? self::createStub(LlmModelSelectionRepositoryInterface::class),
+        );
     }
 }

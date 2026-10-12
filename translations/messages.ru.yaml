@@ -11,6 +11,7 @@ admin:
     menu:
         dashboard: Настройки
         llm_provider_keys: Ключи LLM
+        llm_model_selections: Модели LLM
         back_to_app: К вакансиям
     llm_provider_key:
         singular: Ключ LLM
@@ -20,13 +21,28 @@ admin:
         edit_title: 'Заменить ключ %provider%'
         provider: Провайдер
         api_key: API-ключ
+        saved: Ключ сохранён.
+    llm_model_selection:
+        singular: Модель LLM
+        plural: Модели LLM
+        index_title: Модель LLM под задачу
+        new_title: Выбор модели для задачи
+        edit_title: 'Модель для задачи: %task%'
+        task: Задача
+        provider: Провайдер
+        model: Модель
+        saved: Модель сохранена.
+    form:
         save: Сохранить
         cancel: Отмена
-        saved: Ключ сохранён.
 
 llm:
     provider:
         gemini: Gemini
+    task:
+        cv_analysis: Анализ CV
+        prompt_generation: Генерация промпта
+        matching: Матчинг
 
 nav:
     admin: Настройки

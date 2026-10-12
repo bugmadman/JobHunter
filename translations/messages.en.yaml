@@ -11,6 +11,7 @@ admin:
     menu:
         dashboard: Settings
         llm_provider_keys: LLM keys
+        llm_model_selections: LLM models
         back_to_app: Back to job postings
     llm_provider_key:
         singular: LLM key
@@ -20,13 +21,28 @@ admin:
         edit_title: 'Replace the %provider% key'
         provider: Provider
         api_key: API key
+        saved: The key is saved.
+    llm_model_selection:
+        singular: LLM model
+        plural: LLM models
+        index_title: LLM model per task
+        new_title: Choose a model for a task
+        edit_title: 'Model for: %task%'
+        task: Task
+        provider: Provider
+        model: Model
+        saved: The model is saved.
+    form:
         save: Save
         cancel: Cancel
-        saved: The key is saved.
 
 llm:
     provider:
         gemini: Gemini
+    task:
+        cv_analysis: CV analysis
+        prompt_generation: Prompt generation
+        matching: Matching
 
 nav:
     admin: Settings

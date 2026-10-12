@@ -6,7 +6,7 @@
 {% block main %}
     {{ form_start(form) }}
         {{ form_widget(form) }}
-        <button type="submit" class="btn btn-primary">{{ 'admin.llm_provider_key.save'|trans }}</button>
-        <a href="{{ index_url }}" class="btn btn-secondary">{{ 'admin.llm_provider_key.cancel'|trans }}</a>
+        <button type="submit" class="btn btn-primary">{{ 'admin.form.save'|trans }}</button>
+        <a href="{{ index_url }}" class="btn btn-secondary">{{ 'admin.form.cancel'|trans }}</a>
     {{ form_end(form) }}
 {% endblock %}
