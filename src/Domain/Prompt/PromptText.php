@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Prompt;
 
+use App\Domain\Shared\Text;
+
 final readonly class PromptText
 {
     /**
@@ -16,8 +18,7 @@ final readonly class PromptText
 
     public static function fromString(string $text): self
     {
-        // trim() misses Unicode spaces and invisible characters, so a lone NBSP would pass as a prompt
-        $text = (string) preg_replace('/^[\pZ\p{Cc}\p{Cf}]+|[\pZ\p{Cc}\p{Cf}]+$/u', '', $text);
+        $text = Text::trim($text);
 
         if ('' === $text) {
             throw EmptyPromptText::create();
