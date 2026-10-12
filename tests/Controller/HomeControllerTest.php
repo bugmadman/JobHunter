@@ -19,6 +19,7 @@ final class HomeControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('.navbar-brand', 'JobHunter');
         self::assertSelectorTextContains('h1', 'Job postings');
+        self::assertSelectorExists('.navbar a[href="/cv"]');
         self::assertSelectorExists('.navbar a[href="/admin"]');
     }
 

@@ -36,6 +36,15 @@ admin:
         save: Сохранить
         cancel: Отмена
 
+cv:
+    upload:
+        title: Резюме
+        file: Файл резюме
+        file_help: PDF, до 10 МБ.
+        submit: Загрузить
+        uploaded: Резюме загружено.
+        invalid_file_name: Это имя файла не подходит. Переименуйте файл и загрузите его снова.
+
 llm:
     provider:
         gemini: Gemini
@@ -45,6 +54,7 @@ llm:
         matching: Матчинг
 
 nav:
+    cv: Резюме
     admin: Настройки
     logout: Выйти
 

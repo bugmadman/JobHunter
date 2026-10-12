@@ -1,6 +1,8 @@
 # yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
 
 parameters:
+    # Under var/, so the dev bind mount keeps it across container recreation
+    app.cv_storage_dir: '%kernel.project_dir%/var/storage/cv'
 
 services:
     _defaults:

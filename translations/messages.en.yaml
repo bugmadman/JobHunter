@@ -36,6 +36,15 @@ admin:
         save: Save
         cancel: Cancel
 
+cv:
+    upload:
+        title: CV
+        file: CV file
+        file_help: PDF, up to 10 MB.
+        submit: Upload
+        uploaded: The CV is uploaded.
+        invalid_file_name: This file name can't be used. Rename the file and upload it again.
+
 llm:
     provider:
         gemini: Gemini
@@ -45,6 +54,7 @@ llm:
         matching: Matching
 
 nav:
+    cv: CV
     admin: Settings
     logout: Log out
 

@@ -26,6 +26,7 @@
                                 </button>
                             {% endfor %}
                         </form>
+                        <a class="nav-link" href="{{ path('app_cv_upload') }}">{{ 'nav.cv'|trans }}</a>
                         <a class="nav-link" href="{{ path('admin') }}">{{ 'nav.admin'|trans }}</a>
                         <form method="post" action="{{ logout_path() }}">
                             <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
@@ -38,6 +39,13 @@
         </nav>
 
         <main class="container py-3">
+            <div id="flash-messages">
+                {% for type, messages in app.flashes %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ type }}" role="alert">{{ message|trans }}</div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
             {% block body %}{% endblock %}
         </main>
     </body>

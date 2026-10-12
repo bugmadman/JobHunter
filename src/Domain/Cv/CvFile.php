@@ -21,6 +21,11 @@ final readonly class CvFile
     /**
      * The stored name is a bare file name inside the CV storage directory, never a path: whatever ends up in the
      * column is later joined to that directory, so a slash or a leading dot would let it point elsewhere.
+     *
+     * The original name comes from the browser as is. It is normalised rather than rejected, so an odd name never
+     * blocks an upload: invalid UTF-8 would fail the insert, and control or invisible format characters (NUL,
+     * newlines, a right-to-left override disguising the extension) have no place in a name that is shown and later
+     * sent in a download header.
      */
     public static function create(string $storedName, string $originalName): self
     {
@@ -28,7 +33,11 @@ final readonly class CvFile
             throw InvalidCvFile::invalidStoredName($storedName);
         }
 
-        $originalName = trim($originalName);
+        $originalName = (string) preg_replace(
+            ['/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/u', '/^\p{Z}+|\p{Z}+$/u'],
+            [' ', ''],
+            mb_scrub($originalName, 'UTF-8'),
+        );
         if ('' === $originalName || mb_strlen($originalName) > self::MAX_NAME_LENGTH) {
             throw InvalidCvFile::invalidOriginalName();
         }
