@@ -3,9 +3,9 @@
 DC = docker compose --env-file .env $$([ -f .env.local ] && echo --env-file .env.local)
 PHP = $(DC) exec php
 
-.PHONY: init upd updb down ps in cs fix stan test test-db lint
+.PHONY: init encryption-key upd updb down ps in cs fix stan test test-db lint
 
-init: .env.local
+init: .env.local encryption-key
 	$(DC) build
 	$(DC) run --rm --no-deps php composer install
 	$(DC) up -d --wait
@@ -22,6 +22,18 @@ init: .env.local
 	fi; \
 	printf '# Machine-specific overrides of .env, not committed\nAPP_USERID=%s\n' "$$uid" > $@; \
 	echo "Created $@ with APP_USERID=$$uid"
+
+# Never replaces an existing key: the LLM API keys stored with it would become undecryptable.
+# tail -c1 guards a .env.local without a final newline, where the new line would be glued to the last one
+encryption-key: .env.local
+	@if grep -Eq '^LLM_KEY_ENCRYPTION_KEY=[A-Za-z0-9+/]' .env.local; then \
+		echo "LLM_KEY_ENCRYPTION_KEY is already set in .env.local"; \
+	else \
+		[ -z "$$(tail -c1 .env.local)" ] || echo >> .env.local; \
+		printf 'LLM_KEY_ENCRYPTION_KEY=%s\n' "$$(head -c 32 /dev/urandom | base64)" >> .env.local; \
+		chmod 600 .env.local; \
+		echo "Added LLM_KEY_ENCRYPTION_KEY to .env.local"; \
+	fi
 
 upd:
 	$(DC) up -d --wait

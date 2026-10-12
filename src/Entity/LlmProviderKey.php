@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Domain\Llm\ApiKey;
+use App\Domain\Llm\EncryptedApiKey;
 use App\Domain\Llm\LlmProvider;
 use App\Repository\LlmProviderKeyRepository;
 use Doctrine\DBAL\Types\Types;
@@ -19,14 +19,14 @@ final class LlmProviderKey
     private ?int $id = null;
 
     #[ORM\Column(type: Types::TEXT)]
-    private string $apiKey;
+    private string $encryptedApiKey;
 
     public function __construct(
         #[ORM\Column(length: 32, unique: true, enumType: LlmProvider::class)]
         private LlmProvider $provider,
-        ApiKey $apiKey,
+        EncryptedApiKey $encryptedApiKey,
     ) {
-        $this->apiKey = $apiKey->value();
+        $this->encryptedApiKey = $encryptedApiKey->value();
     }
 
     public function getId(): ?int
@@ -39,13 +39,13 @@ final class LlmProviderKey
         return $this->provider;
     }
 
-    public function getApiKey(): ApiKey
+    public function getEncryptedApiKey(): EncryptedApiKey
     {
-        return ApiKey::fromString($this->apiKey);
+        return new EncryptedApiKey($this->encryptedApiKey);
     }
 
-    public function changeApiKey(ApiKey $apiKey): void
+    public function changeApiKey(EncryptedApiKey $encryptedApiKey): void
     {
-        $this->apiKey = $apiKey->value();
+        $this->encryptedApiKey = $encryptedApiKey->value();
     }
 }

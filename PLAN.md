@@ -112,7 +112,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] `LlmOperationStatus` enum (pending / done / failed): the state of an LLM call started from the UI and running in Messenger
 - [x] [C] Provider key entity (provider → apiKey) + migration
 - [x] [S] Per-task model selection entity (task → provider + model) + migration
-- [ ] [C] Encryption of LLM API keys in the DB (`sodium`, encryption key in `.env.local`)
+- [x] [C] Encryption of LLM API keys in the DB (`sodium`, encryption key in `.env.local`)
 - [ ] [C] EasyAdmin CRUD for keys, the key is shown masked
 - [ ] [S] EasyAdmin CRUD for model selection
 - [ ] [C] `LlmClientInterface` + request/response DTOs
