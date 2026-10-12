@@ -35,4 +35,11 @@ interface PromptServiceInterface
      * Marks a still pending generation failed once its retries are used up; a finished one is left as it is.
      */
     public function giveUpGeneration(Prompt $prompt): void;
+
+    /**
+     * Replaces the prompt's text with a hand-written one, marked edited, and saves it.
+     *
+     * @throws PromptGenerationInProgress nothing is saved
+     */
+    public function edit(Prompt $prompt, PromptText $text): void;
 }

@@ -22,13 +22,17 @@
         {% endif %}
 
         {% if prompt and prompt.text %}
-            <p class="text-body-secondary small mb-1">{{ ('prompt.show.source.' ~ prompt.source.value)|trans }}</p>
+            <p class="text-body-secondary small mb-1">{{ ('prompt.source.' ~ prompt.source.value)|trans }}</p>
             <p class="border rounded p-2">{{ prompt.text|nl2br }}</p>
         {% elseif not prompt %}
             <p class="text-body-secondary">{{ 'prompt.show.none'|trans }}</p>
         {% endif %}
 
         {% if status != 'pending' %}
+            {% if prompt %}
+                <a href="{{ path('admin_prompt_edit', {entityId: prompt.id}) }}" data-turbo-frame="_top"
+                   class="btn btn-outline-secondary btn-sm mb-2">{{ 'prompt.show.edit'|trans }}</a>
+            {% endif %}
             <form method="post" action="{{ path('app_prompt_generate', {platformId: platform.id}) }}"
                   {%- if prompt and prompt.source and prompt.source.value == 'edited' %}
                       data-turbo-confirm="{{ 'prompt.show.confirm_overwrite_edit'|trans }}"

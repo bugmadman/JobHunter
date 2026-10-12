@@ -324,6 +324,32 @@ final class PromptServiceTest extends TestCase
         self::assertSame(self::DRAFT, $prompt->getText());
     }
 
+    public function testEditSavesTheHandWrittenText(): void
+    {
+        $prompt = new Prompt(self::platform(), self::analysedProfile());
+        $prompt->markGenerated(PromptText::fromString(self::DRAFT));
+
+        $prompts = $this->createMock(PromptRepositoryInterface::class);
+        $prompts->expects(self::once())->method('save')->with($prompt);
+
+        self::service($prompts)->edit($prompt, PromptText::fromString('Hand-written.'));
+
+        self::assertSame('Hand-written.', $prompt->getText());
+        self::assertSame(PromptSource::Edited, $prompt->getSource());
+    }
+
+    public function testEditWhileGeneratingIsRejected(): void
+    {
+        $prompt = new Prompt(self::platform(), self::analysedProfile());
+
+        $prompts = $this->createMock(PromptRepositoryInterface::class);
+        $prompts->expects(self::never())->method('save');
+
+        $this->expectException(PromptGenerationInProgress::class);
+
+        self::service($prompts)->edit($prompt, PromptText::fromString('Hand-written.'));
+    }
+
     private static function service(
         ?PromptRepositoryInterface $prompts = null,
         ?CvProfileRepositoryInterface $cvProfiles = null,

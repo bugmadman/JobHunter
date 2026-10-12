@@ -59,6 +59,7 @@ final class PromptControllerTest extends WebTestCase
             'Generate prompt',
         );
         self::assertSelectorNotExists('[data-turbo-confirm]');
+        self::assertSelectorNotExists('turbo-frame#prompt-3 a[href^="/admin/prompt"]');
     }
 
     public function testShowsAPendingGenerationInAFrameThatReloadsItself(): void
@@ -75,13 +76,14 @@ final class PromptControllerTest extends WebTestCase
         );
         self::assertSelectorTextContains('turbo-frame#prompt-3', 'The prompt is being generated.');
         self::assertSelectorNotExists('turbo-frame#prompt-3 form');
+        self::assertSelectorNotExists('turbo-frame#prompt-3 a[href^="/admin/prompt"]');
     }
 
     public function testShowsAGeneratedPromptWithARegenerateButton(): void
     {
         $client = $this->loggedInClient();
         $platform = $this->platform(3);
-        $prompt = new Prompt($platform, $this->analysedCv());
+        $prompt = $this->prompt($platform, 11);
         $prompt->markGenerated(PromptText::fromString("Like PHP.\nDislike Java."));
         $this->stubPlatforms($client)->method('findById')->willReturn($platform);
         $this->stubPrompts($client)->method('findByPlatform')->willReturn($prompt);
@@ -93,13 +95,17 @@ final class PromptControllerTest extends WebTestCase
         self::assertStringContainsString('Like PHP.<br>', $crawler->filter('turbo-frame#prompt-3')->html());
         self::assertSelectorTextContains('turbo-frame#prompt-3 form button', 'Regenerate prompt');
         self::assertSelectorNotExists('[data-turbo-confirm]');
+        self::assertSelectorTextContains(
+            'turbo-frame#prompt-3 a[href="/admin/prompt/11/edit"][data-turbo-frame="_top"]',
+            'Edit',
+        );
     }
 
     public function testAsksBeforeRegeneratingAnEditedPrompt(): void
     {
         $client = $this->loggedInClient();
         $platform = $this->platform(3);
-        $prompt = new Prompt($platform, $this->analysedCv());
+        $prompt = $this->prompt($platform, 11);
         $prompt->markGenerationFailed();
         $prompt->edit(PromptText::fromString('Hand-written.'));
         $this->stubPlatforms($client)->method('findById')->willReturn($platform);
@@ -110,6 +116,7 @@ final class PromptControllerTest extends WebTestCase
         self::assertSelectorTextContains('turbo-frame#prompt-3', 'Edited by hand');
         self::assertSelectorTextContains('turbo-frame#prompt-3 .alert-danger', 'The generation failed.');
         self::assertSelectorExists('form[data-turbo-confirm^="The prompt was edited by hand."]');
+        self::assertSelectorExists('turbo-frame#prompt-3 a[href="/admin/prompt/11/edit"]');
     }
 
     public function testShowReturns404ForAnUnknownPlatform(): void
@@ -126,8 +133,7 @@ final class PromptControllerTest extends WebTestCase
     {
         $client = $this->loggedInClient();
         $platform = $this->platform(3);
-        $prompt = new Prompt($platform, $this->analysedCv());
-        new \ReflectionProperty(Prompt::class, 'id')->setValue($prompt, 11);
+        $prompt = $this->prompt($platform, 11);
         $this->stubPlatforms($client)->method('findById')->willReturnMap([[3, $platform]]);
         $this->mockPromptService($client)
             ->expects(self::once())
@@ -240,6 +246,14 @@ final class PromptControllerTest extends WebTestCase
         new \ReflectionProperty(Platform::class, 'id')->setValue($platform, $id);
 
         return $platform;
+    }
+
+    private function prompt(Platform $platform, int $id): Prompt
+    {
+        $prompt = new Prompt($platform, $this->analysedCv());
+        new \ReflectionProperty(Prompt::class, 'id')->setValue($prompt, $id);
+
+        return $prompt;
     }
 
     private function analysedCv(): CvProfile

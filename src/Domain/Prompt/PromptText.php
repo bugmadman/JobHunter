@@ -16,7 +16,8 @@ final readonly class PromptText
 
     public static function fromString(string $text): self
     {
-        $text = trim($text);
+        // trim() misses Unicode spaces and invisible characters, so a lone NBSP would pass as a prompt
+        $text = (string) preg_replace('/^[\pZ\p{Cc}\p{Cf}]+|[\pZ\p{Cc}\p{Cf}]+$/u', '', $text);
 
         if ('' === $text) {
             throw EmptyPromptText::create();

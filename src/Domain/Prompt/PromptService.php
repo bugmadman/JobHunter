@@ -116,6 +116,12 @@ final readonly class PromptService implements PromptServiceInterface
         $this->prompts->save($prompt);
     }
 
+    public function edit(Prompt $prompt, PromptText $text): void
+    {
+        $prompt->edit($text);
+        $this->prompts->save($prompt);
+    }
+
     private static function describe(CvProfile $cvProfile): string
     {
         $analysis = $cvProfile->getAnalysis()

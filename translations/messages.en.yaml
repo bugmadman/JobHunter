@@ -12,6 +12,7 @@ admin:
         dashboard: Settings
         llm_provider_keys: LLM keys
         llm_model_selections: LLM models
+        prompts: Prompts
         back_to_app: Back to job postings
     llm_provider_key:
         singular: LLM key
@@ -32,6 +33,18 @@ admin:
         provider: Provider
         model: Model
         saved: The model is saved.
+    prompt:
+        singular: Prompt
+        plural: Prompts
+        index_title: Platform prompts
+        edit_title: 'Prompt for %platform%'
+        platform: Platform
+        source: Source
+        generation_status: Latest generation
+        text: Text
+        saved: The prompt is saved.
+        empty_text: The prompt text must not be empty.
+        generation_in_progress: The prompt is being generated. Wait for the draft, then edit it.
     form:
         save: Save
         cancel: Cancel
@@ -79,17 +92,22 @@ prompt:
         none: No prompt yet.
         pending: The prompt is being generated. This part of the page updates by itself.
         failed: The generation failed. Check the prompt generation model and key in the settings, then try again.
-        source:
-            generated: Generated from the CV
-            edited: Edited by hand
         generate: Generate prompt
         regenerate: Regenerate prompt
         confirm_overwrite_edit: The prompt was edited by hand. The new draft will replace your edits. Continue?
         no_analysed_cv: Upload a CV and wait for its analysis first.
+        edit: Edit
+    source:
+        generated: Generated from the CV
+        edited: Edited by hand
 
 llm:
     provider:
         gemini: Gemini
+    operation_status:
+        pending: In progress
+        done: Done
+        failed: Failed
     task:
         cv_analysis: CV analysis
         prompt_generation: Prompt generation

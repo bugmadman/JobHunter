@@ -12,6 +12,7 @@ admin:
         dashboard: Настройки
         llm_provider_keys: Ключи LLM
         llm_model_selections: Модели LLM
+        prompts: Промпты
         back_to_app: К вакансиям
     llm_provider_key:
         singular: Ключ LLM
@@ -32,6 +33,18 @@ admin:
         provider: Провайдер
         model: Модель
         saved: Модель сохранена.
+    prompt:
+        singular: Промпт
+        plural: Промпты
+        index_title: Промпты площадок
+        edit_title: 'Промпт для %platform%'
+        platform: Площадка
+        source: Источник
+        generation_status: Последняя генерация
+        text: Текст
+        saved: Промпт сохранён.
+        empty_text: Текст промпта не может быть пустым.
+        generation_in_progress: Промпт генерируется. Дождитесь черновика, потом редактируйте.
     form:
         save: Сохранить
         cancel: Отмена
@@ -79,17 +92,22 @@ prompt:
         none: Промпта пока нет.
         pending: Промпт генерируется. Эта часть страницы обновляется сама.
         failed: Генерация не удалась. Проверьте модель и ключ для генерации промпта в настройках и попробуйте снова.
-        source:
-            generated: Сгенерирован по резюме
-            edited: Отредактирован вручную
         generate: Сгенерировать промпт
         regenerate: Перегенерировать промпт
         confirm_overwrite_edit: Промпт редактировался вручную. Новый черновик заменит ваши правки. Продолжить?
         no_analysed_cv: Сначала загрузите резюме и дождитесь его анализа.
+        edit: Редактировать
+    source:
+        generated: Сгенерирован по резюме
+        edited: Отредактирован вручную
 
 llm:
     provider:
         gemini: Gemini
+    operation_status:
+        pending: Выполняется
+        done: Готово
+        failed: Ошибка
     task:
         cv_analysis: Анализ CV
         prompt_generation: Генерация промпта

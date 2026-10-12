@@ -21,6 +21,7 @@ final class PromptTextTest extends TestCase
 
     #[TestWith([''])]
     #[TestWith(["  \t\n"])]
+    #[TestWith(["\u{00A0}\u{200B}"])]
     public function testRejectsAnEmptyText(string $text): void
     {
         $this->expectException(EmptyPromptText::class);

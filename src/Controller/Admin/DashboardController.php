@@ -39,6 +39,7 @@ final class DashboardController extends AbstractDashboardController
             'admin.menu.llm_model_selections',
             'fa fa-microchip',
         );
+        yield MenuItem::linkTo(PromptCrudController::class, 'admin.menu.prompts', 'fa fa-pen');
         yield MenuItem::linkToRoute('admin.menu.back_to_app', 'fa fa-arrow-left', 'app_home');
     }
 }
