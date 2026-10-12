@@ -123,7 +123,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 ## Phase 5 — Platforms and skills
 
-- [ ] [S] Platform access type enum
+- [x] [S] Platform access type enum
 - [ ] [S] `Platform` entity + migration
 - [ ] [S] Fixture: Upwork, LinkedIn, Glassdoor, Indeed
 - [ ] [S] `Skill` entity + migration
