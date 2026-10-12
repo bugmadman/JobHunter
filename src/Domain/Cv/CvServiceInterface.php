@@ -27,4 +27,9 @@ interface CvServiceInterface
      * @throws LlmRequestFailed
      */
     public function analyze(CvProfile $cvProfile): void;
+
+    /**
+     * Marks a still pending analysis failed once its retries are used up; a finished one is left as it is.
+     */
+    public function giveUpAnalysis(CvProfile $cvProfile): void;
 }

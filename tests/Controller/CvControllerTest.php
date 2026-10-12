@@ -9,11 +9,14 @@ use App\Domain\Cv\CvServiceInterface;
 use App\Domain\Cv\CvUpload;
 use App\Domain\Cv\InvalidCvFile;
 use App\Entity\CvProfile;
+use App\Message\AnalyzeCv;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Field\FileFormField;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 
 final class CvControllerTest extends WebTestCase
 {
@@ -51,8 +54,11 @@ final class CvControllerTest extends WebTestCase
         self::assertSelectorExists('input[type="file"][name="cv_upload[file]"][accept="application/pdf,.pdf"]');
     }
 
-    public function testUploadsThePdfThroughTheService(): void
+    public function testUploadsThePdfThroughTheServiceAndQueuesItsAnalysis(): void
     {
+        $profile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
+        new \ReflectionProperty(CvProfile::class, 'id')->setValue($profile, 42);
+
         $client = $this->loggedInClient();
         $this->mockCvService($client)
             ->expects(self::once())
@@ -61,11 +67,12 @@ final class CvControllerTest extends WebTestCase
                 static fn (CvUpload $upload): bool => 'My CV.pdf' === $upload->originalName
                     && is_file($upload->path),
             ))
-            ->willReturn(new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf')));
+            ->willReturn($profile);
 
         $this->submit($client, $this->pdf('My CV.pdf'));
 
         self::assertResponseRedirects(self::URL);
+        self::assertEquals([new AnalyzeCv(42)], $this->queuedMessages($client));
         $client->followRedirect();
         self::assertSelectorTextContains('#flash-messages .alert-success', 'The CV is uploaded.');
     }
@@ -81,6 +88,7 @@ final class CvControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('.invalid-feedback', 'The mime type of the file is invalid');
+        self::assertSame([], $this->queuedMessages($client));
     }
 
     public function testRejectsAFileOverTheSizeLimit(): void
@@ -132,6 +140,7 @@ final class CvControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('.invalid-feedback', 'This file name can\'t be used.');
+        self::assertSame([], $this->queuedMessages($client));
     }
 
     public function testRedirectsAnonymousToLogin(): void
@@ -174,6 +183,20 @@ final class CvControllerTest extends WebTestCase
         }
 
         $client->submit($form, [], $server);
+    }
+
+    /**
+     * @return list<object>
+     */
+    private function queuedMessages(KernelBrowser $client): array
+    {
+        $transport = $client->getContainer()->get('messenger.transport.async');
+        self::assertInstanceOf(InMemoryTransport::class, $transport);
+
+        return array_values(array_map(
+            static fn (Envelope $envelope): object => $envelope->getMessage(),
+            [...$transport->getSent()],
+        ));
     }
 
     private function mockCvService(KernelBrowser $client): CvServiceInterface&MockObject

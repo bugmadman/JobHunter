@@ -9,10 +9,12 @@ use App\Domain\Cv\CvUpload;
 use App\Domain\Cv\InvalidCvFile;
 use App\Form\CvUploadData;
 use App\Form\CvUploadType;
+use App\Message\AnalyzeCv;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -21,6 +23,7 @@ final class CvController extends AbstractController
     public function __construct(
         private readonly CvServiceInterface $cvService,
         private readonly TranslatorInterface $translator,
+        private readonly MessageBusInterface $bus,
     ) {
     }
 
@@ -36,7 +39,12 @@ final class CvController extends AbstractController
             \assert(null !== $file);
 
             try {
-                $this->cvService->upload(new CvUpload($file->getPathname(), $file->getClientOriginalName()));
+                $cvProfile = $this->cvService->upload(
+                    new CvUpload($file->getPathname(), $file->getClientOriginalName()),
+                );
+                $cvProfileId = $cvProfile->getId();
+                \assert(null !== $cvProfileId);
+                $this->bus->dispatch(new AnalyzeCv($cvProfileId));
                 $this->addFlash('success', 'cv.upload.uploaded');
 
                 return $this->redirectToRoute('app_cv_upload');

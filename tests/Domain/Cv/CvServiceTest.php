@@ -329,6 +329,33 @@ final class CvServiceTest extends TestCase
         }
     }
 
+    public function testGivingUpMarksAPendingAnalysisFailed(): void
+    {
+        $profile = self::pendingProfile();
+
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->expects(self::once())->method('save')->with($profile);
+
+        self::service($cvProfiles)->giveUpAnalysis($profile);
+
+        self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());
+        self::assertNull($profile->getRawLlmResponse());
+    }
+
+    public function testGivingUpLeavesAFinishedAnalysisAsItIs(): void
+    {
+        $profile = self::pendingProfile();
+        $profile->markAnalysisFailed('{"first":true}');
+
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->expects(self::never())->method('save');
+
+        self::service($cvProfiles)->giveUpAnalysis($profile);
+
+        self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());
+        self::assertSame('{"first":true}', $profile->getRawLlmResponse());
+    }
+
     private static function analyzeFailing(CvService $service, CvProfile $profile): CvAnalysisFailed
     {
         try {

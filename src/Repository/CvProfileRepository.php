@@ -18,6 +18,11 @@ final class CvProfileRepository extends ServiceEntityRepository implements CvPro
         parent::__construct($registry, CvProfile::class);
     }
 
+    public function findById(int $id): ?CvProfile
+    {
+        return $this->find($id);
+    }
+
     public function save(CvProfile $cvProfile): void
     {
         $this->getEntityManager()->persist($cvProfile);

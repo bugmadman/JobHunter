@@ -3,6 +3,9 @@ framework:
         transports:
             async: '%env(MESSENGER_TRANSPORT_DSN)%'
 
+        routing:
+            App\Message\AnalyzeCv: async
+
 when@test:
     framework:
         messenger:

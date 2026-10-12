@@ -7,6 +7,7 @@ namespace App\Domain\Cv;
 use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmClientNotFound;
 use App\Domain\Llm\LlmModelNotSelected;
+use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Llm\LlmServiceInterface;
 use App\Domain\Llm\LlmTask;
 use App\Domain\Skill\InvalidSkillName;
@@ -87,6 +88,16 @@ final readonly class CvService implements CvServiceInterface
         }
 
         $cvProfile->markAnalysisDone($parsed->analysis, $this->findOrCreateSkills($skillNames), $response->text);
+        $this->cvProfiles->save($cvProfile);
+    }
+
+    public function giveUpAnalysis(CvProfile $cvProfile): void
+    {
+        if (LlmOperationStatus::Pending !== $cvProfile->getAnalysisStatus()) {
+            return;
+        }
+
+        $cvProfile->markAnalysisFailed();
         $this->cvProfiles->save($cvProfile);
     }
 
