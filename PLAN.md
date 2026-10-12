@@ -100,7 +100,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] `UnknownUserLoginListener`: only on the `main` firewall; verify the submitted password against a dummy hash made by the configured hasher (regenerated when it needs a rehash) instead of hashing a constant, so a password over 4096 bytes is rejected as fast as for a known email; find `UserNotFoundException` anywhere in the exception chain; tests
 - [x] [C] Rehash the owner's password on login when the hasher config changes (`PasswordUpgraderInterface`), so a wrong password and the dummy check cost the same; tests
 - [x] [S] Empty EasyAdmin dashboard
-- [ ] [S] Link to the admin in the base layout navigation
+- [x] [S] Link to the admin in the base layout navigation
 - [ ] [S] `User.locale` (a `Locale` enum: `en`, `ru`; default `en`) + migration
 - [ ] [S] The request locale is taken from the logged-in user's `locale` (EasyAdmin included)
 - [ ] [S] Language switcher in the interface, saves `User.locale`

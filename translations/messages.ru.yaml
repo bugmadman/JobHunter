@@ -13,6 +13,7 @@ admin:
         back_to_app: К вакансиям
 
 nav:
+    admin: Настройки
     logout: Выйти
 
 login:

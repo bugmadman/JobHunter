@@ -13,6 +13,7 @@ admin:
         back_to_app: Back to job postings
 
 nav:
+    admin: Settings
     logout: Log out
 
 login:
