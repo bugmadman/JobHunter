@@ -36,4 +36,13 @@ final readonly class LlmService implements LlmServiceInterface
 
         return null === $providerKey ? null : $this->apiKeyEncryptor->decrypt($providerKey->getEncryptedApiKey());
     }
+
+    public function deleteApiKey(LlmProvider $provider): void
+    {
+        $providerKey = $this->providerKeys->findByProvider($provider);
+
+        if (null !== $providerKey) {
+            $this->providerKeys->remove($providerKey);
+        }
+    }
 }

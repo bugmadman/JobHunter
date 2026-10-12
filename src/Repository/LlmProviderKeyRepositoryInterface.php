@@ -11,5 +11,12 @@ interface LlmProviderKeyRepositoryInterface
 {
     public function findByProvider(LlmProvider $provider): ?LlmProviderKey;
 
+    /**
+     * @return list<LlmProvider>
+     */
+    public function findConfiguredProviders(): array;
+
     public function save(LlmProviderKey $providerKey): void;
+
+    public function remove(LlmProviderKey $providerKey): void;
 }

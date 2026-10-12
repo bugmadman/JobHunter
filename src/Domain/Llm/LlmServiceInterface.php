@@ -9,4 +9,6 @@ interface LlmServiceInterface
     public function saveApiKey(LlmProvider $provider, ApiKey $apiKey): void;
 
     public function findApiKey(LlmProvider $provider): ?ApiKey;
+
+    public function deleteApiKey(LlmProvider $provider): void;
 }

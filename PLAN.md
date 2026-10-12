@@ -113,7 +113,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] Provider key entity (provider → apiKey) + migration
 - [x] [S] Per-task model selection entity (task → provider + model) + migration
 - [x] [C] Encryption of LLM API keys in the DB (`sodium`, encryption key in `.env.local`)
-- [ ] [C] EasyAdmin CRUD for keys, the key is shown masked
+- [x] [C] EasyAdmin CRUD for keys, the key is shown masked
 - [ ] [S] EasyAdmin CRUD for model selection
 - [ ] [C] `LlmClientInterface` + request/response DTOs
 - [ ] [C] `GeminiClient`: text request

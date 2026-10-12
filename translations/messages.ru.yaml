@@ -10,7 +10,23 @@ admin:
         title: Настройки
     menu:
         dashboard: Настройки
+        llm_provider_keys: Ключи LLM
         back_to_app: К вакансиям
+    llm_provider_key:
+        singular: Ключ LLM
+        plural: Ключи LLM
+        index_title: Ключи LLM-провайдеров
+        new_title: Добавить ключ LLM
+        edit_title: 'Заменить ключ %provider%'
+        provider: Провайдер
+        api_key: API-ключ
+        save: Сохранить
+        cancel: Отмена
+        saved: Ключ сохранён.
+
+llm:
+    provider:
+        gemini: Gemini
 
 nav:
     admin: Настройки

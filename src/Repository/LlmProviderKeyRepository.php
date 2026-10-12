@@ -24,9 +24,23 @@ final class LlmProviderKeyRepository extends ServiceEntityRepository implements 
         return $this->findOneBy(['provider' => $provider]);
     }
 
+    public function findConfiguredProviders(): array
+    {
+        return array_map(
+            static fn (LlmProviderKey $providerKey): LlmProvider => $providerKey->getProvider(),
+            $this->findAll(),
+        );
+    }
+
     public function save(LlmProviderKey $providerKey): void
     {
         $this->getEntityManager()->persist($providerKey);
+        $this->getEntityManager()->flush();
+    }
+
+    public function remove(LlmProviderKey $providerKey): void
+    {
+        $this->getEntityManager()->remove($providerKey);
         $this->getEntityManager()->flush();
     }
 }

@@ -1,0 +1,12 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+
+{% block content_title %}{{ title|trans }}{% endblock %}
+
+{% block main %}
+    {{ form_start(form) }}
+        {{ form_widget(form) }}
+        <button type="submit" class="btn btn-primary">{{ 'admin.llm_provider_key.save'|trans }}</button>
+        <a href="{{ index_url }}" class="btn btn-secondary">{{ 'admin.llm_provider_key.cancel'|trans }}</a>
+    {{ form_end(form) }}
+{% endblock %}

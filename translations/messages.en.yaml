@@ -10,7 +10,23 @@ admin:
         title: Settings
     menu:
         dashboard: Settings
+        llm_provider_keys: LLM keys
         back_to_app: Back to job postings
+    llm_provider_key:
+        singular: LLM key
+        plural: LLM keys
+        index_title: LLM provider keys
+        new_title: Add an LLM key
+        edit_title: 'Replace the %provider% key'
+        provider: Provider
+        api_key: API key
+        save: Save
+        cancel: Cancel
+        saved: The key is saved.
+
+llm:
+    provider:
+        gemini: Gemini
 
 nav:
     admin: Settings

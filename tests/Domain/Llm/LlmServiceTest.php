@@ -97,4 +97,26 @@ final class LlmServiceTest extends TestCase
 
         new LlmService($providerKeys, $encryptor)->saveApiKey(LlmProvider::Gemini, ApiKey::fromString('AIza-secret'));
     }
+
+    public function testDeletesTheProviderKey(): void
+    {
+        $providerKey = new LlmProviderKey(LlmProvider::Gemini, new EncryptedApiKey('ciphertext'));
+
+        $providerKeys = $this->createMock(LlmProviderKeyRepositoryInterface::class);
+        $providerKeys->method('findByProvider')->with(LlmProvider::Gemini)->willReturn($providerKey);
+        $providerKeys->expects(self::once())->method('remove')->with($providerKey);
+
+        new LlmService($providerKeys, self::createStub(ApiKeyEncryptorInterface::class))
+            ->deleteApiKey(LlmProvider::Gemini);
+    }
+
+    public function testDeletingTheKeyOfAnUnconfiguredProviderDoesNothing(): void
+    {
+        $providerKeys = $this->createMock(LlmProviderKeyRepositoryInterface::class);
+        $providerKeys->method('findByProvider')->willReturn(null);
+        $providerKeys->expects(self::never())->method('remove');
+
+        new LlmService($providerKeys, self::createStub(ApiKeyEncryptorInterface::class))
+            ->deleteApiKey(LlmProvider::Gemini);
+    }
 }

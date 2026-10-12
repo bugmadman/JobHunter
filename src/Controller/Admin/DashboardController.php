@@ -33,6 +33,7 @@ final class DashboardController extends AbstractDashboardController
     public function configureMenuItems(): iterable
     {
         yield MenuItem::linkToDashboard('admin.menu.dashboard', 'fa fa-gauge');
+        yield MenuItem::linkTo(LlmProviderKeyCrudController::class, 'admin.menu.llm_provider_keys', 'fa fa-key');
         yield MenuItem::linkToRoute('admin.menu.back_to_app', 'fa fa-arrow-left', 'app_home');
     }
 }
