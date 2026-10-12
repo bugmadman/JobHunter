@@ -103,7 +103,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Link to the admin in the base layout navigation
 - [x] [S] `User.locale` (a `Locale` enum: `en`, `ru`; default `en`) + migration
 - [x] [S] The request locale is taken from the logged-in user's `locale` (EasyAdmin included)
-- [ ] [S] Language switcher in the interface, saves `User.locale`
+- [x] [S] Language switcher in the interface, saves `User.locale`
 
 ## Phase 4 — LLM settings
 

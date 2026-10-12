@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Domain\User;
 
 use App\Domain\Shared\Email;
+use App\Domain\Shared\Locale;
 use App\Domain\User\PlainPassword;
 use App\Domain\User\UserAlreadyExists;
 use App\Domain\User\UserService;
@@ -68,5 +69,18 @@ final class UserServiceTest extends TestCase
         $hasher->expects(self::never())->method('hash');
 
         new UserService($users, $hasher)->upgradePasswordHash($user, 'new-hash');
+    }
+
+    public function testChangedLocaleIsSaved(): void
+    {
+        $user = new User(Email::fromString('owner@example.com'), 'hash');
+
+        $users = $this->createMock(UserRepositoryInterface::class);
+        $users->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static fn (User $saved): bool => $saved === $user
+                && Locale::Ru === $saved->getLocale()));
+
+        new UserService($users, self::createStub(PasswordHasherInterface::class))->changeLocale($user, Locale::Ru);
     }
 }

@@ -16,6 +16,10 @@ nav:
     admin: Settings
     logout: Log out
 
+locale:
+    en: EN
+    ru: RU
+
 login:
     title: Log in
     email: Email

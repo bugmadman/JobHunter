@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\User;
 
 use App\Domain\Shared\Email;
+use App\Domain\Shared\Locale;
 use App\Entity\User;
 use App\Infrastructure\Security\PasswordHasherInterface;
 use App\Repository\UserRepositoryInterface;
@@ -32,6 +33,12 @@ final readonly class UserService implements UserServiceInterface
     public function upgradePasswordHash(User $user, #[\SensitiveParameter] string $passwordHash): void
     {
         $user->changePasswordHash($passwordHash);
+        $this->users->save($user);
+    }
+
+    public function changeLocale(User $user, Locale $locale): void
+    {
+        $user->changeLocale($locale);
         $this->users->save($user);
     }
 }

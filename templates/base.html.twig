@@ -15,6 +15,17 @@
                 <a class="navbar-brand" href="{{ path('app_home') }}">{{ 'app.name'|trans }}</a>
                 {% if app.user %}
                     <div class="d-flex align-items-center gap-3">
+                        <form method="post" action="{{ path('app_locale') }}" class="btn-group btn-group-sm">
+                            <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
+                                   value="{{ csrf_token('locale') }}">
+                            <input type="hidden" name="_target" value="{{ app.request.requestUri }}">
+                            {% for locale in enum_cases('App\\Domain\\Shared\\Locale') %}
+                                <button type="submit" name="locale" value="{{ locale.value }}"
+                                        class="btn btn-outline-secondary{{ locale.value == app.request.locale ? ' active' }}">
+                                    {{- ('locale.' ~ locale.value)|trans -}}
+                                </button>
+                            {% endfor %}
+                        </form>
                         <a class="nav-link" href="{{ path('admin') }}">{{ 'nav.admin'|trans }}</a>
                         <form method="post" action="{{ logout_path() }}">
                             <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
