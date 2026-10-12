@@ -107,7 +107,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 ## Phase 4 — LLM settings
 
-- [ ] [S] `LlmProvider` enum (only Gemini for now)
+- [x] [S] `LlmProvider` enum (only Gemini for now)
 - [ ] [S] `LlmTask` enum (CV analysis / prompt generation / matching)
 - [ ] [S] `LlmOperationStatus` enum (pending / done / failed): the state of an LLM call started from the UI and running in Messenger
 - [ ] [C] Provider key entity (provider → apiKey) + migration
