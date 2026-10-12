@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Domain\Shared\Email;
 use App\Domain\Shared\InvalidEmail;
+use App\Domain\User\IntakeApiKey;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -24,6 +25,11 @@ final class UserRepository extends ServiceEntityRepository implements UserReposi
     public function exists(): bool
     {
         return $this->count() > 0;
+    }
+
+    public function findByApiKey(IntakeApiKey $apiKey): ?User
+    {
+        return $this->findOneBy(['apiKeyHash' => $apiKey->hash()]);
     }
 
     public function save(User $user): void

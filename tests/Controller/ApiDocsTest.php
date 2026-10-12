@@ -25,11 +25,11 @@ final class ApiDocsTest extends WebTestCase
     #[TestWith(['/api/v1/errors/404'])]
     #[TestWith(['/api/v1/validation_errors/1'])]
     #[TestWith(['/api/v1/.well-known/genid/1'])]
-    public function testOtherApiPathsRedirectAnonymousToLogin(string $path): void
+    public function testOtherApiPathsRequireTheApiKey(string $path): void
     {
         $client = self::createClient();
         $client->request('GET', $path, server: ['HTTP_ACCEPT' => 'application/ld+json']);
 
-        self::assertResponseRedirects('/login');
+        self::assertResponseStatusCodeSame(401);
     }
 }

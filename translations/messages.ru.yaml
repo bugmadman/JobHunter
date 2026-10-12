@@ -1,6 +1,9 @@
 app:
     name: JobHunter
 
+api:
+    unauthorized: Нужен действующий API-ключ.
+
 home:
     title: Вакансии
     placeholder: Здесь будет список вакансий.

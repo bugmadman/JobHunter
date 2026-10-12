@@ -162,7 +162,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 ## Phase 9 — Job posting intake (API Platform)
 
 - [x] [C] Generating/regenerating the API key in the settings
-- [ ] [C] API key authenticator (header)
+- [x] [C] API key authenticator (header)
 - [ ] [C] Rate limiter on the job posting intake endpoint
 - [ ] [C] POST endpoint for creating a `JobPosting` (DTO with Assert)
 - [ ] [C] Dispatching a message to Messenger on creation

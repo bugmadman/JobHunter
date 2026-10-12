@@ -21,6 +21,18 @@ final readonly class IntakeApiKey
     }
 
     /**
+     * @throws InvalidIntakeApiKey
+     */
+    public static function fromString(#[\SensitiveParameter] string $apiKey): self
+    {
+        if (1 !== preg_match('/^[0-9a-f]{64}$/D', $apiKey)) {
+            throw InvalidIntakeApiKey::create();
+        }
+
+        return new self($apiKey);
+    }
+
+    /**
      * @return non-empty-string
      */
     public function value(): string

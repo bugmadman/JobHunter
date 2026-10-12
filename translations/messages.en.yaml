@@ -1,6 +1,9 @@
 app:
     name: JobHunter
 
+api:
+    unauthorized: A valid API key is required.
+
 home:
     title: Job postings
     placeholder: The job posting list will be here.
