@@ -126,7 +126,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Platform access type enum
 - [x] [S] `Platform` entity + migration
 - [x] [S] Fixture: Upwork, LinkedIn, Glassdoor, Indeed
-- [ ] [S] `Skill` entity + migration
+- [x] [S] `Skill` entity + migration
 
 ## Phase 6 — CV: upload and analysis
 
