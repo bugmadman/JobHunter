@@ -10,6 +10,8 @@ interface PlatformRepositoryInterface
 {
     public function findById(int $id): ?Platform;
 
+    public function findByName(string $name): ?Platform;
+
     /**
      * @return list<Platform>
      */

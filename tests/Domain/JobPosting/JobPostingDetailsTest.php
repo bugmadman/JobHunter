@@ -144,6 +144,24 @@ final class JobPostingDetailsTest extends TestCase
         JobPostingDetails::create(...$fields);
     }
 
+    /**
+     * @param array{string, string, string, ?string, ?string} $fields
+     */
+    #[TestWith([['', 'Symfony.', self::URL, null, null], 'title'])]
+    #[TestWith([['PHP Developer', "Sym\0fony.", self::URL, null, null], 'description'])]
+    #[TestWith([['PHP Developer', 'Symfony.', 'ftp://example.com/job', null, null], 'url'])]
+    #[TestWith([['PHP Developer', 'Symfony.', self::URL, "\u{00A0}Acme\0", null], 'company'])]
+    #[TestWith([['PHP Developer', 'Symfony.', self::URL, null, "Ber\0lin"], 'location'])]
+    public function testNamesTheInvalidField(array $fields, string $field): void
+    {
+        try {
+            JobPostingDetails::create(...$fields);
+            self::fail('The details must be rejected.');
+        } catch (InvalidJobPostingDetails $exception) {
+            self::assertSame($field, $exception->field);
+        }
+    }
+
     public function testAcceptsAnUppercaseHttpScheme(): void
     {
         self::assertSame(

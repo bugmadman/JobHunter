@@ -4,11 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Security;
 
-use App\DataFixtures\AppFixtures;
 use App\Domain\User\IntakeApiKey;
-use App\Domain\User\UserServiceInterface;
-use App\Entity\User;
-use App\Repository\UserRepository;
 use App\Tests\Controller\LogsInAsOwner;
 use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -16,6 +12,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class ApiKeyAuthenticationTest extends WebTestCase
 {
+    use IssuesIntakeApiKey;
     use LogsInAsOwner;
 
     private const string API_PATH = '/api/v1';
@@ -91,19 +88,6 @@ final class ApiKeyAuthenticationTest extends WebTestCase
     private function requestApi(KernelBrowser $client, array $server = []): void
     {
         $client->request('GET', self::API_PATH, server: ['HTTP_ACCEPT' => 'application/ld+json'] + $server);
-    }
-
-    private function issueOwnerApiKey(KernelBrowser $client): IntakeApiKey
-    {
-        $container = $client->getContainer();
-        $users = $container->get(UserRepository::class);
-        self::assertInstanceOf(UserRepository::class, $users);
-        $owner = $users->loadUserByIdentifier(AppFixtures::OWNER_EMAIL);
-        self::assertInstanceOf(User::class, $owner);
-        $service = $container->get(UserServiceInterface::class);
-        self::assertInstanceOf(UserServiceInterface::class, $service);
-
-        return $service->regenerateApiKey($owner);
     }
 
     private function assertUnauthorized(KernelBrowser $client): void

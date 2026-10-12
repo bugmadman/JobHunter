@@ -23,6 +23,11 @@ final class PlatformRepository extends ServiceEntityRepository implements Platfo
         return $this->find($id);
     }
 
+    public function findByName(string $name): ?Platform
+    {
+        return $this->findOneBy(['name' => $name]);
+    }
+
     public function findAllOrderedByName(): array
     {
         return $this->findBy([], ['name' => 'ASC']);

@@ -4,6 +4,9 @@ app:
 api:
     unauthorized: Нужен действующий API-ключ.
     too_many_requests: Слишком много запросов, повторите позже.
+    job_posting:
+        unknown_platform: 'Неизвестная платформа «%platform%».'
+        invalid_value: Недопустимое значение.
 
 home:
     title: Вакансии

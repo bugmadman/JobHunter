@@ -1,7 +1,13 @@
 api_platform:
     title: JobHunter API
     version: 1.0.0
+    path_segment_name_generator: api_platform.metadata.path_segment_name_generator.dash
     defaults:
         stateless: true
         cache_headers:
             vary: ['Content-Type', 'Authorization', 'Origin']
+    swagger:
+        http_auth:
+            ApiKey:
+                scheme: bearer
+                bearerFormat: 64 hex characters

@@ -10,6 +10,7 @@ use App\Domain\JobPosting\JobPostingStatus;
 use App\Domain\JobPosting\JobPostingStatusChanged;
 use App\Domain\JobPosting\JobPostingVerdict;
 use App\Domain\JobPosting\StatusReason;
+use App\Repository\JobPostingRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -18,7 +19,7 @@ use Doctrine\ORM\Mapping as ORM;
  * together with every final status and the verdict only with `evaluated`, so neither can disagree with the status.
  * The arrival and every transition are recorded as events, which JobPostingStageLogWriter logs on flush.
  */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: JobPostingRepository::class)]
 final class JobPosting
 {
     #[ORM\Id]

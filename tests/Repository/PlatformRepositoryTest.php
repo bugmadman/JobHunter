@@ -23,4 +23,14 @@ final class PlatformRepositoryTest extends KernelTestCase
             ),
         );
     }
+
+    public function testFindsAPlatformByItsExactName(): void
+    {
+        $repository = self::getContainer()->get(PlatformRepository::class);
+        self::assertInstanceOf(PlatformRepository::class, $repository);
+
+        self::assertSame('LinkedIn', $repository->findByName('LinkedIn')?->getName());
+        self::assertNull($repository->findByName('linkedin'));
+        self::assertNull($repository->findByName('Monster'));
+    }
 }

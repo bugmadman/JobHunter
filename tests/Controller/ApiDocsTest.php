@@ -32,4 +32,21 @@ final class ApiDocsTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(401);
     }
+
+    public function testDocumentsOnlyTheIntakeWithTheApiKeyAsABearerToken(): void
+    {
+        $client = self::createClient();
+        $client->request('GET', '/api/v1/docs.jsonopenapi', server: ['HTTP_ACCEPT' => 'application/vnd.openapi+json']);
+
+        $docs = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($docs);
+        self::assertIsArray($docs['paths']);
+        self::assertSame(['/api/v1/job-postings'], array_keys($docs['paths']));
+        self::assertSame([['ApiKey' => []]], $docs['security']);
+        self::assertIsArray($docs['components']);
+        self::assertIsArray($docs['components']['securitySchemes']);
+        self::assertIsArray($docs['components']['securitySchemes']['ApiKey']);
+        self::assertSame('http', $docs['components']['securitySchemes']['ApiKey']['type']);
+        self::assertSame('bearer', $docs['components']['securitySchemes']['ApiKey']['scheme']);
+    }
 }

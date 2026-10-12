@@ -164,7 +164,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] Generating/regenerating the API key in the settings
 - [x] [C] API key authenticator (header)
 - [x] [C] Rate limiter on the job posting intake endpoint
-- [ ] [C] POST endpoint for creating a `JobPosting` (DTO with Assert)
+- [x] [C] POST endpoint for creating a `JobPosting` (DTO with Assert)
 - [ ] [C] Dispatching a message to Messenger on creation
 - [ ] [S] Verify the endpoint with curl
 
