@@ -155,7 +155,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 - [x] [C] `JobPosting` pipeline status enum
 - [x] [C] `JobPosting` entity with transition methods that protect invariants + migration
-- [ ] [C] Unit tests for status transitions (including forbidden ones); delete the placeholder `tests/KernelBootTest.php`, real tests now cover the PHPUnit setup
+- [x] [C] Unit tests for status transitions (including forbidden ones); delete the placeholder `tests/KernelBootTest.php`, real tests now cover the PHPUnit setup
 - [ ] [S] `JobPostingStageLog` entity + migration
 - [ ] [C] Domain events for transitions → written to `JobPostingStageLog`
 
