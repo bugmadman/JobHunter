@@ -101,7 +101,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] Rehash the owner's password on login when the hasher config changes (`PasswordUpgraderInterface`), so a wrong password and the dummy check cost the same; tests
 - [x] [S] Empty EasyAdmin dashboard
 - [x] [S] Link to the admin in the base layout navigation
-- [ ] [S] `User.locale` (a `Locale` enum: `en`, `ru`; default `en`) + migration
+- [x] [S] `User.locale` (a `Locale` enum: `en`, `ru`; default `en`) + migration
 - [ ] [S] The request locale is taken from the logged-in user's `locale` (EasyAdmin included)
 - [ ] [S] Language switcher in the interface, saves `User.locale`
 

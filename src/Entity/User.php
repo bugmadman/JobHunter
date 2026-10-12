@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Domain\Shared\Email;
+use App\Domain\Shared\Locale;
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -25,6 +26,9 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private string $password;
 
+    #[ORM\Column(length: 2, enumType: Locale::class, options: ['default' => Locale::En->value])]
+    private Locale $locale = Locale::En;
+
     public function __construct(Email $email, #[\SensitiveParameter] string $passwordHash)
     {
         $this->email = $email->value;
@@ -39,6 +43,11 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getEmail(): Email
     {
         return Email::fromString($this->email);
+    }
+
+    public function getLocale(): Locale
+    {
+        return $this->locale;
     }
 
     public function getUserIdentifier(): string
