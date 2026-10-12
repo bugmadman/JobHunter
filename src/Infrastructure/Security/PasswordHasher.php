@@ -21,12 +21,12 @@ final readonly class PasswordHasher implements PasswordHasherInterface
         return $this->userHasher()->hash($password->value());
     }
 
-    public function verify(string $hash, #[\SensitiveParameter] string $password): bool
+    public function verify(#[\SensitiveParameter] string $hash, #[\SensitiveParameter] string $password): bool
     {
         return $this->userHasher()->verify($hash, $password);
     }
 
-    public function needsRehash(string $hash): bool
+    public function needsRehash(#[\SensitiveParameter] string $hash): bool
     {
         return $this->userHasher()->needsRehash($hash);
     }
