@@ -147,7 +147,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] "Generate prompt" button: dispatches the message, the Turbo frame refreshes until the draft is ready
 - [x] [C] Manual prompt editing in EasyAdmin
 - [x] [S] `platforms/upwork.md`
-- [ ] [S] `platforms/linkedin.md`
+- [x] [S] `platforms/linkedin.md`
 - [ ] [S] `platforms/glassdoor.md`
 - [ ] [S] `platforms/indeed.md`
 
