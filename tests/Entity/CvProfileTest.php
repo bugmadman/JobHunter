@@ -13,6 +13,7 @@ use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Cv\Seniority;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Entity\CvProfile;
+use App\Entity\Skill;
 use PHPUnit\Framework\TestCase;
 
 final class CvProfileTest extends TestCase
@@ -31,6 +32,8 @@ final class CvProfileTest extends TestCase
     public function testDoneAnalysisIsStored(): void
     {
         $profile = self::pendingProfile();
+        $php = new Skill('PHP');
+        $symfony = new Skill('Symfony');
 
         $profile->markAnalysisDone(
             new CvAnalysis(
@@ -44,6 +47,7 @@ final class CvProfileTest extends TestCase
                     LanguageProficiency::create('en', LanguageLevel::C1),
                 ],
             ),
+            [$php, $symfony, $php],
             '{"seniority":"senior"}',
         );
 
@@ -66,13 +70,14 @@ final class CvProfileTest extends TestCase
             ],
             $analysis->languages,
         );
+        self::assertSame([$php, $symfony], $profile->getSkills());
     }
 
     public function testDoneAnalysisWithoutOptionalFields(): void
     {
         $profile = self::pendingProfile();
 
-        $profile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', null, null, null), '{}');
+        $profile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', null, null, null), [], '{}');
 
         $analysis = $profile->getAnalysis();
         self::assertNotNull($analysis);
@@ -80,6 +85,7 @@ final class CvProfileTest extends TestCase
         self::assertNull($analysis->seniority);
         self::assertNull($analysis->salaryExpectation);
         self::assertSame([], $analysis->languages);
+        self::assertSame([], $profile->getSkills());
     }
 
     public function testFailedAnalysisKeepsTheRawResponse(): void
@@ -106,7 +112,7 @@ final class CvProfileTest extends TestCase
     public function testDoneAnalysisCannotBeFinishedAgain(): void
     {
         $profile = self::pendingProfile();
-        $profile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', 5, null, null), '{"first":true}');
+        $profile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', 5, null, null), [], '{"first":true}');
 
         try {
             $profile->markAnalysisFailed('{"second":true}');
@@ -117,7 +123,7 @@ final class CvProfileTest extends TestCase
         }
 
         $this->expectException(CvAnalysisAlreadyFinished::class);
-        $profile->markAnalysisDone(new CvAnalysis('Другой', 'Other', 7, null, null), '{}');
+        $profile->markAnalysisDone(new CvAnalysis('Другой', 'Other', 7, null, null), [], '{}');
     }
 
     public function testFailedAnalysisCannotBeFinishedAgain(): void
@@ -126,7 +132,7 @@ final class CvProfileTest extends TestCase
         $profile->markAnalysisFailed('{"first":true}');
 
         try {
-            $profile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', 5, null, null), '{}');
+            $profile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', 5, null, null), [], '{}');
             self::fail('A failed analysis was marked done.');
         } catch (CvAnalysisAlreadyFinished) {
             self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());

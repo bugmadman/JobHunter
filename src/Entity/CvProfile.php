@@ -64,9 +64,16 @@ final class CvProfile
     #[ORM\OneToMany(targetEntity: CvLanguage::class, mappedBy: 'cvProfile', cascade: ['persist'], orphanRemoval: true)]
     private Collection $languages;
 
+    /**
+     * @var Collection<int, Skill>
+     */
+    #[ORM\ManyToMany(targetEntity: Skill::class)]
+    private Collection $skills;
+
     public function __construct(CvFile $file)
     {
         $this->languages = new ArrayCollection();
+        $this->skills = new ArrayCollection();
         $this->storedFileName = $file->storedName;
         $this->originalFileName = $file->originalName;
     }
@@ -110,12 +117,23 @@ final class CvProfile
         );
     }
 
+    /**
+     * @return list<Skill>
+     */
+    public function getSkills(): array
+    {
+        return array_values($this->skills->toArray());
+    }
+
     public function getRawLlmResponse(): ?string
     {
         return $this->rawLlmResponse;
     }
 
-    public function markAnalysisDone(CvAnalysis $analysis, string $rawLlmResponse): void
+    /**
+     * @param list<Skill> $skills
+     */
+    public function markAnalysisDone(CvAnalysis $analysis, array $skills, string $rawLlmResponse): void
     {
         $this->assertAnalysisPending();
 
@@ -131,6 +149,12 @@ final class CvProfile
 
         foreach ($analysis->languages as $proficiency) {
             $this->languages->add(new CvLanguage($this, $proficiency));
+        }
+
+        foreach ($skills as $skill) {
+            if (!$this->skills->contains($skill)) {
+                $this->skills->add($skill);
+            }
         }
     }
 
