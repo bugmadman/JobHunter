@@ -6,6 +6,8 @@ namespace App\Tests\Domain\Cv;
 
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\InvalidCvAnalysis;
+use App\Domain\Cv\LanguageLevel;
+use App\Domain\Cv\LanguageProficiency;
 use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
 
@@ -42,5 +44,15 @@ final class CvAnalysisTest extends TestCase
         $this->expectException(InvalidCvAnalysis::class);
 
         new CvAnalysis('Анализ', 'Analysis', $years, null, null);
+    }
+
+    public function testDuplicateLanguageIsRejected(): void
+    {
+        $this->expectException(InvalidCvAnalysis::class);
+
+        new CvAnalysis('Анализ', 'Analysis', null, null, null, [
+            LanguageProficiency::create('en', LanguageLevel::C1),
+            LanguageProficiency::create('EN', LanguageLevel::B2),
+        ]);
     }
 }

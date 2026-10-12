@@ -19,4 +19,9 @@ final class InvalidCvAnalysis extends \DomainException
             $years,
         ));
     }
+
+    public static function duplicateLanguage(string $language): self
+    {
+        return new self(\sprintf('The language "%s" is listed more than once.', $language));
+    }
 }

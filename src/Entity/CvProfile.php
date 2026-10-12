@@ -7,10 +7,13 @@ namespace App\Entity;
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvAnalysisAlreadyFinished;
 use App\Domain\Cv\CvFile;
+use App\Domain\Cv\LanguageProficiency;
 use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Cv\Seniority;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Repository\CvProfileRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -55,8 +58,15 @@ final class CvProfile
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $rawLlmResponse = null;
 
+    /**
+     * @var Collection<int, CvLanguage>
+     */
+    #[ORM\OneToMany(targetEntity: CvLanguage::class, mappedBy: 'cvProfile', cascade: ['persist'], orphanRemoval: true)]
+    private Collection $languages;
+
     public function __construct(CvFile $file)
     {
+        $this->languages = new ArrayCollection();
         $this->storedFileName = $file->storedName;
         $this->originalFileName = $file->originalName;
     }
@@ -94,6 +104,9 @@ final class CvProfile
             null === $this->salaryCurrency
                 ? null
                 : SalaryExpectation::create($this->salaryMin, $this->salaryMax, $this->salaryCurrency),
+            array_values($this->languages->map(
+                static fn (CvLanguage $language): LanguageProficiency => $language->getProficiency(),
+            )->toArray()),
         );
     }
 
@@ -115,6 +128,10 @@ final class CvProfile
         $this->salaryMax = $analysis->salaryExpectation?->max;
         $this->salaryCurrency = $analysis->salaryExpectation?->currency;
         $this->rawLlmResponse = $rawLlmResponse;
+
+        foreach ($analysis->languages as $proficiency) {
+            $this->languages->add(new CvLanguage($this, $proficiency));
+        }
     }
 
     /**

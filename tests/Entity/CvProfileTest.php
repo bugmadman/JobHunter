@@ -7,6 +7,8 @@ namespace App\Tests\Entity;
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvAnalysisAlreadyFinished;
 use App\Domain\Cv\CvFile;
+use App\Domain\Cv\LanguageLevel;
+use App\Domain\Cv\LanguageProficiency;
 use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Cv\Seniority;
 use App\Domain\Llm\LlmOperationStatus;
@@ -37,6 +39,10 @@ final class CvProfileTest extends TestCase
                 12,
                 Seniority::Senior,
                 SalaryExpectation::create(4000, 6000, 'USD'),
+                [
+                    LanguageProficiency::create('ru', LanguageLevel::Native),
+                    LanguageProficiency::create('en', LanguageLevel::C1),
+                ],
             ),
             '{"seniority":"senior"}',
         );
@@ -53,6 +59,13 @@ final class CvProfileTest extends TestCase
         self::assertSame(4000, $analysis->salaryExpectation->min);
         self::assertSame(6000, $analysis->salaryExpectation->max);
         self::assertSame('USD', $analysis->salaryExpectation->currency);
+        self::assertEquals(
+            [
+                LanguageProficiency::create('ru', LanguageLevel::Native),
+                LanguageProficiency::create('en', LanguageLevel::C1),
+            ],
+            $analysis->languages,
+        );
     }
 
     public function testDoneAnalysisWithoutOptionalFields(): void
@@ -66,6 +79,7 @@ final class CvProfileTest extends TestCase
         self::assertNull($analysis->yearsExperience);
         self::assertNull($analysis->seniority);
         self::assertNull($analysis->salaryExpectation);
+        self::assertSame([], $analysis->languages);
     }
 
     public function testFailedAnalysisKeepsTheRawResponse(): void

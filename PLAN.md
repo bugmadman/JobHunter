@@ -131,7 +131,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 ## Phase 6 — CV: upload and analysis
 
 - [x] [C] `CvProfile` entity (original file, analysis status (`LlmOperationStatus`), analysis in the original language, analysis in English, `yearsExperience`, `seniority`, `salaryMin/Max/Currency`, raw LLM response) + migration
-- [ ] [S] `CvLanguage` entity (one-to-many) + migration
+- [x] [S] `CvLanguage` entity (one-to-many) + migration
 - [ ] [S] `CvProfile` ↔ `Skill` relation (many-to-many) + migration
 - [ ] [C] CV upload form (PDF only, form limit ≤ 10M: PHP's `upload_max_filesize`), saving the original file
 - [ ] [C] CV analysis JSON schema + validation via `justinrainbow/json-schema`
