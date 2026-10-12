@@ -13,6 +13,7 @@ admin:
         llm_provider_keys: Ключи LLM
         llm_model_selections: Модели LLM
         prompts: Промпты
+        api_key: API-ключ приёма
         back_to_app: К вакансиям
     llm_provider_key:
         singular: Ключ LLM
@@ -45,6 +46,15 @@ admin:
         saved: Промпт сохранён.
         empty_text: Текст промпта не может быть пустым.
         generation_in_progress: Промпт генерируется. Дождитесь черновика, потом редактируйте.
+    api_key:
+        title: API-ключ для приёма вакансий
+        description: Вакансии отправляются в API с этим ключом в заголовке запроса.
+        not_set: Ключа пока нет.
+        is_set: Ключ задан. Он показывается только один раз, сразу после генерации.
+        regenerate_warning: Новый ключ сразу отменяет текущий.
+        generated: 'Новый ключ. Скопируйте его сейчас: больше он показан не будет.'
+        generate: Сгенерировать ключ
+        regenerate: Сгенерировать новый ключ
     form:
         save: Сохранить
         cancel: Отмена

@@ -41,4 +41,13 @@ final readonly class UserService implements UserServiceInterface
         $user->changeLocale($locale);
         $this->users->save($user);
     }
+
+    public function regenerateApiKey(User $user): IntakeApiKey
+    {
+        $apiKey = IntakeApiKey::generate();
+        $user->replaceApiKey($apiKey);
+        $this->users->save($user);
+
+        return $apiKey;
+    }
 }

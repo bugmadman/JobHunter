@@ -83,4 +83,21 @@ final class UserServiceTest extends TestCase
 
         new UserService($users, self::createStub(PasswordHasherInterface::class))->changeLocale($user, Locale::Ru);
     }
+
+    public function testRegeneratedApiKeyReplacesTheStoredHash(): void
+    {
+        $user = new User(Email::fromString('owner@example.com'), 'hash');
+        $hashProperty = new \ReflectionProperty(User::class, 'apiKeyHash');
+
+        $users = $this->createMock(UserRepositoryInterface::class);
+        $users->expects(self::exactly(2))->method('save')->with($user);
+        $service = new UserService($users, self::createStub(PasswordHasherInterface::class));
+
+        $first = $service->regenerateApiKey($user);
+        self::assertSame($first->hash(), $hashProperty->getValue($user));
+
+        $second = $service->regenerateApiKey($user);
+        self::assertNotSame($first->value(), $second->value());
+        self::assertSame($second->hash(), $hashProperty->getValue($user));
+    }
 }

@@ -13,6 +13,7 @@ admin:
         llm_provider_keys: LLM keys
         llm_model_selections: LLM models
         prompts: Prompts
+        api_key: Intake API key
         back_to_app: Back to job postings
     llm_provider_key:
         singular: LLM key
@@ -45,6 +46,15 @@ admin:
         saved: The prompt is saved.
         empty_text: The prompt text must not be empty.
         generation_in_progress: The prompt is being generated. Wait for the draft, then edit it.
+    api_key:
+        title: Job posting intake API key
+        description: Job postings are sent to the API with this key in a request header.
+        not_set: No key yet.
+        is_set: A key is set. It is shown only once, right after it is generated.
+        regenerate_warning: Generating a new key revokes the current one at once.
+        generated: 'The new key. Copy it now: it won''t be shown again.'
+        generate: Generate a key
+        regenerate: Generate a new key
     form:
         save: Save
         cancel: Cancel

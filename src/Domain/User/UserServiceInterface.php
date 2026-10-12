@@ -21,4 +21,9 @@ interface UserServiceInterface
     public function upgradePasswordHash(User $user, #[\SensitiveParameter] string $passwordHash): void;
 
     public function changeLocale(User $user, Locale $locale): void;
+
+    /**
+     * Only the hash is stored: the returned key is the one chance to show it.
+     */
+    public function regenerateApiKey(User $user): IntakeApiKey;
 }

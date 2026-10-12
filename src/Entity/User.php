@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Domain\Shared\Email;
 use App\Domain\Shared\Locale;
+use App\Domain\User\IntakeApiKey;
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -28,6 +29,9 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(length: 2, enumType: Locale::class, options: ['default' => Locale::En->value])]
     private Locale $locale = Locale::En;
+
+    #[ORM\Column(length: 64, unique: true, nullable: true)]
+    private ?string $apiKeyHash = null;
 
     public function __construct(Email $email, #[\SensitiveParameter] string $passwordHash)
     {
@@ -53,6 +57,16 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function changeLocale(Locale $locale): void
     {
         $this->locale = $locale;
+    }
+
+    public function hasApiKey(): bool
+    {
+        return null !== $this->apiKeyHash;
+    }
+
+    public function replaceApiKey(IntakeApiKey $apiKey): void
+    {
+        $this->apiKeyHash = $apiKey->hash();
     }
 
     public function getUserIdentifier(): string

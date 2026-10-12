@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Domain\Shared\Email;
+use App\Domain\User\IntakeApiKey;
 use App\Entity\User;
 use PHPUnit\Framework\TestCase;
 
@@ -61,5 +62,18 @@ final class UserTest extends TestCase
         self::assertSame(42, $restored->getId());
         self::assertSame('owner@example.com', $restored->getUserIdentifier());
         self::assertSame($hash, $user->getPassword());
+    }
+
+    public function testApiKeyIsStoredAsItsHash(): void
+    {
+        $user = new User(Email::fromString('owner@example.com'), 'hash');
+        $apiKey = IntakeApiKey::generate();
+
+        self::assertFalse($user->hasApiKey());
+
+        $user->replaceApiKey($apiKey);
+
+        self::assertTrue($user->hasApiKey());
+        self::assertSame($apiKey->hash(), new \ReflectionProperty(User::class, 'apiKeyHash')->getValue($user));
     }
 }

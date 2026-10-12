@@ -10,3 +10,4 @@ framework:
             - logout
             - locale
             - prompt_generate
+            - api_key_regenerate

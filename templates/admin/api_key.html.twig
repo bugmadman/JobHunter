@@ -1,0 +1,26 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}{{ 'admin.api_key.title'|trans }}{% endblock %}
+
+{% block main %}
+    <p>{{ 'admin.api_key.description'|trans }}</p>
+
+    {% if new_key %}
+        <div class="alert alert-success" role="status">
+            <p>{{ 'admin.api_key.generated'|trans }}</p>
+            <code class="d-block user-select-all text-break" data-api-key>{{ new_key }}</code>
+        </div>
+    {% elseif has_key %}
+        <p class="text-body-secondary">{{ 'admin.api_key.is_set'|trans }}</p>
+        <p class="text-warning-emphasis">{{ 'admin.api_key.regenerate_warning'|trans }}</p>
+    {% else %}
+        <p class="text-body-secondary">{{ 'admin.api_key.not_set'|trans }}</p>
+    {% endif %}
+
+    <form method="post" action="{{ path('admin_api_key_regenerate') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('api_key_regenerate') }}">
+        <button type="submit" class="btn btn-primary">
+            {{- (has_key ? 'admin.api_key.regenerate' : 'admin.api_key.generate')|trans -}}
+        </button>
+    </form>
+{% endblock %}
