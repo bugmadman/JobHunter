@@ -6,7 +6,9 @@ namespace App\Infrastructure\Llm;
 
 use App\Domain\Llm\ApiKey;
 use App\Domain\Llm\LlmModel;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
+#[AutoconfigureTag]
 interface LlmClientInterface
 {
     /**

@@ -6,16 +6,26 @@ namespace App\Domain\Llm;
 
 use App\Entity\LlmModelSelection;
 use App\Entity\LlmProviderKey;
+use App\Infrastructure\Llm\LlmClientInterface;
+use App\Infrastructure\Llm\LlmRequest;
+use App\Infrastructure\Llm\LlmResponse;
 use App\Infrastructure\Security\ApiKeyEncryptorInterface;
 use App\Repository\LlmModelSelectionRepositoryInterface;
 use App\Repository\LlmProviderKeyRepositoryInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 final readonly class LlmService implements LlmServiceInterface
 {
+    /**
+     * @param iterable<string, LlmClientInterface> $clients indexed by the provider value
+     */
     public function __construct(
         private LlmProviderKeyRepositoryInterface $providerKeys,
         private ApiKeyEncryptorInterface $apiKeyEncryptor,
         private LlmModelSelectionRepositoryInterface $modelSelections,
+        // Without an indexAttribute the iterator is a list and the #[AsTaggedItem] index of each client is dropped.
+        #[AutowireIterator(LlmClientInterface::class, indexAttribute: 'provider')]
+        private iterable $clients,
     ) {
     }
 
@@ -69,5 +79,27 @@ final readonly class LlmService implements LlmServiceInterface
         if (null !== $selection) {
             $this->modelSelections->remove($selection);
         }
+    }
+
+    public function generate(LlmTask $task, LlmRequest $request): LlmResponse
+    {
+        $selection = $this->modelSelections->findByTask($task) ?? throw LlmModelNotSelected::forTask($task);
+        $provider = $selection->getProvider();
+
+        $client = $this->client($provider);
+        $apiKey = $this->findApiKey($provider) ?? throw ApiKeyNotSet::forProvider($provider);
+
+        return $client->generate($request, $selection->getModel(), $apiKey);
+    }
+
+    private function client(LlmProvider $provider): LlmClientInterface
+    {
+        foreach ($this->clients as $index => $client) {
+            if ($provider->value === $index) {
+                return $client;
+            }
+        }
+
+        throw LlmClientNotFound::forProvider($provider);
     }
 }

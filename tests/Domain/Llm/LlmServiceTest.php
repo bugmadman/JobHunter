@@ -5,13 +5,19 @@ declare(strict_types=1);
 namespace App\Tests\Domain\Llm;
 
 use App\Domain\Llm\ApiKey;
+use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\EncryptedApiKey;
+use App\Domain\Llm\LlmClientNotFound;
 use App\Domain\Llm\LlmModel;
+use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmProvider;
 use App\Domain\Llm\LlmService;
 use App\Domain\Llm\LlmTask;
 use App\Entity\LlmModelSelection;
 use App\Entity\LlmProviderKey;
+use App\Infrastructure\Llm\LlmClientInterface;
+use App\Infrastructure\Llm\LlmRequest;
+use App\Infrastructure\Llm\LlmResponse;
 use App\Infrastructure\Security\ApiKeyEncryptorInterface;
 use App\Infrastructure\Security\InvalidEncryptionKey;
 use App\Repository\LlmModelSelectionRepositoryInterface;
@@ -170,15 +176,122 @@ final class LlmServiceTest extends TestCase
         self::service(modelSelections: $modelSelections)->deleteModelSelection(LlmTask::Matching);
     }
 
+    public function testGeneratesWithTheClientModelAndKeyOfTheTask(): void
+    {
+        $request = new LlmRequest('Say hello');
+        $response = new LlmResponse('Hello');
+
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::once())
+            ->method('generate')
+            ->with(
+                $request,
+                self::callback(static fn (LlmModel $model): bool => 'gemini-2.5-flash' === $model->value),
+                self::callback(static fn (ApiKey $apiKey): bool => 'AIza-secret' === $apiKey->value()),
+            )
+            ->willReturn($response);
+
+        $service = self::service(
+            self::providerKeys(),
+            self::encryptor(),
+            self::modelSelections(),
+            ['gemini' => $client],
+        );
+
+        self::assertSame($response, $service->generate(LlmTask::Matching, $request));
+    }
+
+    public function testFailsToGenerateWithoutASelectedModel(): void
+    {
+        $modelSelections = self::createStub(LlmModelSelectionRepositoryInterface::class);
+        $modelSelections->method('findByTask')->willReturn(null);
+
+        $this->expectException(LlmModelNotSelected::class);
+        $this->expectExceptionMessage('No model is selected for the "matching" LLM task.');
+
+        self::service(self::providerKeys(), self::encryptor(), $modelSelections, $this->clientNeverCalled())
+            ->generate(LlmTask::Matching, new LlmRequest('Say hello'));
+    }
+
+    public function testFailsToGenerateWithoutAClientForTheProvider(): void
+    {
+        $encryptor = $this->createMock(ApiKeyEncryptorInterface::class);
+        $encryptor->expects(self::never())->method('decrypt');
+
+        $this->expectException(LlmClientNotFound::class);
+        $this->expectExceptionMessage('No LLM client is registered for the "gemini" provider.');
+
+        $otherClient = $this->createMock(LlmClientInterface::class);
+        $otherClient->expects(self::never())->method('generate');
+
+        self::service(self::providerKeys(), $encryptor, self::modelSelections(), ['other' => $otherClient])
+            ->generate(LlmTask::Matching, new LlmRequest('Say hello'));
+    }
+
+    public function testFailsToGenerateWithoutAKeyForTheProvider(): void
+    {
+        $providerKeys = self::createStub(LlmProviderKeyRepositoryInterface::class);
+        $providerKeys->method('findByProvider')->willReturn(null);
+
+        $this->expectException(ApiKeyNotSet::class);
+        $this->expectExceptionMessage('No API key is set for the "gemini" LLM provider.');
+
+        self::service($providerKeys, self::encryptor(), self::modelSelections(), $this->clientNeverCalled())
+            ->generate(LlmTask::Matching, new LlmRequest('Say hello'));
+    }
+
+    /**
+     * @param array<string, LlmClientInterface> $clients
+     */
     private static function service(
         ?LlmProviderKeyRepositoryInterface $providerKeys = null,
         ?ApiKeyEncryptorInterface $encryptor = null,
         ?LlmModelSelectionRepositoryInterface $modelSelections = null,
+        array $clients = [],
     ): LlmService {
         return new LlmService(
             $providerKeys ?? self::createStub(LlmProviderKeyRepositoryInterface::class),
             $encryptor ?? self::createStub(ApiKeyEncryptorInterface::class),
             $modelSelections ?? self::createStub(LlmModelSelectionRepositoryInterface::class),
+            $clients,
         );
+    }
+
+    private static function providerKeys(): LlmProviderKeyRepositoryInterface
+    {
+        $providerKeys = self::createStub(LlmProviderKeyRepositoryInterface::class);
+        $providerKeys->method('findByProvider')
+            ->willReturn(new LlmProviderKey(LlmProvider::Gemini, new EncryptedApiKey('ciphertext')));
+
+        return $providerKeys;
+    }
+
+    private static function encryptor(): ApiKeyEncryptorInterface
+    {
+        $encryptor = self::createStub(ApiKeyEncryptorInterface::class);
+        $encryptor->method('decrypt')->willReturn(ApiKey::fromString('AIza-secret'));
+
+        return $encryptor;
+    }
+
+    private static function modelSelections(): LlmModelSelectionRepositoryInterface
+    {
+        $modelSelections = self::createStub(LlmModelSelectionRepositoryInterface::class);
+        $modelSelections->method('findByTask')->willReturn(
+            new LlmModelSelection(LlmTask::Matching, LlmProvider::Gemini, LlmModel::fromString('gemini-2.5-flash')),
+        );
+
+        return $modelSelections;
+    }
+
+    /**
+     * @return array<string, LlmClientInterface>
+     */
+    private function clientNeverCalled(): array
+    {
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::never())->method('generate');
+
+        return ['gemini' => $client];
     }
 }

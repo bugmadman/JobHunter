@@ -118,7 +118,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] `LlmClientInterface` + request/response DTOs
 - [x] [C] `GeminiClient`: text request
 - [x] [C] `GeminiClient`: structured output via JSON schema
-- [ ] [C] Resolver "task → client + model" from the settings
+- [x] [C] Resolver "task → client + model" from the settings
 - [ ] [S] Console command to check a key (test request to the model)
 
 ## Phase 5 — Platforms and skills

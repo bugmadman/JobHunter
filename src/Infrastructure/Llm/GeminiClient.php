@@ -7,9 +7,11 @@ namespace App\Infrastructure\Llm;
 use App\Domain\Llm\ApiKey;
 use App\Domain\Llm\LlmModel;
 use App\Domain\Llm\LlmProvider;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+#[AsTaggedItem(index: LlmProvider::Gemini->value)]
 final readonly class GeminiClient implements LlmClientInterface
 {
     private const string URL = 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent';
