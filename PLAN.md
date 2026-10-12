@@ -99,7 +99,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] `login_throttling` — brute-force protection for the login; also make an unknown email take as long as a wrong password (a dummy hash check), so the owner's email can't be confirmed by timing
 - [x] [C] `UnknownUserLoginListener`: only on the `main` firewall; verify the submitted password against a dummy hash made by the configured hasher (regenerated when it needs a rehash) instead of hashing a constant, so a password over 4096 bytes is rejected as fast as for a known email; find `UserNotFoundException` anywhere in the exception chain; tests
 - [x] [C] Rehash the owner's password on login when the hasher config changes (`PasswordUpgraderInterface`), so a wrong password and the dummy check cost the same; tests
-- [ ] [S] Empty EasyAdmin dashboard, opens after login
+- [x] [S] Empty EasyAdmin dashboard
 - [ ] [S] Link to the admin in the base layout navigation
 - [ ] [S] `User.locale` (a `Locale` enum: `en`, `ru`; default `en`) + migration
 - [ ] [S] The request locale is taken from the logged-in user's `locale` (EasyAdmin included)

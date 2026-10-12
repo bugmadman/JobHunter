@@ -5,6 +5,13 @@ home:
     title: Job postings
     placeholder: The job posting list will be here.
 
+admin:
+    dashboard:
+        title: Settings
+    menu:
+        dashboard: Settings
+        back_to_app: Back to job postings
+
 nav:
     logout: Log out
 

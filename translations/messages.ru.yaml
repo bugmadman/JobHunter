@@ -5,6 +5,13 @@ home:
     title: Вакансии
     placeholder: Здесь будет список вакансий.
 
+admin:
+    dashboard:
+        title: Настройки
+    menu:
+        dashboard: Настройки
+        back_to_app: К вакансиям
+
 nav:
     logout: Выйти
 
