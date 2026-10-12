@@ -12,7 +12,11 @@ use App\ApiResource\ReceivedJobPosting;
 use App\Domain\JobPosting\InvalidJobPostingDetails;
 use App\Domain\JobPosting\JobPostingDetails;
 use App\Domain\JobPosting\JobPostingServiceInterface;
+use App\Entity\JobPosting;
+use App\Message\ProcessJobPosting;
 use App\Repository\PlatformRepositoryInterface;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -26,6 +30,8 @@ final readonly class JobPostingIntakeProcessor implements ProcessorInterface
         private PlatformRepositoryInterface $platforms,
         private JobPostingServiceInterface $postings,
         private TranslatorInterface $translator,
+        private MessageBusInterface $bus,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -68,7 +74,17 @@ final readonly class JobPostingIntakeProcessor implements ProcessorInterface
             throw new ValidationException($violations);
         }
 
-        return ReceivedJobPosting::fromJobPosting($this->postings->create($platform, $details));
+        // One transaction only because the Doctrine transport shares the connection: a posting is never left
+        // saved without its message. Another transport (or connection) silently drops this guarantee.
+        $posting = $this->entityManager->wrapInTransaction(function () use ($platform, $details): JobPosting {
+            $posting = $this->postings->create($platform, $details);
+            $id = $posting->getId() ?? throw new \LogicException('A saved job posting has an id.');
+            $this->bus->dispatch(new ProcessJobPosting($id));
+
+            return $posting;
+        });
+
+        return ReceivedJobPosting::fromJobPosting($posting);
     }
 
     private function violation(string $field, string $message): ConstraintViolation

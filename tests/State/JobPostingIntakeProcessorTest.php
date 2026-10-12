@@ -9,12 +9,18 @@ use App\Domain\JobPosting\JobPostingServiceInterface;
 use App\Entity\JobPosting;
 use App\Entity\JobPostingStageLog;
 use App\Entity\Platform;
+use App\Message\ProcessJobPosting;
 use App\Tests\Security\IssuesIntakeApiKey;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\Exception\TransportException;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 
 final class JobPostingIntakeProcessorTest extends WebTestCase
 {
@@ -30,7 +36,7 @@ final class JobPostingIntakeProcessorTest extends WebTestCase
         'location' => ' ',
     ];
 
-    public function testSavesTheRawPostingAndLogsItsArrival(): void
+    public function testSavesTheRawPostingLogsItsArrivalAndQueuesItsProcessing(): void
     {
         $client = self::createClient();
 
@@ -56,6 +62,23 @@ final class JobPostingIntakeProcessorTest extends WebTestCase
         self::assertCount(1, $logs);
         self::assertNull($logs[0]->getFrom());
         self::assertSame('raw', $logs[0]->getTo()->value);
+        self::assertEquals([new ProcessJobPosting($body['id'])], $this->queuedMessages($client));
+    }
+
+    public function testRollsThePostingBackWhenItsProcessingCanNotBeQueued(): void
+    {
+        $client = self::createClient();
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects($this->once())->method('dispatch')->willThrowException(new TransportException('Queue down.'));
+        $client->getContainer()->set(MessageBusInterface::class, $bus);
+
+        $this->post($client, self::POSTING);
+
+        self::assertResponseStatusCodeSame(500);
+        $connection = $client->getContainer()->get(Connection::class);
+        self::assertInstanceOf(Connection::class, $connection);
+        self::assertSame(0, $connection->fetchOne('SELECT COUNT(*) FROM job_posting'));
+        self::assertSame(0, $connection->fetchOne('SELECT COUNT(*) FROM job_posting_stage_log'));
     }
 
     public function testPassesThePlatformAndTheDetailsToTheService(): void
@@ -85,6 +108,7 @@ final class JobPostingIntakeProcessorTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(201);
         self::assertSame(['id' => 7, 'status' => 'raw', 'platform' => 'LinkedIn'], $this->json($client));
+        self::assertEquals([new ProcessJobPosting(7)], $this->queuedMessages($client));
     }
 
     /**
@@ -193,6 +217,7 @@ final class JobPostingIntakeProcessorTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(400);
         self::assertResponseHeaderSame('Content-Type', 'application/problem+json');
+        self::assertSame([], $this->queuedMessages($client));
     }
 
     #[TestWith(['text/plain'])]
@@ -205,6 +230,7 @@ final class JobPostingIntakeProcessorTest extends WebTestCase
         $this->postRaw($client, $contentType, json_encode(self::POSTING, \JSON_THROW_ON_ERROR));
 
         self::assertResponseStatusCodeSame(415);
+        self::assertSame([], $this->queuedMessages($client));
     }
 
     public function testRejectsARequestWithoutAKey(): void
@@ -215,6 +241,7 @@ final class JobPostingIntakeProcessorTest extends WebTestCase
         $client->jsonRequest('POST', self::PATH, self::POSTING);
 
         self::assertResponseStatusCodeSame(401);
+        self::assertSame([], $this->queuedMessages($client));
     }
 
     public function testReadingAPostingBackRequiresTheKey(): void
@@ -298,6 +325,21 @@ final class JobPostingIntakeProcessorTest extends WebTestCase
             $fields,
             array_map(static fn (array $violation): mixed => $violation['propertyPath'], $this->violations($client)),
         );
+        self::assertSame([], $this->queuedMessages($client));
+    }
+
+    /**
+     * @return list<object>
+     */
+    private function queuedMessages(KernelBrowser $client): array
+    {
+        $transport = $client->getContainer()->get('messenger.transport.async');
+        self::assertInstanceOf(InMemoryTransport::class, $transport);
+
+        return array_values(array_map(
+            static fn (Envelope $envelope): object => $envelope->getMessage(),
+            [...$transport->getSent()],
+        ));
     }
 
     /**
