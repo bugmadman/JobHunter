@@ -5,6 +5,7 @@ framework:
 
         routing:
             App\Message\AnalyzeCv: async
+            App\Message\GeneratePrompt: async
 
 when@test:
     framework:
