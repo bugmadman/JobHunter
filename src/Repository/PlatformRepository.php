@@ -18,6 +18,16 @@ final class PlatformRepository extends ServiceEntityRepository implements Platfo
         parent::__construct($registry, Platform::class);
     }
 
+    public function findById(int $id): ?Platform
+    {
+        return $this->find($id);
+    }
+
+    public function findAllOrderedByName(): array
+    {
+        return $this->findBy([], ['name' => 'ASC']);
+    }
+
     public function save(Platform $platform): void
     {
         $this->getEntityManager()->persist($platform);

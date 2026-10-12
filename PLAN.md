@@ -144,7 +144,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Prompt source enum (generated / manually edited)
 - [x] [C] `Prompt` entity (platform, text, source, generation status) + migration
 - [x] [C] Generating a draft prompt from `CvProfile` for a platform (LLM call in a Messenger handler)
-- [ ] [S] "Generate prompt" button: dispatches the message, the Turbo frame refreshes until the draft is ready
+- [x] [S] "Generate prompt" button: dispatches the message, the Turbo frame refreshes until the draft is ready
 - [ ] [C] Manual prompt editing in EasyAdmin
 - [ ] [S] `platforms/upwork.md`
 - [ ] [S] `platforms/linkedin.md`

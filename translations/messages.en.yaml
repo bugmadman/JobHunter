@@ -71,6 +71,22 @@ cv:
         c2: C2
         native: Native
 
+prompt:
+    index:
+        title: Platform prompts
+        empty: No platforms yet.
+    show:
+        none: No prompt yet.
+        pending: The prompt is being generated. This part of the page updates by itself.
+        failed: The generation failed. Check the prompt generation model and key in the settings, then try again.
+        source:
+            generated: Generated from the CV
+            edited: Edited by hand
+        generate: Generate prompt
+        regenerate: Regenerate prompt
+        confirm_overwrite_edit: The prompt was edited by hand. The new draft will replace your edits. Continue?
+        no_analysed_cv: Upload a CV and wait for its analysis first.
+
 llm:
     provider:
         gemini: Gemini
@@ -81,6 +97,7 @@ llm:
 
 nav:
     cv: CV
+    prompts: Prompts
     admin: Settings
     logout: Log out
 

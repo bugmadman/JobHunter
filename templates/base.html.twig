@@ -27,6 +27,7 @@
                             {% endfor %}
                         </form>
                         <a class="nav-link" href="{{ path('app_cv_upload') }}">{{ 'nav.cv'|trans }}</a>
+                        <a class="nav-link" href="{{ path('app_prompt_index') }}">{{ 'nav.prompts'|trans }}</a>
                         <a class="nav-link" href="{{ path('admin') }}">{{ 'nav.admin'|trans }}</a>
                         <form method="post" action="{{ logout_path() }}">
                             <input type="hidden" name="_csrf_token" data-controller="csrf-protection"

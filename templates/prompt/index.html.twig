@@ -1,0 +1,18 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'prompt.index.title'|trans }}{% endblock %}
+
+{% block body %}
+    <h1 class="h3">{{ 'prompt.index.title'|trans }}</h1>
+
+    {% for platform in platforms %}
+        <section class="mb-4">
+            <h2 class="h5">{{ platform.name }}</h2>
+            <turbo-frame id="prompt-{{ platform.id }}" src="{{ path('app_prompt_show', {platformId: platform.id}) }}">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            </turbo-frame>
+        </section>
+    {% else %}
+        <p class="text-body-secondary">{{ 'prompt.index.empty'|trans }}</p>
+    {% endfor %}
+{% endblock %}

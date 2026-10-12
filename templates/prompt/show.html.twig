@@ -1,0 +1,44 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ platform.name }}{% endblock %}
+
+{% block body %}
+    <h1 class="h3">{{ platform.name }}</h1>
+
+    <turbo-frame id="prompt-{{ platform.id }}">
+        {% set status = prompt ? prompt.generationStatus.value %}
+        {% if error %}
+            <div class="alert alert-danger" role="alert">{{ error|trans }}</div>
+        {% endif %}
+
+        {% if status == 'pending' %}
+            <div class="alert alert-info" role="status" data-controller="frame-reload"
+                 data-frame-reload-url-value="{{ path('app_prompt_show', {platformId: platform.id}) }}">
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                {{- 'prompt.show.pending'|trans -}}
+            </div>
+        {% elseif status == 'failed' %}
+            <div class="alert alert-danger" role="alert">{{ 'prompt.show.failed'|trans }}</div>
+        {% endif %}
+
+        {% if prompt and prompt.text %}
+            <p class="text-body-secondary small mb-1">{{ ('prompt.show.source.' ~ prompt.source.value)|trans }}</p>
+            <p class="border rounded p-2">{{ prompt.text|nl2br }}</p>
+        {% elseif not prompt %}
+            <p class="text-body-secondary">{{ 'prompt.show.none'|trans }}</p>
+        {% endif %}
+
+        {% if status != 'pending' %}
+            <form method="post" action="{{ path('app_prompt_generate', {platformId: platform.id}) }}"
+                  {%- if prompt and prompt.source and prompt.source.value == 'edited' %}
+                      data-turbo-confirm="{{ 'prompt.show.confirm_overwrite_edit'|trans }}"
+                  {%- endif %}>
+                <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
+                       value="{{ csrf_token('prompt_generate') }}">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    {{- (prompt and prompt.text ? 'prompt.show.regenerate' : 'prompt.show.generate')|trans -}}
+                </button>
+            </form>
+        {% endif %}
+    </turbo-frame>
+{% endblock %}

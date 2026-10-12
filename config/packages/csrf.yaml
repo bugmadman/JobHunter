@@ -9,3 +9,4 @@ framework:
             - authenticate
             - logout
             - locale
+            - prompt_generate
