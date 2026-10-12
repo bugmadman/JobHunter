@@ -231,3 +231,6 @@ The owner writes new thoughts here as is, without structure. After discussion th
 - `LlmRequestFailed` doesn't tell a permanent failure (400, invalid key 401/403, safety block) from a transient one (429, 5xx, network): Messenger would retry an invalid key 3 times. Decide in the first Messenger LLM handler task: a flag or a separate exception mapped to `UnrecoverableMessageHandlingException`.
 - `LlmRequest.systemInstruction` was added by the developer agent's own judgement: it keeps the platform prompt apart from the untrusted job posting text in matching (prompt injection). Confirm or drop it (matching would then put everything into `prompt`).
 - `LlmRequest` carries one attachment; it becomes a list only if a request ever needs several files.
+- `GeminiClient` sends the PDF inline as base64; Gemini caps an inline request at ~20 MB. Enough for a CV; bigger files would need Gemini's Files API. The CV upload limit (10M) keeps it under the cap.
+- `GeminiClient` trims the model's text, skips `thought` parts, and treats any `finishReason` other than `STOP` (MAX_TOKENS included) as a failure. Confirm.
+- A model name entered with the `models/` prefix (`models/gemini-2.5-flash`) gets URL-encoded and fails as HTTP 404. Strip the prefix or reject it in `LlmModel`?
