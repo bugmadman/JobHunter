@@ -149,7 +149,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] `platforms/upwork.md`
 - [x] [S] `platforms/linkedin.md`
 - [x] [S] `platforms/glassdoor.md`
-- [ ] [S] `platforms/indeed.md`
+- [x] [S] `platforms/indeed.md`
 
 ## Phase 8 — Job posting domain
 
