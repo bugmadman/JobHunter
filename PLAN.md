@@ -141,7 +141,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 ## Phase 7 — Per-platform prompts
 
-- [ ] [S] Prompt source enum (generated / manually edited)
+- [x] [S] Prompt source enum (generated / manually edited)
 - [ ] [C] `Prompt` entity (platform, text, source, generation status) + migration
 - [ ] [C] Generating a draft prompt from `CvProfile` for a platform (LLM call in a Messenger handler)
 - [ ] [S] "Generate prompt" button: dispatches the message, the Turbo frame refreshes until the draft is ready
