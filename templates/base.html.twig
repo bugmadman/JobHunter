@@ -14,7 +14,7 @@
             <div class="container d-flex justify-content-between">
                 <a class="navbar-brand" href="{{ path('app_home') }}">{{ 'app.name'|trans }}</a>
                 {% if app.user %}
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
                         <form method="post" action="{{ path('app_locale') }}" class="btn-group btn-group-sm">
                             <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
                                    value="{{ csrf_token('locale') }}">
@@ -26,6 +26,7 @@
                                 </button>
                             {% endfor %}
                         </form>
+                        <a class="nav-link" href="{{ path('app_job_posting_index') }}">{{ 'nav.job_postings'|trans }}</a>
                         <a class="nav-link" href="{{ path('app_cv_upload') }}">{{ 'nav.cv'|trans }}</a>
                         <a class="nav-link" href="{{ path('app_prompt_index') }}">{{ 'nav.prompts'|trans }}</a>
                         <a class="nav-link" href="{{ path('admin') }}">{{ 'nav.admin'|trans }}</a>

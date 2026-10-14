@@ -178,7 +178,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 ## Phase 11 — Results UI (custom pages, not EasyAdmin)
 
-- [ ] [S] Job posting list as cards (not a table), responsive for phones
+- [x] [S] Job posting list as cards (not a table), responsive for phones
 - [ ] [S] List filters: platform, status, like/dislike, applied
 - [ ] [S] Job posting card: description, LLM rating with reason
 - [ ] [S] Job posting card: pipeline history (`JobPostingStageLog`)

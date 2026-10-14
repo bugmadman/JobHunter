@@ -130,9 +130,24 @@ llm:
         prompt_generation: Prompt generation
         matching: Matching
 
+job_posting:
+    index:
+        title: Job postings
+        empty: No job postings yet.
+    status:
+        raw: New
+        rejected: Rejected by keywords
+        filtered: Waiting for the LLM
+        evaluated: Evaluated
+        failed: Failed
+    verdict:
+        like: Like
+        dislike: Dislike
+
 nav:
     cv: CV
     prompts: Prompts
+    job_postings: Job postings
     admin: Settings
     logout: Log out
 

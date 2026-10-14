@@ -130,9 +130,24 @@ llm:
         prompt_generation: Генерация промпта
         matching: Матчинг
 
+job_posting:
+    index:
+        title: Вакансии
+        empty: Вакансий пока нет.
+    status:
+        raw: Новая
+        rejected: Отсеяна по ключевым словам
+        filtered: Ждёт LLM
+        evaluated: Оценена
+        failed: Ошибка
+    verdict:
+        like: Нравится
+        dislike: Не нравится
+
 nav:
     cv: Резюме
     prompts: Промпты
+    job_postings: Вакансии
     admin: Настройки
     logout: Выйти
 

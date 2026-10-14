@@ -1,0 +1,45 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'job_posting.index.title'|trans }}{% endblock %}
+
+{% block body %}
+    <h1 class="h3">{{ 'job_posting.index.title'|trans }}</h1>
+
+    {% if postings is empty %}
+        <p class="text-body-secondary">{{ 'job_posting.index.empty'|trans }}</p>
+    {% else %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+            {% for posting in postings %}
+                <div class="col">
+                    <article class="card h-100" id="posting-{{ posting.id }}">
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <span class="badge text-bg-secondary">{{ posting.platform.name }}</span>
+                                <span class="badge text-bg-light border">
+                                    {{- ('job_posting.status.' ~ posting.status.value)|trans -}}
+                                </span>
+                                {% if posting.verdict %}
+                                    {% set like = posting.verdict.value == 'like' %}
+                                    <span class="badge {{ like ? 'text-bg-success' : 'text-bg-danger' }}">
+                                        {{- ('job_posting.verdict.' ~ posting.verdict.value)|trans -}}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <h2 class="h6 card-title text-break">
+                                <a href="{{ posting.url }}" target="_blank" rel="noopener noreferrer">{{ posting.title }}</a>
+                            </h2>
+                            {% if posting.company or posting.location %}
+                                <p class="card-text small mb-1 text-break">
+                                    {{- [posting.company, posting.location]|filter(v => v)|join(' · ') -}}
+                                </p>
+                            {% endif %}
+                            <p class="card-text small text-body-secondary">
+                                <time datetime="{{ posting.createdAt|date('c') }}">{{ posting.createdAt|date('Y-m-d H:i') }}</time>
+                            </p>
+                        </div>
+                    </article>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}
