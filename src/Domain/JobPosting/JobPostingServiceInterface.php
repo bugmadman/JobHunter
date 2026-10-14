@@ -6,6 +6,7 @@ namespace App\Domain\JobPosting;
 
 use App\Entity\JobPosting;
 use App\Entity\Platform;
+use App\Infrastructure\Llm\LlmRequestFailed;
 
 interface JobPostingServiceInterface
 {
@@ -21,4 +22,17 @@ interface JobPostingServiceInterface
      * @throws JobPostingAlreadyFiltered when the posting is no longer raw (a redelivered message)
      */
     public function filter(JobPosting $posting): void;
+
+    /**
+     * Asks the LLM whether a filtered posting fits, with its platform's prompt as the instructions, and saves the
+     * posting evaluated with the verdict and its reason.
+     *
+     * A failed LLM request leaves the posting filtered, so the call can be retried. Any other failure (the platform
+     * has no prompt text, the LLM settings are missing, the response is invalid) marks the posting failed for good,
+     * with the cause as the reason, and saves it; nothing is thrown for it.
+     *
+     * @throws JobPostingNotFiltered the posting is not filtered (raw, or a redelivered message); nothing is saved
+     * @throws LlmRequestFailed
+     */
+    public function evaluate(JobPosting $posting): void;
 }
