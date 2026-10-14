@@ -8,6 +8,8 @@ use App\Entity\Skill;
 
 final readonly class SkillName
 {
+    public const string WHITESPACE = '[\s\p{Z}\p{Cc}\p{Cf}]+';
+
     /**
      * @param non-empty-string $value
      */
@@ -22,7 +24,7 @@ final readonly class SkillName
      */
     public static function fromString(string $name): self
     {
-        $name = mb_strtolower(trim((string) preg_replace('/[\s\p{Z}\p{Cc}\p{Cf}]+/u', ' ', $name)));
+        $name = mb_strtolower(trim((string) preg_replace('/'.self::WHITESPACE.'/u', ' ', $name)));
 
         if ('' === $name || mb_strlen($name) > Skill::MAX_NAME_LENGTH) {
             throw InvalidSkillName::create($name);
