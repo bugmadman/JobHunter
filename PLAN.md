@@ -170,7 +170,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 ## Phase 10 — Processing (Messenger pipeline)
 
-- [ ] [S] Empty handler for `ProcessJobPosting` (the message class exists)
+- [x] [S] Empty handler for `ProcessJobPosting` (the message class exists)
 - [ ] [C] Keyword filter by `Skill` + edge case tests
 - [ ] [C] Wire the keyword filter into the handler (rejection finalizes the status)
 - [ ] [C] LLM matching using the platform `Prompt`
