@@ -190,7 +190,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 ## Phase 12 — Cover letter
 
 - [x] [S] `LlmTask`: add the "cover letter" task (the model is selected in the settings, like for the others)
-- [ ] [S] `CoverLetter` entity (jobPosting, text, status, createdAt; several versions per job posting) + migration
+- [x] [S] `CoverLetter` entity (jobPosting, text, status, createdAt; several versions per job posting) + migration
 - [ ] [C] Generation service: `CvProfile` + `JobPosting` + platform `Prompt` → letter text (runs in a Messenger handler)
 - [ ] [S] "Cover letter" button in the job posting card (dispatches the message, the Turbo frame refreshes until the letter is ready)
 - [ ] [S] Manual editing of the letter + copying to the clipboard
