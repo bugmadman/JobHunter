@@ -3,6 +3,11 @@ framework:
 
     session: true
 
+    trusted_proxies: '%env(default::SYMFONY_TRUSTED_PROXIES)%'
+    # Not X-Forwarded-Host/-Port/-Prefix: the Host header already reaches the app unchanged, and Cloudflare passes
+    # a client's own X-Forwarded-Host through as is, so trusting it would let the client rewrite the generated URLs
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-proto']
+
 when@test:
     framework:
         test: true
