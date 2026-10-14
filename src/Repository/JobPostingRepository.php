@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Domain\JobPosting\JobPostingListFilter;
 use App\Entity\JobPosting;
+use App\Entity\JobPostingStageLog;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -46,6 +47,20 @@ final class JobPostingRepository extends ServiceEntityRepository implements JobP
 
         /* @var list<JobPosting> */
         return $query->getQuery()->getResult();
+    }
+
+    public function findStageLogsOldestFirst(JobPosting $posting): array
+    {
+        /* @var list<JobPostingStageLog> */
+        return $this->getEntityManager()->createQueryBuilder()
+            ->select('log')
+            ->from(JobPostingStageLog::class, 'log')
+            ->where('log.jobPosting = :posting')
+            ->setParameter('posting', $posting)
+            ->orderBy('log.occurredAt', 'ASC')
+            ->addOrderBy('log.id', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 
     public function save(JobPosting $posting): void

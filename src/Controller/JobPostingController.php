@@ -53,8 +53,11 @@ final class JobPostingController extends AbstractController
     )]
     public function show(int $id): Response
     {
+        $posting = $this->postings->findById($id) ?? throw $this->createNotFoundException();
+
         return $this->render('job_posting/show.html.twig', [
-            'posting' => $this->postings->findById($id) ?? throw $this->createNotFoundException(),
+            'posting' => $posting,
+            'history' => $this->postings->findStageLogsOldestFirst($posting),
         ]);
     }
 }

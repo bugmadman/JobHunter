@@ -33,5 +33,24 @@
             <h2 class="h6">{{ 'job_posting.show.description'|trans }}</h2>
             <p class="text-break">{{ posting.description|nl2br }}</p>
         </section>
+
+        <section id="posting-history">
+            <h2 class="h6">{{ 'job_posting.show.history'|trans }}</h2>
+            <ol class="list-unstyled small">
+                {% for log in history %}
+                    <li class="border-start border-2 ps-2 mb-2">
+                        <time datetime="{{ log.occurredAt|date('c') }}" class="text-body-secondary">
+                            {{- log.occurredAt|date('Y-m-d H:i') -}}
+                        </time>
+                        ·
+                        {% if log.from %}{{ ('job_posting.status.' ~ log.from.value)|trans }} → {% endif %}
+                        {{- ('job_posting.status.' ~ log.to.value)|trans }}
+                        {% if log.reason %}
+                            <div class="text-body-secondary text-break">{{ log.reason|nl2br }}</div>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ol>
+        </section>
     </article>
 {% endblock %}

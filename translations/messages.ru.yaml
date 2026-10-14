@@ -141,6 +141,7 @@ job_posting:
         description: Описание
         llm_reason: Обоснование оценки LLM
         status_reason: Причина статуса
+        history: История обработки
     filter:
         platform: Платформа
         status: Статус

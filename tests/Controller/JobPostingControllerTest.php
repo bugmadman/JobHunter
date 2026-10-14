@@ -11,6 +11,7 @@ use App\Domain\JobPosting\JobPostingVerdict;
 use App\Domain\JobPosting\StatusReason;
 use App\Domain\Platform\PlatformAccessType;
 use App\Entity\JobPosting;
+use App\Entity\JobPostingStageLog;
 use App\Entity\Platform;
 use App\Repository\JobPostingRepositoryInterface;
 use App\Repository\PlatformRepositoryInterface;
@@ -149,6 +150,40 @@ final class JobPostingControllerTest extends WebTestCase
         self::assertSelectorNotExists('#posting-reason');
     }
 
+    public function testShowsThePipelineHistory(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->posting(8, 'Java developer');
+        $this->stubPosting($client, 8, $posting, [
+            new JobPostingStageLog(
+                $posting,
+                null,
+                JobPostingStatus::Raw,
+                null,
+                new \DateTimeImmutable('2026-10-14 10:00'),
+            ),
+            new JobPostingStageLog(
+                $posting,
+                JobPostingStatus::Raw,
+                JobPostingStatus::Rejected,
+                StatusReason::fromString('No matching skills.'),
+                new \DateTimeImmutable('2026-10-14 10:01'),
+            ),
+        ]);
+
+        $client->request('GET', '/postings/8');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('#posting-history h2', 'Pipeline history');
+        self::assertSelectorCount(2, '#posting-history li');
+        self::assertSelectorTextContains('#posting-history li:nth-child(1)', '2026-10-14 10:00 · New');
+        self::assertSelectorTextContains(
+            '#posting-history li:nth-child(2)',
+            '2026-10-14 10:01 · New → Rejected by keywords',
+        );
+        self::assertSelectorTextContains('#posting-history li:nth-child(2)', 'No matching skills.');
+    }
+
     public function testShowReturns404ForAnUnknownPosting(): void
     {
         $client = $this->loggedInClient();
@@ -186,10 +221,14 @@ final class JobPostingControllerTest extends WebTestCase
         $this->stubPlatforms($client);
     }
 
-    private function stubPosting(KernelBrowser $client, int $id, ?JobPosting $posting): void
+    /**
+     * @param list<JobPostingStageLog> $history
+     */
+    private function stubPosting(KernelBrowser $client, int $id, ?JobPosting $posting, array $history = []): void
     {
         $repository = $this->createMock(JobPostingRepositoryInterface::class);
         $repository->expects(self::once())->method('findById')->with($id)->willReturn($posting);
+        $repository->method('findStageLogsOldestFirst')->willReturn($history);
         $client->getContainer()->set(JobPostingRepositoryInterface::class, $repository);
     }
 

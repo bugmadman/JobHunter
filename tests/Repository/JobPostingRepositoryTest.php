@@ -10,6 +10,7 @@ use App\Domain\JobPosting\JobPostingStatus;
 use App\Domain\JobPosting\JobPostingVerdict;
 use App\Domain\JobPosting\StatusReason;
 use App\Entity\JobPosting;
+use App\Entity\JobPostingStageLog;
 use App\Entity\Platform;
 use App\Repository\JobPostingRepository;
 use App\Repository\PlatformRepository;
@@ -44,6 +45,28 @@ final class JobPostingRepositoryTest extends KernelTestCase
         self::assertSame(
             ['Disliked'],
             $this->titles(new JobPostingListFilter($upworkId, JobPostingStatus::Evaluated, JobPostingVerdict::Dislike)),
+        );
+    }
+
+    public function testListsOnlyThePostingsStageLogsOldestFirst(): void
+    {
+        $posting = $this->posting('Rejected', '2026-10-14 10:00');
+        $this->repository()->save($posting);
+        $posting->markRejected(StatusReason::fromString('No skills.'), new \DateTimeImmutable('2026-10-14 10:05'));
+        $this->repository()->save($posting);
+        $this->repository()->save($this->posting('Other', '2026-10-14 10:00'));
+
+        $history = array_map(
+            static fn (JobPostingStageLog $log): array => [$log->getFrom(), $log->getTo(), $log->getReason()],
+            $this->repository()->findStageLogsOldestFirst($posting),
+        );
+
+        self::assertSame(
+            [
+                [null, JobPostingStatus::Raw, null],
+                [JobPostingStatus::Raw, JobPostingStatus::Rejected, 'No skills.'],
+            ],
+            $history,
         );
     }
 

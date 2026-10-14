@@ -141,6 +141,7 @@ job_posting:
         description: Description
         llm_reason: LLM verdict reason
         status_reason: Status reason
+        history: Pipeline history
     filter:
         platform: Platform
         status: Status
