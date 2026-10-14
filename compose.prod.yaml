@@ -3,6 +3,8 @@ x-prod-env: &prod-env
   APP_ENV: prod
   APP_DEBUG: "0"
 
+x-prod-ini: &prod-ini .docker/php/php.prod.ini:/usr/local/etc/php/conf.d/zz-prod.ini:ro
+
 services:
   php:
     # Localhost only: SYMFONY_TRUSTED_PROXIES trusts the network gateway, and Docker hands some connections to
@@ -12,9 +14,13 @@ services:
       - "127.0.0.1:${APP_PORT}:80"
     restart: unless-stopped
     environment: *prod-env
+    volumes:
+      - *prod-ini
 
   worker:
     environment: *prod-env
+    volumes:
+      - *prod-ini
 
   postgres:
     restart: unless-stopped
