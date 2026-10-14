@@ -14,3 +14,4 @@ framework:
             - job_posting_verdict
             - job_posting_comment
             - job_posting_applied
+            - cover_letter_generate

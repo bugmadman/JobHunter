@@ -89,6 +89,13 @@
             </form>
         </turbo-frame>
 
+        <section id="posting-cover-letter-section">
+            <h2 class="h6">{{ 'cover_letter.show.title'|trans }}</h2>
+            <turbo-frame id="posting-cover-letter" src="{{ path('app_cover_letter_show', {id: posting.id}) }}">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            </turbo-frame>
+        </section>
+
         <section id="posting-description">
             <h2 class="h6">{{ 'job_posting.show.description'|trans }}</h2>
             <p class="text-break">{{ posting.description|nl2br }}</p>

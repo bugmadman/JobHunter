@@ -172,6 +172,15 @@ job_posting:
         yes: Applied
         no: Not applied
 
+cover_letter:
+    show:
+        title: Cover letter
+        none: No cover letter yet.
+        pending: The letter is being generated. This part of the page updates by itself.
+        failed: The generation failed. Check that the CV is analysed and that the cover letter model and key are set in the settings, then try again.
+        generate: Generate cover letter
+        regenerate: Generate a new version
+
 nav:
     cv: CV
     prompts: Prompts

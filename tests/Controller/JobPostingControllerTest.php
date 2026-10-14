@@ -142,6 +142,7 @@ final class JobPostingControllerTest extends WebTestCase
         self::assertSelectorTextContains('#posting-reason', 'Onsite only.');
         self::assertSelectorTextContains('#posting-description', 'Description.');
         self::assertSelectorExists('#posting-original[href="https://example.com/7"]');
+        self::assertSelectorExists('turbo-frame#posting-cover-letter[src="/postings/7/cover-letter"]');
     }
 
     public function testShowsTheVerdictButtonsWithTheLlmVerdictChosen(): void
