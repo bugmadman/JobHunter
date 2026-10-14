@@ -48,6 +48,26 @@ final class JobPostingRepositoryTest extends KernelTestCase
         );
     }
 
+    public function testFiltersByTheOwnersVerdictOverTheLlms(): void
+    {
+        $overridden = $this->posting('Overridden', '2026-10-14 09:00');
+        $this->evaluate($overridden, JobPostingVerdict::Like);
+        $overridden->overrideVerdict(JobPostingVerdict::Dislike);
+        $this->repository()->save($overridden);
+        $disliked = $this->posting('Disliked', '2026-10-14 08:00');
+        $this->evaluate($disliked, JobPostingVerdict::Dislike);
+        $this->repository()->save($disliked);
+        $liked = $this->posting('Liked', '2026-10-14 07:00');
+        $this->evaluate($liked, JobPostingVerdict::Like);
+        $this->repository()->save($liked);
+
+        self::assertSame(
+            ['Overridden', 'Disliked'],
+            $this->titles(new JobPostingListFilter(verdict: JobPostingVerdict::Dislike)),
+        );
+        self::assertSame(['Liked'], $this->titles(new JobPostingListFilter(verdict: JobPostingVerdict::Like)));
+    }
+
     public function testListsOnlyThePostingsStageLogsOldestFirst(): void
     {
         $posting = $this->posting('Rejected', '2026-10-14 10:00');

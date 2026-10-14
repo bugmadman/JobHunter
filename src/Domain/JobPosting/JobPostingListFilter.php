@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\JobPosting;
 
 /**
- * A null criterion does not narrow the list.
+ * A null criterion does not narrow the list. The verdict is the effective one: the owner's override, else the LLM's.
  */
 final readonly class JobPostingListFilter
 {

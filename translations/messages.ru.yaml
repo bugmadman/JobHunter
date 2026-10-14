@@ -142,10 +142,12 @@ job_posting:
         llm_reason: Обоснование оценки LLM
         status_reason: Причина статуса
         history: История обработки
+        your_verdict: 'Ваша оценка:'
+        llm_verdict: 'Оценка LLM: %verdict%'
     filter:
         platform: Платформа
         status: Статус
-        verdict: Оценка LLM
+        verdict: Оценка
         any: Все
         apply: Применить
         reset: Сбросить
@@ -158,6 +160,7 @@ job_posting:
     verdict:
         like: Нравится
         dislike: Не нравится
+    manual_verdict: вручную
 
 nav:
     cv: Резюме

@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Domain\JobPosting\InvalidJobPostingTransition;
 use App\Domain\JobPosting\JobPostingDetails;
+use App\Domain\JobPosting\JobPostingNotEvaluated;
 use App\Domain\JobPosting\JobPostingStatus;
 use App\Domain\JobPosting\JobPostingStatusChanged;
 use App\Domain\JobPosting\JobPostingVerdict;
@@ -17,6 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * A posting goes raw → rejected or filtered → evaluated, and fails for good from raw or filtered. The reason is set
  * together with every final status and the verdict only with `evaluated`, so neither can disagree with the status.
+ * The owner's manual verdict is kept apart from the LLM's, which stays as it was answered.
  * The arrival and every transition are recorded as events, which JobPostingStageLogWriter logs on flush.
  */
 #[ORM\Entity(repositoryClass: JobPostingRepository::class)]
@@ -50,6 +52,9 @@ final class JobPosting
 
     #[ORM\Column(length: 32, nullable: true, enumType: JobPostingVerdict::class)]
     private ?JobPostingVerdict $verdict = null;
+
+    #[ORM\Column(length: 32, nullable: true, enumType: JobPostingVerdict::class)]
+    private ?JobPostingVerdict $manualVerdict = null;
 
     /**
      * @var list<JobPostingStatusChanged>
@@ -140,6 +145,22 @@ final class JobPosting
         return $this->verdict;
     }
 
+    /**
+     * The owner's override of the LLM's verdict; null while the owner agrees with the LLM.
+     */
+    public function getManualVerdict(): ?JobPostingVerdict
+    {
+        return $this->manualVerdict;
+    }
+
+    /**
+     * The verdict that counts: the owner's override, else the LLM's.
+     */
+    public function getEffectiveVerdict(): ?JobPostingVerdict
+    {
+        return $this->manualVerdict ?? $this->verdict;
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
@@ -175,6 +196,20 @@ final class JobPosting
         $this->transition(JobPostingStatus::Evaluated, $reason, $at, JobPostingStatus::Filtered);
 
         $this->verdict = $verdict;
+    }
+
+    /**
+     * The owner's verdict replaces the LLM's; choosing the LLM's own verdict drops the override.
+     *
+     * @throws JobPostingNotEvaluated
+     */
+    public function overrideVerdict(JobPostingVerdict $verdict): void
+    {
+        if (null === $this->verdict) {
+            throw JobPostingNotEvaluated::withStatus($this->status);
+        }
+
+        $this->manualVerdict = $verdict === $this->verdict ? null : $verdict;
     }
 
     /**

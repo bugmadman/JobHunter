@@ -182,7 +182,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] List filters: platform, status, like/dislike
 - [x] [S] Job posting card: description, LLM rating with reason
 - [x] [S] Job posting card: pipeline history (`JobPostingStageLog`)
-- [ ] [C] Manually override the LLM like/dislike decision in the job posting card (via Turbo, without a reload)
+- [x] [C] Manually override the LLM like/dislike decision in the job posting card (via Turbo, without a reload)
 - [ ] [S] User comment on a job posting (saved via Turbo, without a reload)
 - [ ] [C] "Applied / not applied" status (toggled via Turbo) + the "applied" list filter
 - [ ] [S] Verify the list and the card on a phone (375px width)

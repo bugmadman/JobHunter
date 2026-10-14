@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Domain\JobPosting\JobPostingListFilter;
+use App\Domain\JobPosting\JobPostingNotEvaluated;
+use App\Domain\JobPosting\JobPostingServiceInterface;
 use App\Domain\JobPosting\JobPostingStatus;
 use App\Domain\JobPosting\JobPostingVerdict;
+use App\Entity\JobPosting;
 use App\Repository\JobPostingRepositoryInterface;
 use App\Repository\PlatformRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 
@@ -20,6 +25,7 @@ final class JobPostingController extends AbstractController
     public function __construct(
         private readonly JobPostingRepositoryInterface $postings,
         private readonly PlatformRepositoryInterface $platforms,
+        private readonly JobPostingServiceInterface $postingService,
     ) {
     }
 
@@ -53,11 +59,41 @@ final class JobPostingController extends AbstractController
     )]
     public function show(int $id): Response
     {
-        $posting = $this->postings->findById($id) ?? throw $this->createNotFoundException();
+        $posting = $this->findPosting($id);
 
         return $this->render('job_posting/show.html.twig', [
             'posting' => $posting,
             'history' => $this->postings->findStageLogsOldestFirst($posting),
+            'verdicts' => JobPostingVerdict::cases(),
         ]);
+    }
+
+    #[Route(
+        '/postings/{id}/verdict',
+        name: 'app_job_posting_verdict',
+        requirements: ['id' => Requirement::POSITIVE_INT],
+        methods: ['POST'],
+    )]
+    public function overrideVerdict(Request $request, int $id): Response
+    {
+        if (!$this->isCsrfTokenValid('job_posting_verdict', $request->request->getString('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        $verdict = JobPostingVerdict::tryFrom($request->request->getString('verdict'))
+            ?? throw new BadRequestHttpException('Unknown verdict.');
+
+        try {
+            $this->postingService->overrideVerdict($this->findPosting($id), $verdict);
+        } catch (JobPostingNotEvaluated $exception) {
+            throw new ConflictHttpException($exception->getMessage(), $exception);
+        }
+
+        return $this->redirectToRoute('app_job_posting_show', ['id' => $id], Response::HTTP_SEE_OTHER);
+    }
+
+    private function findPosting(int $id): JobPosting
+    {
+        return $this->postings->findById($id) ?? throw $this->createNotFoundException();
     }
 }

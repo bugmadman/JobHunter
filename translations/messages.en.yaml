@@ -142,10 +142,12 @@ job_posting:
         llm_reason: LLM verdict reason
         status_reason: Status reason
         history: Pipeline history
+        your_verdict: 'Your verdict:'
+        llm_verdict: 'The LLM said: %verdict%'
     filter:
         platform: Platform
         status: Status
-        verdict: LLM verdict
+        verdict: Verdict
         any: Any
         apply: Apply
         reset: Reset
@@ -158,6 +160,7 @@ job_posting:
     verdict:
         like: Like
         dislike: Dislike
+    manual_verdict: manual
 
 nav:
     cv: CV

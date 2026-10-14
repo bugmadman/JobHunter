@@ -11,3 +11,4 @@ framework:
             - locale
             - prompt_generate
             - api_key_regenerate
+            - job_posting_verdict

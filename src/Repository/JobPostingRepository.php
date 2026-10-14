@@ -42,7 +42,8 @@ final class JobPostingRepository extends ServiceEntityRepository implements JobP
         }
 
         if (null !== $filter->verdict) {
-            $query->andWhere('posting.verdict = :verdict')->setParameter('verdict', $filter->verdict);
+            $query->andWhere('COALESCE(posting.manualVerdict, posting.verdict) = :verdict')
+                ->setParameter('verdict', $filter->verdict);
         }
 
         /* @var list<JobPosting> */

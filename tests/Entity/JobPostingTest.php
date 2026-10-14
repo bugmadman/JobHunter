@@ -6,6 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Domain\JobPosting\InvalidJobPostingTransition;
 use App\Domain\JobPosting\JobPostingDetails;
+use App\Domain\JobPosting\JobPostingNotEvaluated;
 use App\Domain\JobPosting\JobPostingStatus;
 use App\Domain\JobPosting\JobPostingStatusChanged;
 use App\Domain\JobPosting\JobPostingVerdict;
@@ -34,6 +35,7 @@ final class JobPostingTest extends TestCase
         self::assertSame(JobPostingStatus::Raw, $posting->getStatus());
         self::assertNull($posting->getStatusReason());
         self::assertNull($posting->getVerdict());
+        self::assertNull($posting->getEffectiveVerdict());
     }
 
     public function testRawPostingIsRejectedWithTheReason(): void
@@ -69,6 +71,8 @@ final class JobPostingTest extends TestCase
         self::assertSame(JobPostingStatus::Evaluated, $posting->getStatus());
         self::assertSame('Symfony and remote, as the CV asks.', $posting->getStatusReason());
         self::assertSame($verdict, $posting->getVerdict());
+        self::assertNull($posting->getManualVerdict());
+        self::assertSame($verdict, $posting->getEffectiveVerdict());
     }
 
     #[TestWith([JobPostingStatus::Raw])]
@@ -196,6 +200,76 @@ final class JobPostingTest extends TestCase
                 }
             }
         }
+    }
+
+    public function testOwnerOverridesTheLlmVerdictAndTheLlmVerdictIsKept(): void
+    {
+        $posting = self::postingIn(JobPostingStatus::Evaluated);
+        $posting->releaseEvents();
+
+        $posting->overrideVerdict(JobPostingVerdict::Dislike);
+
+        self::assertSame(JobPostingVerdict::Dislike, $posting->getManualVerdict());
+        self::assertSame(JobPostingVerdict::Dislike, $posting->getEffectiveVerdict());
+        self::assertSame(JobPostingVerdict::Like, $posting->getVerdict());
+        self::assertSame(JobPostingStatus::Evaluated, $posting->getStatus());
+        self::assertSame('Symfony and remote.', $posting->getStatusReason());
+        self::assertSame([], $posting->releaseEvents());
+    }
+
+    public function testRepeatingTheOverrideKeepsIt(): void
+    {
+        $posting = self::postingIn(JobPostingStatus::Evaluated);
+        $posting->overrideVerdict(JobPostingVerdict::Dislike);
+
+        $posting->overrideVerdict(JobPostingVerdict::Dislike);
+
+        self::assertSame(JobPostingVerdict::Dislike, $posting->getManualVerdict());
+    }
+
+    public function testChoosingTheLlmVerdictDropsTheOverride(): void
+    {
+        $posting = self::postingIn(JobPostingStatus::Evaluated);
+        $posting->overrideVerdict(JobPostingVerdict::Dislike);
+
+        $posting->overrideVerdict(JobPostingVerdict::Like);
+
+        self::assertNull($posting->getManualVerdict());
+        self::assertSame(JobPostingVerdict::Like, $posting->getEffectiveVerdict());
+    }
+
+    public function testAgreeingWithTheLlmStoresNoOverride(): void
+    {
+        $posting = self::postingIn(JobPostingStatus::Evaluated);
+
+        $posting->overrideVerdict(JobPostingVerdict::Like);
+
+        self::assertNull($posting->getManualVerdict());
+        self::assertSame(JobPostingVerdict::Like, $posting->getEffectiveVerdict());
+    }
+
+    #[TestWith([JobPostingStatus::Raw, JobPostingVerdict::Like])]
+    #[TestWith([JobPostingStatus::Rejected, JobPostingVerdict::Like])]
+    #[TestWith([JobPostingStatus::Filtered, JobPostingVerdict::Dislike])]
+    #[TestWith([JobPostingStatus::Failed, JobPostingVerdict::Dislike])]
+    public function testAPostingWithoutAnLlmVerdictCannotBeOverridden(
+        JobPostingStatus $status,
+        JobPostingVerdict $verdict,
+    ): void {
+        $posting = self::postingIn($status);
+
+        try {
+            $posting->overrideVerdict($verdict);
+            self::fail(\sprintf('A "%s" posting was overridden.', $status->value));
+        } catch (JobPostingNotEvaluated $e) {
+            self::assertSame(
+                \sprintf('The job posting has no LLM verdict to override: its status is "%s".', $status->value),
+                $e->getMessage(),
+            );
+        }
+
+        self::assertNull($posting->getManualVerdict());
+        self::assertNull($posting->getEffectiveVerdict());
     }
 
     /**

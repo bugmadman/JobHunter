@@ -8,7 +8,35 @@
     </p>
 
     <article id="posting-{{ posting.id }}">
-        {{ include('job_posting/_badges.html.twig') }}
+        <turbo-frame id="posting-verdict">
+            {{ include('job_posting/_badges.html.twig') }}
+            {% if posting.verdict %}
+                <form method="post" action="{{ path('app_job_posting_verdict', {id: posting.id}) }}"
+                      class="d-flex flex-wrap align-items-center gap-2 mb-2" id="posting-verdict-form">
+                    <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
+                           value="{{ csrf_token('job_posting_verdict') }}">
+                    <span class="small">{{ 'job_posting.show.your_verdict'|trans }}</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        {% for verdict in verdicts %}
+                            {% set color = verdict.value == 'like' ? 'success' : 'danger' %}
+                            {% set chosen = verdict == posting.effectiveVerdict %}
+                            <button type="submit" name="verdict" value="{{ verdict.value }}"
+                                    class="btn {{ chosen ? 'btn-' ~ color : 'btn-outline-' ~ color }}"
+                                    aria-pressed="{{ chosen ? 'true' : 'false' }}">
+                                {{- ('job_posting.verdict.' ~ verdict.value)|trans -}}
+                            </button>
+                        {% endfor %}
+                    </div>
+                    {% if posting.manualVerdict %}
+                        <span class="small text-body-secondary" id="posting-llm-verdict">
+                            {{- 'job_posting.show.llm_verdict'|trans({
+                                '%verdict%': ('job_posting.verdict.' ~ posting.verdict.value)|trans,
+                            }) -}}
+                        </span>
+                    {% endif %}
+                </form>
+            {% endif %}
+        </turbo-frame>
         <h1 class="h4 text-break">{{ posting.title }}</h1>
         {% if posting.company or posting.location %}
             <p class="mb-1 text-break">{{ [posting.company, posting.location]|filter(v => v)|join(' · ') }}</p>

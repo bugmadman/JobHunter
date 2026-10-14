@@ -135,6 +135,12 @@ final readonly class JobPostingService implements JobPostingServiceInterface
         $this->postings->save($posting);
     }
 
+    public function overrideVerdict(JobPosting $posting, JobPostingVerdict $verdict): void
+    {
+        $posting->overrideVerdict($verdict);
+        $this->postings->save($posting);
+    }
+
     private function fail(JobPosting $posting, string $reason): void
     {
         $posting->markFailed(StatusReason::fromString($reason), $this->clock->now());

@@ -6,6 +6,8 @@ namespace App\Tests\Controller;
 
 use App\Domain\JobPosting\JobPostingDetails;
 use App\Domain\JobPosting\JobPostingListFilter;
+use App\Domain\JobPosting\JobPostingNotEvaluated;
+use App\Domain\JobPosting\JobPostingServiceInterface;
 use App\Domain\JobPosting\JobPostingStatus;
 use App\Domain\JobPosting\JobPostingVerdict;
 use App\Domain\JobPosting\StatusReason;
@@ -15,12 +17,17 @@ use App\Entity\JobPostingStageLog;
 use App\Entity\Platform;
 use App\Repository\JobPostingRepositoryInterface;
 use App\Repository\PlatformRepositoryInterface;
+use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class JobPostingControllerTest extends WebTestCase
 {
     use LogsInAsOwner;
+
+    private const array SAME_ORIGIN = ['HTTP_SEC_FETCH_SITE' => 'same-origin'];
+    private const array CROSS_SITE = ['HTTP_SEC_FETCH_SITE' => 'cross-site'];
+    private const string WELL_FORMED_TOKEN = 'b8L2Vq9xR4mT7nK1wZ3cY6pA';
 
     public function testListsThePostingsAsCards(): void
     {
@@ -45,6 +52,19 @@ final class JobPostingControllerTest extends WebTestCase
         self::assertSelectorTextContains('#posting-7 .text-bg-success', 'Like');
         self::assertSelectorTextContains('#posting-8', 'New');
         self::assertSelectorNotExists('#posting-8 .text-bg-success, #posting-8 .text-bg-danger');
+    }
+
+    public function testListsTheOwnersVerdictOverTheLlms(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->evaluatedPosting(7, JobPostingVerdict::Like);
+        $posting->overrideVerdict(JobPostingVerdict::Dislike);
+        $this->stubPostings($client, [$posting]);
+
+        $client->request('GET', '/postings');
+
+        self::assertSelectorTextSame('#posting-7 .text-bg-danger', 'Dislike · manual');
+        self::assertSelectorNotExists('#posting-7 .text-bg-success');
     }
 
     public function testShowsAnEmptyList(): void
@@ -122,6 +142,54 @@ final class JobPostingControllerTest extends WebTestCase
         self::assertSelectorExists('#posting-original[href="https://example.com/7"]');
     }
 
+    public function testShowsTheVerdictButtonsWithTheLlmVerdictChosen(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubPosting($client, 7, $this->evaluatedPosting(7, JobPostingVerdict::Like));
+
+        $client->request('GET', '/postings/7');
+
+        self::assertResponseIsSuccessful();
+        $form = 'turbo-frame#posting-verdict form[method="post"][action="/postings/7/verdict"]';
+        self::assertSelectorExists($form.' input[name="_csrf_token"][data-controller="csrf-protection"]');
+        self::assertSelectorCount(2, $form.' button[name="verdict"]');
+        self::assertSelectorTextSame($form.' button[value="like"][aria-pressed="true"]', 'Like');
+        self::assertSelectorTextSame($form.' button[value="dislike"][aria-pressed="false"]', 'Dislike');
+        self::assertSelectorTextSame('turbo-frame#posting-verdict .text-bg-success', 'Like');
+        self::assertSelectorNotExists('#posting-llm-verdict');
+    }
+
+    public function testShowsTheOwnersVerdictWithTheLlmsBesideIt(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->evaluatedPosting(7, JobPostingVerdict::Like);
+        $posting->overrideVerdict(JobPostingVerdict::Dislike);
+        $this->stubPosting($client, 7, $posting);
+
+        $client->request('GET', '/postings/7');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('#posting-verdict-form button[value="dislike"][aria-pressed="true"]');
+        self::assertSelectorExists('#posting-verdict-form button[value="like"][aria-pressed="false"]');
+        self::assertSelectorTextSame('turbo-frame#posting-verdict .text-bg-danger', 'Dislike · manual');
+        self::assertSelectorTextSame('#posting-llm-verdict', 'The LLM said: Like');
+        self::assertSelectorTextContains('#posting-reason', 'LLM verdict reason');
+    }
+
+    public function testShowsNoVerdictButtonsBeforeTheLlmVerdict(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->posting(8, 'Java developer');
+        $posting->markFiltered(new \DateTimeImmutable('2026-10-14 10:01'));
+        $this->stubPosting($client, 8, $posting);
+
+        $client->request('GET', '/postings/8');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('turbo-frame#posting-verdict');
+        self::assertSelectorNotExists('#posting-verdict-form');
+    }
+
     public function testShowsTheStatusReasonOfARejectedPosting(): void
     {
         $client = $this->loggedInClient();
@@ -194,6 +262,66 @@ final class JobPostingControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
+    public function testOverridesTheVerdictAndRedirectsBackToTheCard(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->evaluatedPosting(7, JobPostingVerdict::Like);
+        $this->stubPosting($client, 7, $posting);
+        $this->mockPostingService($client)
+            ->expects(self::once())
+            ->method('overrideVerdict')
+            ->with($posting, JobPostingVerdict::Dislike);
+
+        $this->postVerdict($client, '/postings/7/verdict', 'dislike');
+
+        self::assertResponseRedirects('/postings/7', 303);
+    }
+
+    public function testRejectsAnUnknownVerdict(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockPostingService($client)->expects(self::never())->method('overrideVerdict');
+
+        $this->postVerdict($client, '/postings/7/verdict', 'maybe');
+
+        self::assertResponseStatusCodeSame(400);
+    }
+
+    public function testOverrideOfAPostingWithoutAnLlmVerdictIsAConflict(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubPosting($client, 8, $this->posting(8, 'Java developer'));
+        $this->mockPostingService($client)
+            ->expects(self::once())
+            ->method('overrideVerdict')
+            ->willThrowException(JobPostingNotEvaluated::withStatus(JobPostingStatus::Raw));
+
+        $this->postVerdict($client, '/postings/8/verdict', 'like');
+
+        self::assertResponseStatusCodeSame(409);
+    }
+
+    public function testOverrideReturns404ForAnUnknownPosting(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubPosting($client, 9, null);
+        $this->mockPostingService($client)->expects(self::never())->method('overrideVerdict');
+
+        $this->postVerdict($client, '/postings/9/verdict', 'like');
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testRejectsACrossSiteVerdictRequest(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockPostingService($client)->expects(self::never())->method('overrideVerdict');
+
+        $this->postVerdict($client, '/postings/7/verdict', 'like', self::CROSS_SITE);
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testRedirectsAnonymousToLogin(): void
     {
         $client = self::createClient();
@@ -208,6 +336,31 @@ final class JobPostingControllerTest extends WebTestCase
         $this->logInAsOwner($client);
 
         return $client;
+    }
+
+    /**
+     * @param array<string, string> $server
+     */
+    private function postVerdict(
+        KernelBrowser $client,
+        string $url,
+        string $verdict,
+        array $server = self::SAME_ORIGIN,
+    ): void {
+        $client->request(
+            'POST',
+            $url,
+            ['_csrf_token' => self::WELL_FORMED_TOKEN, 'verdict' => $verdict],
+            server: $server,
+        );
+    }
+
+    private function mockPostingService(KernelBrowser $client): JobPostingServiceInterface&MockObject
+    {
+        $service = $this->createMock(JobPostingServiceInterface::class);
+        $client->getContainer()->set(JobPostingServiceInterface::class, $service);
+
+        return $service;
     }
 
     /**
@@ -242,6 +395,19 @@ final class JobPostingControllerTest extends WebTestCase
         $platforms = self::createStub(PlatformRepositoryInterface::class);
         $platforms->method('findAllOrderedByName')->willReturn([$linkedIn, $upwork]);
         $client->getContainer()->set(PlatformRepositoryInterface::class, $platforms);
+    }
+
+    private function evaluatedPosting(int $id, JobPostingVerdict $verdict): JobPosting
+    {
+        $posting = $this->posting($id, 'Senior PHP developer');
+        $posting->markFiltered(new \DateTimeImmutable('2026-10-14 10:01'));
+        $posting->markEvaluated(
+            $verdict,
+            StatusReason::fromString('Fits.'),
+            new \DateTimeImmutable('2026-10-14 10:02'),
+        );
+
+        return $posting;
     }
 
     private function posting(int $id, string $title, ?string $company = null, ?string $location = null): JobPosting

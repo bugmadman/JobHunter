@@ -44,4 +44,11 @@ interface JobPostingServiceInterface
      * @throws LlmRequestFailed
      */
     public function evaluate(JobPosting $posting): void;
+
+    /**
+     * Saves the owner's verdict over the LLM's; the LLM's own verdict drops the override.
+     *
+     * @throws JobPostingNotEvaluated the posting has no LLM verdict yet; nothing is saved
+     */
+    public function overrideVerdict(JobPosting $posting, JobPostingVerdict $verdict): void;
 }

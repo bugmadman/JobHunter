@@ -11,6 +11,7 @@ use App\Domain\JobPosting\InvalidEvaluationResponse;
 use App\Domain\JobPosting\JobPostingAlreadyFiltered;
 use App\Domain\JobPosting\JobPostingDetails;
 use App\Domain\JobPosting\JobPostingEvaluation;
+use App\Domain\JobPosting\JobPostingNotEvaluated;
 use App\Domain\JobPosting\JobPostingNotFiltered;
 use App\Domain\JobPosting\JobPostingService;
 use App\Domain\JobPosting\JobPostingStatus;
@@ -619,6 +620,28 @@ final class JobPostingServiceTest extends TestCase
                 yield $name => $case;
             }
         }
+    }
+
+    public function testOverridesTheVerdictAndSavesThePosting(): void
+    {
+        $posting = self::filteredPosting();
+        $posting->markEvaluated(JobPostingVerdict::Like, StatusReason::fromString('Fits.'), self::now());
+
+        self::service($this->repositorySaving($posting))->overrideVerdict($posting, JobPostingVerdict::Dislike);
+
+        self::assertSame(JobPostingVerdict::Dislike, $posting->getEffectiveVerdict());
+        self::assertSame(JobPostingVerdict::Like, $posting->getVerdict());
+    }
+
+    public function testAPostingWithoutAnLlmVerdictIsNotOverriddenOrSaved(): void
+    {
+        $posting = self::filteredPosting();
+        $postings = $this->createMock(JobPostingRepositoryInterface::class);
+        $postings->expects(self::never())->method('save');
+
+        $this->expectException(JobPostingNotEvaluated::class);
+
+        self::service($postings)->overrideVerdict($posting, JobPostingVerdict::Dislike);
     }
 
     private static function assertEvaluationFailed(JobPosting $posting, string $reason): void
