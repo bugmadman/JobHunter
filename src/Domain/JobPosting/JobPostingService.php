@@ -147,6 +147,17 @@ final readonly class JobPostingService implements JobPostingServiceInterface
         $this->postings->save($posting);
     }
 
+    public function updateApplied(JobPosting $posting, bool $applied): void
+    {
+        if ($applied) {
+            $posting->markApplied($this->clock->now());
+        } else {
+            $posting->markNotApplied();
+        }
+
+        $this->postings->save($posting);
+    }
+
     private function fail(JobPosting $posting, string $reason): void
     {
         $posting->markFailed(StatusReason::fromString($reason), $this->clock->now());

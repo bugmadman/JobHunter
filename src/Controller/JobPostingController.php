@@ -43,6 +43,7 @@ final class JobPostingController extends AbstractController
             \is_int($platformId) ? $platformId : null,
             JobPostingStatus::tryFrom($request->query->getString('status')),
             JobPostingVerdict::tryFrom($request->query->getString('verdict')),
+            self::parseApplied($request->query->getString('applied')),
         );
 
         return $this->render('job_posting/index.html.twig', [
@@ -120,8 +121,37 @@ final class JobPostingController extends AbstractController
         return $this->redirectToRoute('app_job_posting_show', ['id' => $id], Response::HTTP_SEE_OTHER);
     }
 
+    #[Route(
+        '/postings/{id}/applied',
+        name: 'app_job_posting_applied',
+        requirements: ['id' => Requirement::POSITIVE_INT],
+        methods: ['POST'],
+    )]
+    public function updateApplied(Request $request, int $id): Response
+    {
+        if (!$this->isCsrfTokenValid('job_posting_applied', $request->request->getString('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        $applied = self::parseApplied($request->request->getString('applied'))
+            ?? throw new BadRequestHttpException('The applied flag must be 1 or 0.');
+
+        $this->postingService->updateApplied($this->findPosting($id), $applied);
+
+        return $this->redirectToRoute('app_job_posting_show', ['id' => $id], Response::HTTP_SEE_OTHER);
+    }
+
     private function findPosting(int $id): JobPosting
     {
         return $this->postings->findById($id) ?? throw $this->createNotFoundException();
+    }
+
+    private static function parseApplied(string $value): ?bool
+    {
+        return match ($value) {
+            '1' => true,
+            '0' => false,
+            default => null,
+        };
     }
 }

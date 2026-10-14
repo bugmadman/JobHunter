@@ -13,6 +13,7 @@ final readonly class JobPostingListFilter
         public ?int $platformId = null,
         public ?JobPostingStatus $status = null,
         public ?JobPostingVerdict $verdict = null,
+        public ?bool $applied = null,
     ) {
     }
 }

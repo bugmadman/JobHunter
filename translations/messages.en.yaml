@@ -146,10 +146,14 @@ job_posting:
         llm_verdict: 'The LLM said: %verdict%'
         comment: Comment
         save_comment: Save comment
+        applied_at: 'Applied on %date%'
+        mark_applied: Mark as applied
+        mark_not_applied: Mark as not applied
     filter:
         platform: Platform
         status: Status
         verdict: Verdict
+        applied: Applied
         any: Any
         apply: Apply
         reset: Reset
@@ -163,6 +167,9 @@ job_posting:
         like: Like
         dislike: Dislike
     manual_verdict: manual
+    applied:
+        yes: Applied
+        no: Not applied
 
 nav:
     cv: CV

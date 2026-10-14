@@ -56,4 +56,9 @@ interface JobPostingServiceInterface
      * Saves the owner's comment on the posting; null removes it.
      */
     public function updateComment(JobPosting $posting, ?JobPostingComment $comment): void;
+
+    /**
+     * Saves whether the owner applied to the posting; applying is dated now, unless already applied.
+     */
+    public function updateApplied(JobPosting $posting, bool $applied): void;
 }

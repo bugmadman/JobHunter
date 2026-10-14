@@ -184,7 +184,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Job posting card: pipeline history (`JobPostingStageLog`)
 - [x] [C] Manually override the LLM like/dislike decision in the job posting card (via Turbo, without a reload)
 - [x] [S] User comment on a job posting (saved via Turbo, without a reload)
-- [ ] [C] "Applied / not applied" status (toggled via Turbo) + the "applied" list filter
+- [x] [C] "Applied / not applied" status (toggled via Turbo) + the "applied" list filter
 - [ ] [S] Verify the list and the card on a phone (375px width)
 
 ## Phase 12 — Cover letter

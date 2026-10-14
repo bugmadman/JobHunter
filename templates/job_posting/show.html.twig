@@ -57,6 +57,26 @@
             </section>
         {% endif %}
 
+        <turbo-frame id="posting-applied">
+            <form method="post" action="{{ path('app_job_posting_applied', {id: posting.id}) }}"
+                  class="d-flex flex-wrap align-items-center gap-2 mb-3" id="posting-applied-form">
+                <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
+                       value="{{ csrf_token('job_posting_applied') }}">
+                {% if posting.applied %}
+                    <span class="badge text-bg-primary" id="posting-applied-at">
+                        {{- 'job_posting.show.applied_at'|trans({'%date%': posting.appliedAt|date('Y-m-d')}) -}}
+                    </span>
+                    <button type="submit" name="applied" value="0" class="btn btn-sm btn-outline-secondary">
+                        {{- 'job_posting.show.mark_not_applied'|trans -}}
+                    </button>
+                {% else %}
+                    <button type="submit" name="applied" value="1" class="btn btn-sm btn-primary">
+                        {{- 'job_posting.show.mark_applied'|trans -}}
+                    </button>
+                {% endif %}
+            </form>
+        </turbo-frame>
+
         <turbo-frame id="posting-comment">
             <form method="post" action="{{ path('app_job_posting_comment', {id: posting.id}) }}" class="mb-3"
                   id="posting-comment-form">

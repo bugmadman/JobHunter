@@ -85,17 +85,18 @@ final class JobPostingControllerTest extends WebTestCase
         $repository = $this->createMock(JobPostingRepositoryInterface::class);
         $repository->expects(self::once())
             ->method('findNewestFirst')
-            ->with(new JobPostingListFilter(3, JobPostingStatus::Evaluated, JobPostingVerdict::Dislike))
+            ->with(new JobPostingListFilter(3, JobPostingStatus::Evaluated, JobPostingVerdict::Dislike, false))
             ->willReturn([]);
         $client->getContainer()->set(JobPostingRepositoryInterface::class, $repository);
         $this->stubPlatforms($client);
 
-        $client->request('GET', '/postings?platform=3&status=evaluated&verdict=dislike');
+        $client->request('GET', '/postings?platform=3&status=evaluated&verdict=dislike&applied=0');
 
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('#filter-platform option[selected]', 'LinkedIn');
         self::assertSelectorTextContains('#filter-status option[selected]', 'Evaluated');
         self::assertSelectorTextContains('#filter-verdict option[selected]', 'Dislike');
+        self::assertSelectorTextContains('#filter-applied option[selected]', 'Not applied');
         self::assertSelectorTextContains('main', 'No job postings match the filters.');
         self::assertSelectorExists('#posting-filters a[href="/postings"]');
     }
@@ -111,7 +112,7 @@ final class JobPostingControllerTest extends WebTestCase
         $client->getContainer()->set(JobPostingRepositoryInterface::class, $repository);
         $this->stubPlatforms($client);
 
-        $client->request('GET', '/postings?platform=abc&status=unknown&verdict=maybe');
+        $client->request('GET', '/postings?platform=abc&status=unknown&verdict=maybe&applied=yes');
 
         self::assertResponseIsSuccessful();
         self::assertSelectorNotExists('#posting-filters option[selected]');
@@ -395,6 +396,88 @@ final class JobPostingControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
+    public function testListsTheAppliedBadge(): void
+    {
+        $client = $this->loggedInClient();
+        $applied = $this->posting(7, 'Senior PHP developer');
+        $applied->markApplied(new \DateTimeImmutable('2026-10-14 12:00'));
+        $this->stubPostings($client, [$applied, $this->posting(8, 'Java developer')]);
+
+        $client->request('GET', '/postings');
+
+        self::assertSelectorTextSame('#posting-7 .posting-applied', 'Applied');
+        self::assertSelectorNotExists('#posting-8 .posting-applied');
+    }
+
+    public function testShowsTheApplyButtonForANotAppliedPosting(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubPosting($client, 7, $this->posting(7, 'Senior PHP developer'));
+
+        $client->request('GET', '/postings/7');
+
+        $form = 'turbo-frame#posting-applied form[method="post"][action="/postings/7/applied"]';
+        self::assertSelectorExists($form.' input[name="_csrf_token"]');
+        self::assertSelectorTextSame($form.' button[name="applied"][value="1"]', 'Mark as applied');
+        self::assertSelectorNotExists('#posting-applied-at');
+    }
+
+    public function testShowsTheApplicationDateAndTheUndoButton(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->posting(7, 'Senior PHP developer');
+        $posting->markApplied(new \DateTimeImmutable('2026-10-14 12:00'));
+        $this->stubPosting($client, 7, $posting);
+
+        $client->request('GET', '/postings/7');
+
+        self::assertSelectorTextSame('#posting-applied-at', 'Applied on 2026-10-14');
+        self::assertSelectorTextSame('#posting-applied-form button[value="0"]', 'Mark as not applied');
+    }
+
+    public function testMarksAppliedAndRedirectsBackToTheCard(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->posting(7, 'Senior PHP developer');
+        $this->stubPosting($client, 7, $posting);
+        $this->mockPostingService($client)->expects(self::once())->method('updateApplied')->with($posting, false);
+
+        $this->postApplied($client, '/postings/7/applied', '0');
+
+        self::assertResponseRedirects('/postings/7', 303);
+    }
+
+    public function testRejectsAnUnknownAppliedValue(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockPostingService($client)->expects(self::never())->method('updateApplied');
+
+        $this->postApplied($client, '/postings/7/applied', 'yes');
+
+        self::assertResponseStatusCodeSame(400);
+    }
+
+    public function testAppliedReturns404ForAnUnknownPosting(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubPosting($client, 9, null);
+        $this->mockPostingService($client)->expects(self::never())->method('updateApplied');
+
+        $this->postApplied($client, '/postings/9/applied', '1');
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testRejectsACrossSiteAppliedRequest(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockPostingService($client)->expects(self::never())->method('updateApplied');
+
+        $this->postApplied($client, '/postings/7/applied', '1', self::CROSS_SITE);
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testRedirectsAnonymousToLogin(): void
     {
         $client = self::createClient();
@@ -441,6 +524,23 @@ final class JobPostingControllerTest extends WebTestCase
             'POST',
             $url,
             ['_csrf_token' => self::WELL_FORMED_TOKEN, 'comment' => $comment],
+            server: $server,
+        );
+    }
+
+    /**
+     * @param array<string, string> $server
+     */
+    private function postApplied(
+        KernelBrowser $client,
+        string $url,
+        string $applied,
+        array $server = self::SAME_ORIGIN,
+    ): void {
+        $client->request(
+            'POST',
+            $url,
+            ['_csrf_token' => self::WELL_FORMED_TOKEN, 'applied' => $applied],
             server: $server,
         );
     }

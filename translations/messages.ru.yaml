@@ -146,10 +146,14 @@ job_posting:
         llm_verdict: 'Оценка LLM: %verdict%'
         comment: Комментарий
         save_comment: Сохранить комментарий
+        applied_at: 'Отклик %date%'
+        mark_applied: Отметить отклик
+        mark_not_applied: Снять отметку об отклике
     filter:
         platform: Платформа
         status: Статус
         verdict: Оценка
+        applied: Отклик
         any: Все
         apply: Применить
         reset: Сбросить
@@ -163,6 +167,9 @@ job_posting:
         like: Нравится
         dislike: Не нравится
     manual_verdict: вручную
+    applied:
+        yes: Отклик отправлен
+        no: Без отклика
 
 nav:
     cv: Резюме

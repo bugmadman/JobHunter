@@ -659,6 +659,20 @@ final class JobPostingServiceTest extends TestCase
         self::assertNull($posting->getComment());
     }
 
+    public function testMarksThePostingAppliedNowAndNotApplied(): void
+    {
+        $posting = self::filteredPosting();
+        $postings = $this->createMock(JobPostingRepositoryInterface::class);
+        $postings->expects(self::exactly(2))->method('save')->with($posting);
+        $service = self::service($postings);
+
+        $service->updateApplied($posting, true);
+        self::assertEquals(self::now(), $posting->getAppliedAt());
+
+        $service->updateApplied($posting, false);
+        self::assertNull($posting->getAppliedAt());
+    }
+
     private static function assertEvaluationFailed(JobPosting $posting, string $reason): void
     {
         self::assertSame(JobPostingStatus::Failed, $posting->getStatus());

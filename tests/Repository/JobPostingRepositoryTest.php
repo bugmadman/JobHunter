@@ -68,6 +68,17 @@ final class JobPostingRepositoryTest extends KernelTestCase
         self::assertSame(['Liked'], $this->titles(new JobPostingListFilter(verdict: JobPostingVerdict::Like)));
     }
 
+    public function testFiltersByApplied(): void
+    {
+        $applied = $this->posting('Applied', '2026-10-14 09:00');
+        $applied->markApplied(new \DateTimeImmutable('2026-10-14 12:00'));
+        $this->repository()->save($applied);
+        $this->repository()->save($this->posting('NotApplied', '2026-10-14 08:00'));
+
+        self::assertSame(['Applied'], $this->titles(new JobPostingListFilter(applied: true)));
+        self::assertSame(['NotApplied'], $this->titles(new JobPostingListFilter(applied: false)));
+    }
+
     public function testListsOnlyThePostingsStageLogsOldestFirst(): void
     {
         $posting = $this->posting('Rejected', '2026-10-14 10:00');

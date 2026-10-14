@@ -19,7 +19,8 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * A posting goes raw → rejected or filtered → evaluated, and fails for good from raw or filtered. The reason is set
  * together with every final status and the verdict only with `evaluated`, so neither can disagree with the status.
- * The owner's manual verdict is kept apart from the LLM's, which stays as it was answered.
+ * The owner's manual verdict is kept apart from the LLM's, which stays as it was answered. Whether the owner applied
+ * is independent of the status and the verdict.
  * The arrival and every transition are recorded as events, which JobPostingStageLogWriter logs on flush.
  */
 #[ORM\Entity(repositoryClass: JobPostingRepository::class)]
@@ -59,6 +60,9 @@ final class JobPosting
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $comment = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $appliedAt = null;
 
     /**
      * @var list<JobPostingStatusChanged>
@@ -170,6 +174,19 @@ final class JobPosting
         return $this->comment;
     }
 
+    /**
+     * When the owner applied; null while they haven't.
+     */
+    public function getAppliedAt(): ?\DateTimeImmutable
+    {
+        return $this->appliedAt;
+    }
+
+    public function isApplied(): bool
+    {
+        return null !== $this->appliedAt;
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
@@ -227,6 +244,19 @@ final class JobPosting
     public function updateComment(?JobPostingComment $comment): void
     {
         $this->comment = $comment?->value;
+    }
+
+    /**
+     * Marking an applied posting again keeps the first date.
+     */
+    public function markApplied(\DateTimeImmutable $at): void
+    {
+        $this->appliedAt ??= $at;
+    }
+
+    public function markNotApplied(): void
+    {
+        $this->appliedAt = null;
     }
 
     /**

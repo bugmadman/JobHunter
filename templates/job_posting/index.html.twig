@@ -5,7 +5,7 @@
 {% block body %}
     <h1 class="h3">{{ 'job_posting.index.title'|trans }}</h1>
 
-    {% set filtered = filter.platformId or filter.status or filter.verdict %}
+    {% set filtered = filter.platformId or filter.status or filter.verdict or filter.applied is not null %}
     <form method="get" class="row row-cols-1 row-cols-sm-auto g-2 align-items-end mb-3" id="posting-filters">
         <div class="col">
             <label class="form-label small mb-1" for="filter-platform">{{ 'job_posting.filter.platform'|trans }}</label>
@@ -40,6 +40,18 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="col">
+            <label class="form-label small mb-1" for="filter-applied">{{ 'job_posting.filter.applied'|trans }}</label>
+            <select class="form-select form-select-sm" id="filter-applied" name="applied">
+                <option value="">{{ 'job_posting.filter.any'|trans }}</option>
+                <option value="1" {{- filter.applied is same as(true) ? ' selected' }}>
+                    {{- 'job_posting.applied.yes'|trans -}}
+                </option>
+                <option value="0" {{- filter.applied is same as(false) ? ' selected' }}>
+                    {{- 'job_posting.applied.no'|trans -}}
+                </option>
+            </select>
+        </div>
         <div class="col d-flex gap-2">
             <button type="submit" class="btn btn-sm btn-primary">{{ 'job_posting.filter.apply'|trans }}</button>
             {% if filtered %}
@@ -61,6 +73,11 @@
                     <article class="card h-100" id="posting-{{ posting.id }}">
                         <div class="card-body">
                             {{ include('job_posting/_badges.html.twig') }}
+                            {% if posting.applied %}
+                                <span class="badge text-bg-primary mb-2 posting-applied">
+                                    {{- 'job_posting.applied.yes'|trans -}}
+                                </span>
+                            {% endif %}
                             <h2 class="h6 card-title text-break">
                                 <a href="{{ path('app_job_posting_show', {id: posting.id}) }}">{{ posting.title }}</a>
                             </h2>

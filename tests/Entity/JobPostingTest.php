@@ -272,6 +272,32 @@ final class JobPostingTest extends TestCase
         self::assertNull($posting->getEffectiveVerdict());
     }
 
+    public function testAppliedIsDatedAndKeepsTheFirstDate(): void
+    {
+        $posting = self::postingIn(JobPostingStatus::Rejected);
+        $posting->releaseEvents();
+        self::assertFalse($posting->isApplied());
+
+        $posting->markApplied(self::at());
+        $posting->markApplied(new \DateTimeImmutable('2026-10-13 10:00:00'));
+
+        self::assertTrue($posting->isApplied());
+        self::assertEquals(self::at(), $posting->getAppliedAt());
+        self::assertSame(JobPostingStatus::Rejected, $posting->getStatus());
+        self::assertSame([], $posting->releaseEvents());
+    }
+
+    public function testNotAppliedClearsTheDate(): void
+    {
+        $posting = self::postingIn(JobPostingStatus::Raw);
+        $posting->markApplied(self::at());
+
+        $posting->markNotApplied();
+
+        self::assertFalse($posting->isApplied());
+        self::assertNull($posting->getAppliedAt());
+    }
+
     /**
      * @return array<string, array{JobPostingStatus, \Closure(JobPosting): void}>
      */

@@ -46,6 +46,10 @@ final class JobPostingRepository extends ServiceEntityRepository implements JobP
                 ->setParameter('verdict', $filter->verdict);
         }
 
+        if (null !== $filter->applied) {
+            $query->andWhere($filter->applied ? 'posting.appliedAt IS NOT NULL' : 'posting.appliedAt IS NULL');
+        }
+
         /* @var list<JobPosting> */
         return $query->getQuery()->getResult();
     }
