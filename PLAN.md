@@ -166,7 +166,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] Rate limiter on the job posting intake endpoint
 - [x] [C] POST endpoint for creating a `JobPosting` (DTO with Assert)
 - [x] [C] Dispatching a message to Messenger on creation
-- [ ] [S] Verify the endpoint with curl
+- [x] [S] Verify the endpoint with curl
 
 ## Phase 10 — Processing (Messenger pipeline)
 
