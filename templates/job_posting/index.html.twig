@@ -60,20 +60,9 @@
                 <div class="col">
                     <article class="card h-100" id="posting-{{ posting.id }}">
                         <div class="card-body">
-                            <div class="d-flex flex-wrap gap-1 mb-2">
-                                <span class="badge text-bg-secondary">{{ posting.platform.name }}</span>
-                                <span class="badge text-bg-light border">
-                                    {{- ('job_posting.status.' ~ posting.status.value)|trans -}}
-                                </span>
-                                {% if posting.verdict %}
-                                    {% set like = posting.verdict.value == 'like' %}
-                                    <span class="badge {{ like ? 'text-bg-success' : 'text-bg-danger' }}">
-                                        {{- ('job_posting.verdict.' ~ posting.verdict.value)|trans -}}
-                                    </span>
-                                {% endif %}
-                            </div>
+                            {{ include('job_posting/_badges.html.twig') }}
                             <h2 class="h6 card-title text-break">
-                                <a href="{{ posting.url }}" target="_blank" rel="noopener noreferrer">{{ posting.title }}</a>
+                                <a href="{{ path('app_job_posting_show', {id: posting.id}) }}">{{ posting.title }}</a>
                             </h2>
                             {% if posting.company or posting.location %}
                                 <p class="card-text small mb-1 text-break">

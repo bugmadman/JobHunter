@@ -13,6 +13,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Requirement\Requirement;
 
 final class JobPostingController extends AbstractController
 {
@@ -41,6 +42,19 @@ final class JobPostingController extends AbstractController
             'statuses' => JobPostingStatus::cases(),
             'verdicts' => JobPostingVerdict::cases(),
             'filter' => $filter,
+        ]);
+    }
+
+    #[Route(
+        '/postings/{id}',
+        name: 'app_job_posting_show',
+        requirements: ['id' => Requirement::POSITIVE_INT],
+        methods: ['GET'],
+    )]
+    public function show(int $id): Response
+    {
+        return $this->render('job_posting/show.html.twig', [
+            'posting' => $this->postings->findById($id) ?? throw $this->createNotFoundException(),
         ]);
     }
 }

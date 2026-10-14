@@ -135,6 +135,12 @@ job_posting:
         title: Вакансии
         empty: Вакансий пока нет.
         no_matches: Нет вакансий, подходящих под фильтры.
+    show:
+        back: ← Все вакансии
+        original: Открыть оригинал
+        description: Описание
+        llm_reason: Обоснование оценки LLM
+        status_reason: Причина статуса
     filter:
         platform: Платформа
         status: Статус

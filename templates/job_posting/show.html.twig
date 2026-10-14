@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ posting.title }}{% endblock %}
+
+{% block body %}
+    <p class="mb-2">
+        <a href="{{ path('app_job_posting_index') }}">{{ 'job_posting.show.back'|trans }}</a>
+    </p>
+
+    <article id="posting-{{ posting.id }}">
+        {{ include('job_posting/_badges.html.twig') }}
+        <h1 class="h4 text-break">{{ posting.title }}</h1>
+        {% if posting.company or posting.location %}
+            <p class="mb-1 text-break">{{ [posting.company, posting.location]|filter(v => v)|join(' · ') }}</p>
+        {% endif %}
+        <p class="small text-body-secondary">
+            <time datetime="{{ posting.createdAt|date('c') }}">{{ posting.createdAt|date('Y-m-d H:i') }}</time>
+            · <a href="{{ posting.url }}" target="_blank" rel="noopener noreferrer" id="posting-original">
+                {{- 'job_posting.show.original'|trans -}}
+            </a>
+        </p>
+
+        {% if posting.statusReason %}
+            <section class="mb-3" id="posting-reason">
+                <h2 class="h6">
+                    {{- (posting.verdict ? 'job_posting.show.llm_reason' : 'job_posting.show.status_reason')|trans -}}
+                </h2>
+                <p class="border rounded p-2 mb-0 text-break">{{ posting.statusReason|nl2br }}</p>
+            </section>
+        {% endif %}
+
+        <section id="posting-description">
+            <h2 class="h6">{{ 'job_posting.show.description'|trans }}</h2>
+            <p class="text-break">{{ posting.description|nl2br }}</p>
+        </section>
+    </article>
+{% endblock %}

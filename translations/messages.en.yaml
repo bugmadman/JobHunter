@@ -135,6 +135,12 @@ job_posting:
         title: Job postings
         empty: No job postings yet.
         no_matches: No job postings match the filters.
+    show:
+        back: ← All job postings
+        original: Open the original
+        description: Description
+        llm_reason: LLM verdict reason
+        status_reason: Status reason
     filter:
         platform: Platform
         status: Status

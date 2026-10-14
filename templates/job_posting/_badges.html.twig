@@ -1,0 +1,10 @@
+<div class="d-flex flex-wrap gap-1 mb-2">
+    <span class="badge text-bg-secondary">{{ posting.platform.name }}</span>
+    <span class="badge text-bg-light border">{{ ('job_posting.status.' ~ posting.status.value)|trans }}</span>
+    {% if posting.verdict %}
+        {% set like = posting.verdict.value == 'like' %}
+        <span class="badge {{ like ? 'text-bg-success' : 'text-bg-danger' }}">
+            {{- ('job_posting.verdict.' ~ posting.verdict.value)|trans -}}
+        </span>
+    {% endif %}
+</div>

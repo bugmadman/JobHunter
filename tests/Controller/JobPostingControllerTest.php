@@ -37,7 +37,7 @@ final class JobPostingControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSelectorCount(2, 'main article.card');
-        self::assertSelectorTextContains('#posting-7 a[href="https://example.com/7"]', 'Senior PHP developer');
+        self::assertSelectorTextContains('#posting-7 a[href="/postings/7"]', 'Senior PHP developer');
         self::assertSelectorTextContains('#posting-7', 'Upwork');
         self::assertSelectorTextContains('#posting-7', 'Acme · Remote');
         self::assertSelectorTextContains('#posting-7', 'Evaluated');
@@ -97,6 +97,68 @@ final class JobPostingControllerTest extends WebTestCase
         self::assertSelectorTextContains('main', 'No job postings yet.');
     }
 
+    public function testShowsThePostingWithTheLlmReason(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->posting(7, 'Senior PHP developer', 'Acme', 'Remote');
+        $posting->markFiltered(new \DateTimeImmutable('2026-10-14 10:01'));
+        $posting->markEvaluated(
+            JobPostingVerdict::Dislike,
+            StatusReason::fromString('Onsite only.'),
+            new \DateTimeImmutable('2026-10-14 10:02'),
+        );
+        $this->stubPosting($client, 7, $posting);
+
+        $client->request('GET', '/postings/7');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Senior PHP developer');
+        self::assertSelectorTextContains('#posting-7', 'Acme · Remote');
+        self::assertSelectorTextContains('#posting-7 .text-bg-danger', 'Dislike');
+        self::assertSelectorTextContains('#posting-reason', 'LLM verdict reason');
+        self::assertSelectorTextContains('#posting-reason', 'Onsite only.');
+        self::assertSelectorTextContains('#posting-description', 'Description.');
+        self::assertSelectorExists('#posting-original[href="https://example.com/7"]');
+    }
+
+    public function testShowsTheStatusReasonOfARejectedPosting(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->posting(8, 'Java developer');
+        $posting->markRejected(
+            StatusReason::fromString('No matching skills.'),
+            new \DateTimeImmutable('2026-10-14 10:01'),
+        );
+        $this->stubPosting($client, 8, $posting);
+
+        $client->request('GET', '/postings/8');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('#posting-reason', 'Status reason');
+        self::assertSelectorTextContains('#posting-reason', 'No matching skills.');
+    }
+
+    public function testShowsNoReasonForANewPosting(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubPosting($client, 8, $this->posting(8, 'Java developer'));
+
+        $client->request('GET', '/postings/8');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('#posting-reason');
+    }
+
+    public function testShowReturns404ForAnUnknownPosting(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubPosting($client, 9, null);
+
+        $client->request('GET', '/postings/9');
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
     public function testRedirectsAnonymousToLogin(): void
     {
         $client = self::createClient();
@@ -122,6 +184,13 @@ final class JobPostingControllerTest extends WebTestCase
         $repository->method('findNewestFirst')->willReturn($postings);
         $client->getContainer()->set(JobPostingRepositoryInterface::class, $repository);
         $this->stubPlatforms($client);
+    }
+
+    private function stubPosting(KernelBrowser $client, int $id, ?JobPosting $posting): void
+    {
+        $repository = $this->createMock(JobPostingRepositoryInterface::class);
+        $repository->expects(self::once())->method('findById')->with($id)->willReturn($posting);
+        $client->getContainer()->set(JobPostingRepositoryInterface::class, $repository);
     }
 
     private function stubPlatforms(KernelBrowser $client): void
