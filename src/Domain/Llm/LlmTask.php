@@ -9,4 +9,5 @@ enum LlmTask: string
     case CvAnalysis = 'cv_analysis';
     case PromptGeneration = 'prompt_generation';
     case Matching = 'matching';
+    case CoverLetter = 'cover_letter';
 }

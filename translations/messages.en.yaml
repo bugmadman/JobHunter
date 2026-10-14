@@ -129,6 +129,7 @@ llm:
         cv_analysis: CV analysis
         prompt_generation: Prompt generation
         matching: Matching
+        cover_letter: Cover letter
 
 job_posting:
     index:

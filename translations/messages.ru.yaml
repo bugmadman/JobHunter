@@ -129,6 +129,7 @@ llm:
         cv_analysis: Анализ CV
         prompt_generation: Генерация промпта
         matching: Матчинг
+        cover_letter: Сопроводительное письмо
 
 job_posting:
     index:

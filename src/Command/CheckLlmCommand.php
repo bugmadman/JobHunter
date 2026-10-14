@@ -27,7 +27,7 @@ final readonly class CheckLlmCommand
 
     public function __invoke(
         SymfonyStyle $io,
-        #[Argument('The LLM task: cv_analysis, prompt_generation or matching')]
+        #[Argument('The LLM task: cv_analysis, prompt_generation, matching or cover_letter')]
         string $task,
     ): int {
         $llmTask = LlmTask::tryFrom($task);
