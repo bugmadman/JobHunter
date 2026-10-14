@@ -202,7 +202,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] Prod `php.ini` override: `opcache.validate_timestamps=0`, `zend.assertions=-1`
 - [ ] [S] Ingress rule in the existing Cloudflare Tunnel: `jobhunter.madbugs.dev` → `localhost:APP_PORT` on the server
 - [ ] [S] Verify from a phone: login, job posting list, POSTing a job posting via the API over HTTPS
-- [ ] [S] README: installation and first run
+- [x] [S] README: installation and first run
 - [ ] [S] README: external access (an example with Cloudflare Tunnel; `cloudflared` is not part of our compose — everyone has their own setup)
 
 ## Open questions

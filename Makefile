@@ -3,7 +3,7 @@
 DC = docker compose --env-file .env $$([ -f .env.local ] && echo --env-file .env.local)
 PHP = $(DC) exec php
 
-.PHONY: init encryption-key upd updb down ps in cs fix stan test test-db lint
+.PHONY: init encryption-key deploy upd updb down ps in cs fix stan test test-db lint
 
 init: .env.local encryption-key
 	$(DC) build
@@ -34,6 +34,16 @@ encryption-key: .env.local
 		chmod 600 .env.local; \
 		echo "Added LLM_KEY_ENCRYPTION_KEY to .env.local"; \
 	fi
+
+# Server only, after git pull. Prod has no AssetMapper dev server, so assets 404 until compiled. OPcache doesn't
+# check timestamps in prod, so php and worker are restarted even when up -d leaves them running
+deploy: encryption-key
+	$(DC) build
+	$(DC) run --rm --no-deps php composer install --no-dev --optimize-autoloader
+	$(DC) up -d --wait
+	$(PHP) bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+	$(PHP) bin/console asset-map:compile
+	$(DC) restart php worker
 
 upd:
 	$(DC) up -d --wait
