@@ -1,0 +1,27 @@
+# Prod: run as -f compose.yaml -f compose.prod.yaml (or COMPOSE_FILE in .env.local), so compose.override.yaml is skipped
+x-prod-env: &prod-env
+  APP_ENV: prod
+  APP_DEBUG: "0"
+
+services:
+  php:
+    # Localhost only: SYMFONY_TRUSTED_PROXIES trusts the network gateway, and Docker hands some connections to
+    # the published port (IPv6, Docker Desktop, rootless) to the container from that gateway, so they could forge
+    # X-Forwarded-For. The reverse proxy runs on the host and connects to 127.0.0.1
+    ports:
+      - "127.0.0.1:${APP_PORT}:80"
+    restart: unless-stopped
+    environment: *prod-env
+
+  worker:
+    environment: *prod-env
+
+  postgres:
+    restart: unless-stopped
+
+networks:
+  default:
+    # A pinned subnet keeps the gateway in SYMFONY_TRUSTED_PROXIES the same when the network is recreated
+    ipam:
+      config:
+        - subnet: ${APP_SUBNET}

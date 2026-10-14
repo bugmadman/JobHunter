@@ -1,6 +1,8 @@
 # Dev only: docker compose merges this file automatically, prod lists its files explicitly and skips it
 services:
   php:
+    ports:
+      - "${APP_PORT}:80"
     environment:
       FRANKENPHP_WORKER_CONFIG: watch
 

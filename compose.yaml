@@ -8,8 +8,6 @@ services:
       args:
         USER: ${APP_USER}
         USERID: ${APP_USERID}
-    ports:
-      - "${APP_PORT}:80"
     volumes:
       - .:/app
     depends_on:
