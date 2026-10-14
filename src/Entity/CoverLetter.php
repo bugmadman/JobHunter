@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Domain\CoverLetter\CoverLetterGenerationAlreadyFinished;
+use App\Domain\CoverLetter\CoverLetterText;
 use App\Domain\Llm\LlmOperationStatus;
+use App\Repository\CoverLetterRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -12,7 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
  * One version of a cover letter for a job posting; every generation request creates a new one. The text stays null
  * until the generation is done.
  */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: CoverLetterRepository::class)]
 final class CoverLetter
 {
     #[ORM\Id]
@@ -58,5 +61,36 @@ final class CoverLetter
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    /**
+     * @throws CoverLetterGenerationAlreadyFinished
+     */
+    public function markGenerated(CoverLetterText $text): void
+    {
+        $this->assertGenerationPending();
+
+        $this->status = LlmOperationStatus::Done;
+        $this->text = $text->value;
+    }
+
+    /**
+     * @throws CoverLetterGenerationAlreadyFinished
+     */
+    public function markGenerationFailed(): void
+    {
+        $this->assertGenerationPending();
+
+        $this->status = LlmOperationStatus::Failed;
+    }
+
+    /**
+     * @throws CoverLetterGenerationAlreadyFinished
+     */
+    public function assertGenerationPending(): void
+    {
+        if (LlmOperationStatus::Pending !== $this->status) {
+            throw CoverLetterGenerationAlreadyFinished::withStatus($this->status);
+        }
     }
 }

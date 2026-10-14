@@ -38,8 +38,6 @@ final readonly class JobPostingService implements JobPostingServiceInterface
         one or two sentences in English naming the deciding factors.
         PROMPT;
 
-    private const string POSTING_TAG = 'job_posting';
-
     public function __construct(
         private JobPostingRepositoryInterface $postings,
         private CvProfileRepositoryInterface $cvProfiles,
@@ -113,7 +111,7 @@ final readonly class JobPostingService implements JobPostingServiceInterface
 
         try {
             $response = $this->llm->generate(LlmTask::Matching, new LlmRequest(
-                self::describe($posting->getDetails()),
+                JobPostingFence::wrap($posting->getDetails()),
                 systemInstruction: $promptText."\n\n".self::EVALUATION_INSTRUCTION,
                 responseSchema: $this->evaluationParser->schema(),
             ));
@@ -162,35 +160,5 @@ final readonly class JobPostingService implements JobPostingServiceInterface
     {
         $posting->markFailed(StatusReason::fromString($reason), $this->clock->now());
         $this->postings->save($posting);
-    }
-
-    /**
-     * @return non-empty-string
-     */
-    private static function describe(JobPostingDetails $details): string
-    {
-        $lines = ['<'.self::POSTING_TAG.'>', 'Title: '.self::defuse($details->title)];
-
-        if (null !== $details->company) {
-            $lines[] = 'Company: '.self::defuse($details->company);
-        }
-
-        if (null !== $details->location) {
-            $lines[] = 'Location: '.self::defuse($details->location);
-        }
-
-        $lines[] = 'Description:';
-        $lines[] = self::defuse($details->description);
-        $lines[] = '</'.self::POSTING_TAG.'>';
-
-        return implode("\n", $lines);
-    }
-
-    /**
-     * A posting could close the fence itself and put its own instructions outside it.
-     */
-    private static function defuse(string $text): string
-    {
-        return (string) preg_replace('~<(?=\s*/?\s*'.self::POSTING_TAG.')~i', '&lt;', $text);
     }
 }
