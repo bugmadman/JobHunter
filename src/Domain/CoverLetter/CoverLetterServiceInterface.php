@@ -32,6 +32,13 @@ interface CoverLetterServiceInterface
     public function generate(CoverLetter $coverLetter): void;
 
     /**
+     * Saves the owner's edited text of a generated letter.
+     *
+     * @throws CoverLetterNotGenerated the letter is not generated; nothing is saved
+     */
+    public function edit(CoverLetter $coverLetter, CoverLetterText $text): void;
+
+    /**
      * Marks a still pending generation failed once its retries are used up; a finished one is left as it is.
      */
     public function giveUpGeneration(CoverLetter $coverLetter): void;

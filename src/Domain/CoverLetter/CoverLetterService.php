@@ -127,6 +127,12 @@ final readonly class CoverLetterService implements CoverLetterServiceInterface
         $this->coverLetters->save($coverLetter);
     }
 
+    public function edit(CoverLetter $coverLetter, CoverLetterText $text): void
+    {
+        $coverLetter->edit($text);
+        $this->coverLetters->save($coverLetter);
+    }
+
     public function giveUpGeneration(CoverLetter $coverLetter): void
     {
         if (LlmOperationStatus::Pending !== $coverLetter->getStatus()) {

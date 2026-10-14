@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Domain\CoverLetter\CoverLetterGenerationInProgress;
+use App\Domain\CoverLetter\CoverLetterNotGenerated;
 use App\Domain\CoverLetter\CoverLetterServiceInterface;
 use App\Domain\CoverLetter\CoverLetterText;
 use App\Domain\JobPosting\JobPostingDetails;
+use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Platform\PlatformAccessType;
 use App\Entity\CoverLetter;
 use App\Entity\JobPosting;
@@ -63,11 +65,11 @@ final class CoverLetterControllerTest extends WebTestCase
         self::assertSelectorNotExists('turbo-frame#posting-cover-letter form');
     }
 
-    public function testShowsTheGeneratedLetterWithANewVersionButton(): void
+    public function testShowsTheGeneratedLetterInAnEditFormWithACopyButton(): void
     {
         $client = $this->loggedInClient();
         $posting = $this->posting(7);
-        $coverLetter = $this->coverLetter($posting);
+        $coverLetter = $this->coverLetter($posting, 11);
         $coverLetter->markGenerated(CoverLetterText::fromString("Dear team,\nI fit."));
         $this->stubPostings($client)->method('findById')->willReturn($posting);
         $this->stubCoverLetters($client)->method('findLatestByJobPosting')->willReturn($coverLetter);
@@ -75,8 +77,15 @@ final class CoverLetterControllerTest extends WebTestCase
         $crawler = $client->request('GET', '/postings/7/cover-letter');
 
         self::assertSelectorNotExists('[data-controller="frame-reload"]');
-        self::assertStringContainsString('Dear team,<br>', $crawler->filter('#cover-letter-text')->html());
-        self::assertSelectorTextContains('turbo-frame#posting-cover-letter form button', 'Generate a new version');
+        $form = $crawler->filter('turbo-frame#posting-cover-letter form#cover-letter-form');
+        self::assertSame('/cover-letters/11', $form->attr('action'));
+        $textarea = $form->filter('textarea[name="text"]');
+        self::assertSame("Dear team,\nI fit.", $textarea->text(normalizeWhitespace: false));
+        self::assertSelectorExists('#cover-letter-form button[data-action="clipboard#copy"]');
+        self::assertSelectorTextContains(
+            'turbo-frame#posting-cover-letter form[action="/postings/7/cover-letter"] button',
+            'Generate a new version',
+        );
     }
 
     public function testShowsAFailedGenerationWithARetryButton(): void
@@ -158,6 +167,72 @@ final class CoverLetterControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
+    public function testSavesTheEditedLetter(): void
+    {
+        $client = $this->loggedInClient();
+        $coverLetter = $this->coverLetter($this->posting(7), 11);
+        $this->stubCoverLetters($client)->method('findById')->willReturnMap([[11, $coverLetter]]);
+        $this->mockCoverLetterService($client)
+            ->expects(self::once())
+            ->method('edit')
+            ->with($coverLetter, CoverLetterText::fromString('Edited letter.'));
+
+        $this->postText($client, '/cover-letters/11', '  Edited letter. ');
+
+        self::assertResponseRedirects('/postings/7/cover-letter', 303);
+    }
+
+    public function testRejectsAnEmptyLetter(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubCoverLetters($client)->method('findById')->willReturn($this->coverLetter($this->posting(7), 11));
+        $this->mockCoverLetterService($client)->expects(self::never())->method('edit');
+
+        $this->postText($client, '/cover-letters/11', " \n ");
+
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testEditingANotGeneratedLetterIsAConflict(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubCoverLetters($client)->method('findById')->willReturn($this->coverLetter($this->posting(7), 11));
+        $this->mockCoverLetterService($client)
+            ->expects(self::once())
+            ->method('edit')
+            ->willThrowException(CoverLetterNotGenerated::withStatus(LlmOperationStatus::Pending));
+
+        $this->postText($client, '/cover-letters/11', 'Edited letter.');
+
+        self::assertResponseStatusCodeSame(409);
+    }
+
+    public function testEditReturns404ForAnUnknownLetter(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubCoverLetters($client)->method('findById')->willReturn(null);
+        $this->mockCoverLetterService($client)->expects(self::never())->method('edit');
+
+        $this->postText($client, '/cover-letters/999', 'Edited letter.');
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testRejectsACrossSiteEdit(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockCoverLetterService($client)->expects(self::never())->method('edit');
+
+        $client->request(
+            'POST',
+            '/cover-letters/11',
+            ['_csrf_token' => self::WELL_FORMED_TOKEN, 'text' => 'Edited letter.'],
+            server: self::CROSS_SITE,
+        );
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testRedirectsAnonymousToLogin(): void
     {
         $client = self::createClient();
@@ -182,6 +257,16 @@ final class CoverLetterControllerTest extends WebTestCase
     private function post(KernelBrowser $client, string $url, array $server = self::SAME_ORIGIN): void
     {
         $client->request('POST', $url, ['_csrf_token' => self::WELL_FORMED_TOKEN], server: $server);
+    }
+
+    private function postText(KernelBrowser $client, string $url, string $text): void
+    {
+        $client->request(
+            'POST',
+            $url,
+            ['_csrf_token' => self::WELL_FORMED_TOKEN, 'text' => $text],
+            server: self::SAME_ORIGIN,
+        );
     }
 
     /**

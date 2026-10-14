@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Domain\CoverLetter\CoverLetterGenerationAlreadyFinished;
+use App\Domain\CoverLetter\CoverLetterNotGenerated;
 use App\Domain\CoverLetter\CoverLetterText;
 use App\Domain\JobPosting\JobPostingDetails;
 use App\Domain\Llm\LlmOperationStatus;
@@ -81,6 +82,40 @@ final class CoverLetterTest extends TestCase
         $this->expectException(CoverLetterGenerationAlreadyFinished::class);
 
         $coverLetter->markGenerated(CoverLetterText::fromString('I fit.'));
+    }
+
+    public function testEditingReplacesTheGeneratedText(): void
+    {
+        $coverLetter = self::coverLetter();
+        $coverLetter->markGenerated(CoverLetterText::fromString('I fit.'));
+
+        $coverLetter->edit(CoverLetterText::fromString('I fit well.'));
+
+        self::assertSame(LlmOperationStatus::Done, $coverLetter->getStatus());
+        self::assertSame('I fit well.', $coverLetter->getText());
+    }
+
+    public function testAPendingLetterCannotBeEdited(): void
+    {
+        $coverLetter = self::coverLetter();
+
+        try {
+            $coverLetter->edit(CoverLetterText::fromString('I fit.'));
+            self::fail('Expected a pending letter to refuse an edit.');
+        } catch (CoverLetterNotGenerated) {
+        }
+
+        self::assertNull($coverLetter->getText());
+    }
+
+    public function testAFailedLetterCannotBeEdited(): void
+    {
+        $coverLetter = self::coverLetter();
+        $coverLetter->markGenerationFailed();
+
+        $this->expectException(CoverLetterNotGenerated::class);
+
+        $coverLetter->edit(CoverLetterText::fromString('I fit.'));
     }
 
     private static function coverLetter(): CoverLetter

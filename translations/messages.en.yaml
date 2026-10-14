@@ -180,6 +180,9 @@ cover_letter:
         failed: The generation failed. Check that the CV is analysed and that the cover letter model and key are set in the settings, then try again.
         generate: Generate cover letter
         regenerate: Generate a new version
+        save: Save the letter
+        copy: Copy
+        copied: Copied
 
 nav:
     cv: CV

@@ -7,6 +7,7 @@ namespace App\Tests\Domain\CoverLetter;
 use App\Domain\CoverLetter\CoverLetterGenerationAlreadyFinished;
 use App\Domain\CoverLetter\CoverLetterGenerationFailed;
 use App\Domain\CoverLetter\CoverLetterGenerationInProgress;
+use App\Domain\CoverLetter\CoverLetterNotGenerated;
 use App\Domain\CoverLetter\CoverLetterService;
 use App\Domain\CoverLetter\CoverLetterText;
 use App\Domain\CoverLetter\EmptyCoverLetterText;
@@ -314,6 +315,29 @@ final class CoverLetterServiceTest extends TestCase
 
         self::service($coverLetters, self::cvProfilesFinding(self::analysedProfile()), llm: $llm)
             ->generate($coverLetter);
+    }
+
+    public function testEditSavesTheNewText(): void
+    {
+        $coverLetter = self::coverLetter();
+        $coverLetter->markGenerated(CoverLetterText::fromString(self::LETTER));
+
+        $coverLetters = $this->createMock(CoverLetterRepositoryInterface::class);
+        $coverLetters->expects(self::once())->method('save')->with($coverLetter);
+
+        self::service($coverLetters)->edit($coverLetter, CoverLetterText::fromString('Edited.'));
+
+        self::assertSame('Edited.', $coverLetter->getText());
+    }
+
+    public function testEditOfANotGeneratedLetterSavesNothing(): void
+    {
+        $coverLetters = $this->createMock(CoverLetterRepositoryInterface::class);
+        $coverLetters->expects(self::never())->method('save');
+
+        $this->expectException(CoverLetterNotGenerated::class);
+
+        self::service($coverLetters)->edit(self::coverLetter(), CoverLetterText::fromString('Edited.'));
     }
 
     public function testGivingUpMarksAPendingGenerationFailed(): void

@@ -193,7 +193,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] `CoverLetter` entity (jobPosting, text, status, createdAt; several versions per job posting) + migration
 - [x] [C] Generation service: `CvProfile` + `JobPosting` + platform `Prompt` → letter text (runs in a Messenger handler)
 - [x] [S] "Cover letter" button in the job posting card (dispatches the message, the Turbo frame refreshes until the letter is ready)
-- [ ] [S] Manual editing of the letter + copying to the clipboard
+- [x] [S] Manual editing of the letter + copying to the clipboard
 
 ## Phase 13 — Deployment to the home server
 

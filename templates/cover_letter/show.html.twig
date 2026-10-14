@@ -21,7 +21,18 @@
                     {{- cover_letter.createdAt|date('Y-m-d H:i') -}}
                 </time>
             </p>
-            <p class="border rounded p-2 text-break" id="cover-letter-text">{{ cover_letter.text|nl2br }}</p>
+            <form method="post" action="{{ path('app_cover_letter_edit', {id: cover_letter.id}) }}" class="mb-3"
+                  id="cover-letter-form" data-controller="clipboard"
+                  data-clipboard-copied-label-value="{{ 'cover_letter.show.copied'|trans }}">
+                <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
+                       value="{{ csrf_token('cover_letter_edit') }}">
+                <label for="cover-letter-text" class="visually-hidden">{{ 'cover_letter.show.title'|trans }}</label>
+                <textarea name="text" id="cover-letter-text" class="form-control mb-2" rows="12" required
+                          data-clipboard-target="source">{{ cover_letter.text }}</textarea>
+                <button type="submit" class="btn btn-sm btn-primary">{{ 'cover_letter.show.save'|trans }}</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-clipboard-target="button"
+                        data-action="clipboard#copy">{{ 'cover_letter.show.copy'|trans }}</button>
+            </form>
         {% else %}
             <p class="text-body-secondary">{{ 'cover_letter.show.none'|trans }}</p>
         {% endif %}

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Domain\CoverLetter\CoverLetterGenerationAlreadyFinished;
+use App\Domain\CoverLetter\CoverLetterNotGenerated;
 use App\Domain\CoverLetter\CoverLetterText;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Repository\CoverLetterRepository;
@@ -82,6 +83,20 @@ final class CoverLetter
         $this->assertGenerationPending();
 
         $this->status = LlmOperationStatus::Failed;
+    }
+
+    /**
+     * The owner's edit replaces the generated text of this version; it doesn't add a new one.
+     *
+     * @throws CoverLetterNotGenerated
+     */
+    public function edit(CoverLetterText $text): void
+    {
+        if (LlmOperationStatus::Done !== $this->status) {
+            throw CoverLetterNotGenerated::withStatus($this->status);
+        }
+
+        $this->text = $text->value;
     }
 
     /**
