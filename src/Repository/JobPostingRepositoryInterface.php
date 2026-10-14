@@ -8,5 +8,7 @@ use App\Entity\JobPosting;
 
 interface JobPostingRepositoryInterface
 {
+    public function findById(int $id): ?JobPosting;
+
     public function save(JobPosting $posting): void;
 }

@@ -172,7 +172,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 - [x] [S] Empty handler for `ProcessJobPosting` (the message class exists)
 - [x] [C] Keyword filter by `Skill` + edge case tests
-- [ ] [C] Wire the keyword filter into the handler (rejection finalizes the status)
+- [x] [C] Wire the keyword filter into the handler (rejection finalizes the status)
 - [ ] [C] LLM matching using the platform `Prompt`
 - [ ] [C] Wire LLM matching into the handler (like/dislike + reason)
 

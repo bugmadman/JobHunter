@@ -18,6 +18,11 @@ final class JobPostingRepository extends ServiceEntityRepository implements JobP
         parent::__construct($registry, JobPosting::class);
     }
 
+    public function findById(int $id): ?JobPosting
+    {
+        return $this->find($id);
+    }
+
     public function save(JobPosting $posting): void
     {
         $this->getEntityManager()->persist($posting);

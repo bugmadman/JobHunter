@@ -108,6 +108,17 @@ final class JobPosting
         return $this->location;
     }
 
+    public function getDetails(): JobPostingDetails
+    {
+        return JobPostingDetails::create(
+            $this->title,
+            $this->description,
+            $this->url,
+            $this->company,
+            $this->location,
+        );
+    }
+
     public function getStatus(): JobPostingStatus
     {
         return $this->status;
