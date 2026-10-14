@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Domain\JobPosting\CommentTooLong;
+use App\Domain\JobPosting\JobPostingComment;
 use App\Domain\JobPosting\JobPostingListFilter;
 use App\Domain\JobPosting\JobPostingNotEvaluated;
 use App\Domain\JobPosting\JobPostingServiceInterface;
@@ -17,6 +19,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 
@@ -47,6 +50,7 @@ final class JobPostingController extends AbstractController
             'platforms' => $this->platforms->findAllOrderedByName(),
             'statuses' => JobPostingStatus::cases(),
             'verdicts' => JobPostingVerdict::cases(),
+            'comment_max_length' => JobPostingComment::MAX_LENGTH,
             'filter' => $filter,
         ]);
     }
@@ -65,6 +69,7 @@ final class JobPostingController extends AbstractController
             'posting' => $posting,
             'history' => $this->postings->findStageLogsOldestFirst($posting),
             'verdicts' => JobPostingVerdict::cases(),
+            'comment_max_length' => JobPostingComment::MAX_LENGTH,
         ]);
     }
 
@@ -88,6 +93,29 @@ final class JobPostingController extends AbstractController
         } catch (JobPostingNotEvaluated $exception) {
             throw new ConflictHttpException($exception->getMessage(), $exception);
         }
+
+        return $this->redirectToRoute('app_job_posting_show', ['id' => $id], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route(
+        '/postings/{id}/comment',
+        name: 'app_job_posting_comment',
+        requirements: ['id' => Requirement::POSITIVE_INT],
+        methods: ['POST'],
+    )]
+    public function updateComment(Request $request, int $id): Response
+    {
+        if (!$this->isCsrfTokenValid('job_posting_comment', $request->request->getString('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        try {
+            $comment = JobPostingComment::fromInput($request->request->getString('comment'));
+        } catch (CommentTooLong $exception) {
+            throw new UnprocessableEntityHttpException($exception->getMessage(), $exception);
+        }
+
+        $this->postingService->updateComment($this->findPosting($id), $comment);
 
         return $this->redirectToRoute('app_job_posting_show', ['id' => $id], Response::HTTP_SEE_OTHER);
     }

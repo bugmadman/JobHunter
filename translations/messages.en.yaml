@@ -144,6 +144,8 @@ job_posting:
         history: Pipeline history
         your_verdict: 'Your verdict:'
         llm_verdict: 'The LLM said: %verdict%'
+        comment: Comment
+        save_comment: Save comment
     filter:
         platform: Platform
         status: Status

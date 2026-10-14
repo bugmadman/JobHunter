@@ -141,6 +141,12 @@ final readonly class JobPostingService implements JobPostingServiceInterface
         $this->postings->save($posting);
     }
 
+    public function updateComment(JobPosting $posting, ?JobPostingComment $comment): void
+    {
+        $posting->updateComment($comment);
+        $this->postings->save($posting);
+    }
+
     private function fail(JobPosting $posting, string $reason): void
     {
         $posting->markFailed(StatusReason::fromString($reason), $this->clock->now());

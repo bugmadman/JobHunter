@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Domain\JobPosting\InvalidJobPostingTransition;
+use App\Domain\JobPosting\JobPostingComment;
 use App\Domain\JobPosting\JobPostingDetails;
 use App\Domain\JobPosting\JobPostingNotEvaluated;
 use App\Domain\JobPosting\JobPostingStatus;
@@ -55,6 +56,9 @@ final class JobPosting
 
     #[ORM\Column(length: 32, nullable: true, enumType: JobPostingVerdict::class)]
     private ?JobPostingVerdict $manualVerdict = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $comment = null;
 
     /**
      * @var list<JobPostingStatusChanged>
@@ -161,6 +165,11 @@ final class JobPosting
         return $this->manualVerdict ?? $this->verdict;
     }
 
+    public function getComment(): ?string
+    {
+        return $this->comment;
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
@@ -210,6 +219,14 @@ final class JobPosting
         }
 
         $this->manualVerdict = $verdict === $this->verdict ? null : $verdict;
+    }
+
+    /**
+     * Null removes the comment.
+     */
+    public function updateComment(?JobPostingComment $comment): void
+    {
+        $this->comment = $comment?->value;
     }
 
     /**

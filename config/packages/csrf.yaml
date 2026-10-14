@@ -12,3 +12,4 @@ framework:
             - prompt_generate
             - api_key_regenerate
             - job_posting_verdict
+            - job_posting_comment

@@ -51,4 +51,9 @@ interface JobPostingServiceInterface
      * @throws JobPostingNotEvaluated the posting has no LLM verdict yet; nothing is saved
      */
     public function overrideVerdict(JobPosting $posting, JobPostingVerdict $verdict): void;
+
+    /**
+     * Saves the owner's comment on the posting; null removes it.
+     */
+    public function updateComment(JobPosting $posting, ?JobPostingComment $comment): void;
 }

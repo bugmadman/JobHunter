@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller;
 
+use App\Domain\JobPosting\JobPostingComment;
 use App\Domain\JobPosting\JobPostingDetails;
 use App\Domain\JobPosting\JobPostingListFilter;
 use App\Domain\JobPosting\JobPostingNotEvaluated;
@@ -322,6 +323,78 @@ final class JobPostingControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
+    public function testShowsTheCommentFormWithTheSavedComment(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->posting(7, 'Senior PHP developer');
+        $posting->updateComment(JobPostingComment::fromInput('Ask about the rate.'));
+        $this->stubPosting($client, 7, $posting);
+
+        $client->request('GET', '/postings/7');
+
+        $form = 'turbo-frame#posting-comment form[method="post"][action="/postings/7/comment"]';
+        self::assertSelectorExists($form.' input[name="_csrf_token"]');
+        self::assertSelectorTextSame($form.' textarea[name="comment"][maxlength="5000"]', 'Ask about the rate.');
+    }
+
+    public function testSavesTheCommentAndRedirectsBackToTheCard(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->posting(7, 'Senior PHP developer');
+        $this->stubPosting($client, 7, $posting);
+        $this->mockPostingService($client)
+            ->expects(self::once())
+            ->method('updateComment')
+            ->with($posting, JobPostingComment::fromInput('Ask about the rate.'));
+
+        $this->postComment($client, '/postings/7/comment', '  Ask about the rate. ');
+
+        self::assertResponseRedirects('/postings/7', 303);
+    }
+
+    public function testABlankCommentRemovesIt(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->posting(7, 'Senior PHP developer');
+        $this->stubPosting($client, 7, $posting);
+        $this->mockPostingService($client)->expects(self::once())->method('updateComment')->with($posting, null);
+
+        $this->postComment($client, '/postings/7/comment', " \n");
+
+        self::assertResponseRedirects('/postings/7', 303);
+    }
+
+    public function testRejectsATooLongComment(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockPostingService($client)->expects(self::never())->method('updateComment');
+
+        $this->postComment($client, '/postings/7/comment', str_repeat('a', JobPostingComment::MAX_LENGTH + 1));
+
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testCommentReturns404ForAnUnknownPosting(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubPosting($client, 9, null);
+        $this->mockPostingService($client)->expects(self::never())->method('updateComment');
+
+        $this->postComment($client, '/postings/9/comment', 'Ask about the rate.');
+
+        self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testRejectsACrossSiteCommentRequest(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockPostingService($client)->expects(self::never())->method('updateComment');
+
+        $this->postComment($client, '/postings/7/comment', 'Ask about the rate.', self::CROSS_SITE);
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testRedirectsAnonymousToLogin(): void
     {
         $client = self::createClient();
@@ -351,6 +424,23 @@ final class JobPostingControllerTest extends WebTestCase
             'POST',
             $url,
             ['_csrf_token' => self::WELL_FORMED_TOKEN, 'verdict' => $verdict],
+            server: $server,
+        );
+    }
+
+    /**
+     * @param array<string, string> $server
+     */
+    private function postComment(
+        KernelBrowser $client,
+        string $url,
+        string $comment,
+        array $server = self::SAME_ORIGIN,
+    ): void {
+        $client->request(
+            'POST',
+            $url,
+            ['_csrf_token' => self::WELL_FORMED_TOKEN, 'comment' => $comment],
             server: $server,
         );
     }

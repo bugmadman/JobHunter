@@ -9,6 +9,7 @@ use App\Domain\Cv\CvFile;
 use App\Domain\JobPosting\EvaluationResponseParserInterface;
 use App\Domain\JobPosting\InvalidEvaluationResponse;
 use App\Domain\JobPosting\JobPostingAlreadyFiltered;
+use App\Domain\JobPosting\JobPostingComment;
 use App\Domain\JobPosting\JobPostingDetails;
 use App\Domain\JobPosting\JobPostingEvaluation;
 use App\Domain\JobPosting\JobPostingNotEvaluated;
@@ -642,6 +643,20 @@ final class JobPostingServiceTest extends TestCase
         $this->expectException(JobPostingNotEvaluated::class);
 
         self::service($postings)->overrideVerdict($posting, JobPostingVerdict::Dislike);
+    }
+
+    public function testSavesTheCommentAndRemovesItWithNull(): void
+    {
+        $posting = self::filteredPosting();
+        $postings = $this->createMock(JobPostingRepositoryInterface::class);
+        $postings->expects(self::exactly(2))->method('save')->with($posting);
+        $service = self::service($postings);
+
+        $service->updateComment($posting, JobPostingComment::fromInput('Ask about the rate.'));
+        self::assertSame('Ask about the rate.', $posting->getComment());
+
+        $service->updateComment($posting, null);
+        self::assertNull($posting->getComment());
     }
 
     private static function assertEvaluationFailed(JobPosting $posting, string $reason): void

@@ -144,6 +144,8 @@ job_posting:
         history: История обработки
         your_verdict: 'Ваша оценка:'
         llm_verdict: 'Оценка LLM: %verdict%'
+        comment: Комментарий
+        save_comment: Сохранить комментарий
     filter:
         platform: Платформа
         status: Статус

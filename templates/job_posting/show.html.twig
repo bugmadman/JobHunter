@@ -57,6 +57,18 @@
             </section>
         {% endif %}
 
+        <turbo-frame id="posting-comment">
+            <form method="post" action="{{ path('app_job_posting_comment', {id: posting.id}) }}" class="mb-3"
+                  id="posting-comment-form">
+                <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
+                       value="{{ csrf_token('job_posting_comment') }}">
+                <label for="posting-comment-text" class="form-label h6">{{ 'job_posting.show.comment'|trans }}</label>
+                <textarea name="comment" id="posting-comment-text" class="form-control mb-2" rows="3"
+                          maxlength="{{ comment_max_length }}">{{ posting.comment }}</textarea>
+                <button type="submit" class="btn btn-sm btn-primary">{{ 'job_posting.show.save_comment'|trans }}</button>
+            </form>
+        </turbo-frame>
+
         <section id="posting-description">
             <h2 class="h6">{{ 'job_posting.show.description'|trans }}</h2>
             <p class="text-break">{{ posting.description|nl2br }}</p>
