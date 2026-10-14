@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Domain\JobPosting\JobPostingDetails;
+use App\Domain\JobPosting\JobPostingListFilter;
+use App\Domain\JobPosting\JobPostingStatus;
 use App\Domain\JobPosting\JobPostingVerdict;
 use App\Domain\JobPosting\StatusReason;
 use App\Domain\Platform\PlatformAccessType;
 use App\Entity\JobPosting;
 use App\Entity\Platform;
 use App\Repository\JobPostingRepositoryInterface;
+use App\Repository\PlatformRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
@@ -54,6 +57,46 @@ final class JobPostingControllerTest extends WebTestCase
         self::assertSelectorTextContains('main', 'No job postings yet.');
     }
 
+    public function testFiltersByTheQueryAndKeepsTheChoice(): void
+    {
+        $client = $this->loggedInClient();
+        $repository = $this->createMock(JobPostingRepositoryInterface::class);
+        $repository->expects(self::once())
+            ->method('findNewestFirst')
+            ->with(new JobPostingListFilter(3, JobPostingStatus::Evaluated, JobPostingVerdict::Dislike))
+            ->willReturn([]);
+        $client->getContainer()->set(JobPostingRepositoryInterface::class, $repository);
+        $this->stubPlatforms($client);
+
+        $client->request('GET', '/postings?platform=3&status=evaluated&verdict=dislike');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('#filter-platform option[selected]', 'LinkedIn');
+        self::assertSelectorTextContains('#filter-status option[selected]', 'Evaluated');
+        self::assertSelectorTextContains('#filter-verdict option[selected]', 'Dislike');
+        self::assertSelectorTextContains('main', 'No job postings match the filters.');
+        self::assertSelectorExists('#posting-filters a[href="/postings"]');
+    }
+
+    public function testIgnoresUnknownFilterValues(): void
+    {
+        $client = $this->loggedInClient();
+        $repository = $this->createMock(JobPostingRepositoryInterface::class);
+        $repository->expects(self::once())
+            ->method('findNewestFirst')
+            ->with(new JobPostingListFilter())
+            ->willReturn([]);
+        $client->getContainer()->set(JobPostingRepositoryInterface::class, $repository);
+        $this->stubPlatforms($client);
+
+        $client->request('GET', '/postings?platform=abc&status=unknown&verdict=maybe');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('#posting-filters option[selected]');
+        self::assertSelectorNotExists('#posting-filters a');
+        self::assertSelectorTextContains('main', 'No job postings yet.');
+    }
+
     public function testRedirectsAnonymousToLogin(): void
     {
         $client = self::createClient();
@@ -76,8 +119,21 @@ final class JobPostingControllerTest extends WebTestCase
     private function stubPostings(KernelBrowser $client, array $postings): void
     {
         $repository = self::createStub(JobPostingRepositoryInterface::class);
-        $repository->method('findAllNewestFirst')->willReturn($postings);
+        $repository->method('findNewestFirst')->willReturn($postings);
         $client->getContainer()->set(JobPostingRepositoryInterface::class, $repository);
+        $this->stubPlatforms($client);
+    }
+
+    private function stubPlatforms(KernelBrowser $client): void
+    {
+        $linkedIn = new Platform('LinkedIn', PlatformAccessType::Browser);
+        new \ReflectionProperty(Platform::class, 'id')->setValue($linkedIn, 3);
+        $upwork = new Platform('Upwork', PlatformAccessType::Browser);
+        new \ReflectionProperty(Platform::class, 'id')->setValue($upwork, 5);
+
+        $platforms = self::createStub(PlatformRepositoryInterface::class);
+        $platforms->method('findAllOrderedByName')->willReturn([$linkedIn, $upwork]);
+        $client->getContainer()->set(PlatformRepositoryInterface::class, $platforms);
     }
 
     private function posting(int $id, string $title, ?string $company = null, ?string $location = null): JobPosting

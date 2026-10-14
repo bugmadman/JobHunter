@@ -134,6 +134,14 @@ job_posting:
     index:
         title: Вакансии
         empty: Вакансий пока нет.
+        no_matches: Нет вакансий, подходящих под фильтры.
+    filter:
+        platform: Платформа
+        status: Статус
+        verdict: Оценка LLM
+        any: Все
+        apply: Применить
+        reset: Сбросить
     status:
         raw: Новая
         rejected: Отсеяна по ключевым словам

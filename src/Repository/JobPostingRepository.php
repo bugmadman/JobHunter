@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Domain\JobPosting\JobPostingListFilter;
 use App\Entity\JobPosting;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -23,16 +24,28 @@ final class JobPostingRepository extends ServiceEntityRepository implements JobP
         return $this->find($id);
     }
 
-    public function findAllNewestFirst(): array
+    public function findNewestFirst(JobPostingListFilter $filter): array
     {
-        /* @var list<JobPosting> */
-        return $this->createQueryBuilder('posting')
+        $query = $this->createQueryBuilder('posting')
             ->addSelect('platform')
             ->join('posting.platform', 'platform')
             ->orderBy('posting.createdAt', 'DESC')
-            ->addOrderBy('posting.id', 'DESC')
-            ->getQuery()
-            ->getResult();
+            ->addOrderBy('posting.id', 'DESC');
+
+        if (null !== $filter->platformId) {
+            $query->andWhere('platform.id = :platform')->setParameter('platform', $filter->platformId);
+        }
+
+        if (null !== $filter->status) {
+            $query->andWhere('posting.status = :status')->setParameter('status', $filter->status);
+        }
+
+        if (null !== $filter->verdict) {
+            $query->andWhere('posting.verdict = :verdict')->setParameter('verdict', $filter->verdict);
+        }
+
+        /* @var list<JobPosting> */
+        return $query->getQuery()->getResult();
     }
 
     public function save(JobPosting $posting): void

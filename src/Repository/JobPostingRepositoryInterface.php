@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Domain\JobPosting\JobPostingListFilter;
 use App\Entity\JobPosting;
 
 interface JobPostingRepositoryInterface
@@ -13,7 +14,7 @@ interface JobPostingRepositoryInterface
     /**
      * @return list<JobPosting>
      */
-    public function findAllNewestFirst(): array;
+    public function findNewestFirst(JobPostingListFilter $filter): array;
 
     public function save(JobPosting $posting): void;
 }

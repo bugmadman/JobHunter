@@ -134,6 +134,14 @@ job_posting:
     index:
         title: Job postings
         empty: No job postings yet.
+        no_matches: No job postings match the filters.
+    filter:
+        platform: Platform
+        status: Status
+        verdict: LLM verdict
+        any: Any
+        apply: Apply
+        reset: Reset
     status:
         raw: New
         rejected: Rejected by keywords

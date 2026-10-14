@@ -179,12 +179,12 @@ Goal — as many automated checks as possible, so that errors are caught without
 ## Phase 11 — Results UI (custom pages, not EasyAdmin)
 
 - [x] [S] Job posting list as cards (not a table), responsive for phones
-- [ ] [S] List filters: platform, status, like/dislike, applied
+- [x] [S] List filters: platform, status, like/dislike
 - [ ] [S] Job posting card: description, LLM rating with reason
 - [ ] [S] Job posting card: pipeline history (`JobPostingStageLog`)
 - [ ] [C] Manually override the LLM like/dislike decision in the job posting card (via Turbo, without a reload)
 - [ ] [S] User comment on a job posting (saved via Turbo, without a reload)
-- [ ] [C] "Applied / not applied" status (toggled via Turbo)
+- [ ] [C] "Applied / not applied" status (toggled via Turbo) + the "applied" list filter
 - [ ] [S] Verify the list and the card on a phone (375px width)
 
 ## Phase 12 — Cover letter

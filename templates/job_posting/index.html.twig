@@ -5,8 +5,55 @@
 {% block body %}
     <h1 class="h3">{{ 'job_posting.index.title'|trans }}</h1>
 
+    {% set filtered = filter.platformId or filter.status or filter.verdict %}
+    <form method="get" class="row row-cols-1 row-cols-sm-auto g-2 align-items-end mb-3" id="posting-filters">
+        <div class="col">
+            <label class="form-label small mb-1" for="filter-platform">{{ 'job_posting.filter.platform'|trans }}</label>
+            <select class="form-select form-select-sm" id="filter-platform" name="platform">
+                <option value="">{{ 'job_posting.filter.any'|trans }}</option>
+                {% for platform in platforms %}
+                    <option value="{{ platform.id }}" {{- platform.id == filter.platformId ? ' selected' }}>
+                        {{- platform.name -}}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col">
+            <label class="form-label small mb-1" for="filter-status">{{ 'job_posting.filter.status'|trans }}</label>
+            <select class="form-select form-select-sm" id="filter-status" name="status">
+                <option value="">{{ 'job_posting.filter.any'|trans }}</option>
+                {% for status in statuses %}
+                    <option value="{{ status.value }}" {{- status == filter.status ? ' selected' }}>
+                        {{- ('job_posting.status.' ~ status.value)|trans -}}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col">
+            <label class="form-label small mb-1" for="filter-verdict">{{ 'job_posting.filter.verdict'|trans }}</label>
+            <select class="form-select form-select-sm" id="filter-verdict" name="verdict">
+                <option value="">{{ 'job_posting.filter.any'|trans }}</option>
+                {% for verdict in verdicts %}
+                    <option value="{{ verdict.value }}" {{- verdict == filter.verdict ? ' selected' }}>
+                        {{- ('job_posting.verdict.' ~ verdict.value)|trans -}}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-primary">{{ 'job_posting.filter.apply'|trans }}</button>
+            {% if filtered %}
+                <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_job_posting_index') }}">
+                    {{- 'job_posting.filter.reset'|trans -}}
+                </a>
+            {% endif %}
+        </div>
+    </form>
+
     {% if postings is empty %}
-        <p class="text-body-secondary">{{ 'job_posting.index.empty'|trans }}</p>
+        <p class="text-body-secondary">
+            {{- (filtered ? 'job_posting.index.no_matches' : 'job_posting.index.empty')|trans -}}
+        </p>
     {% else %}
         <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
             {% for posting in postings %}

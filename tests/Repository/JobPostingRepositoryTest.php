@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Domain\JobPosting\JobPostingDetails;
+use App\Domain\JobPosting\JobPostingListFilter;
+use App\Domain\JobPosting\JobPostingStatus;
+use App\Domain\JobPosting\JobPostingVerdict;
+use App\Domain\JobPosting\StatusReason;
 use App\Entity\JobPosting;
 use App\Entity\Platform;
 use App\Repository\JobPostingRepository;
@@ -19,32 +23,65 @@ final class JobPostingRepositoryTest extends KernelTestCase
         $this->repository()->save($this->posting('Newest', '2026-10-14 09:00'));
         $this->repository()->save($this->posting('Middle', '2026-10-13 18:00'));
 
+        self::assertSame(['Newest', 'Middle', 'Older'], $this->titles(new JobPostingListFilter()));
+    }
+
+    public function testFiltersByPlatformStatusAndVerdict(): void
+    {
+        $liked = $this->posting('Liked', '2026-10-14 09:00');
+        $this->evaluate($liked, JobPostingVerdict::Like);
+        $this->repository()->save($liked);
+        $disliked = $this->posting('Disliked', '2026-10-14 08:00');
+        $this->evaluate($disliked, JobPostingVerdict::Dislike);
+        $this->repository()->save($disliked);
+        $this->repository()->save($this->posting('New', '2026-10-14 07:00'));
+        $this->repository()->save($this->posting('LinkedIn', '2026-10-14 06:00', 'LinkedIn'));
+
+        $upworkId = $this->platform('Upwork')->getId();
+
+        self::assertSame(['Liked', 'Disliked', 'New'], $this->titles(new JobPostingListFilter($upworkId)));
+        self::assertSame(['New', 'LinkedIn'], $this->titles(new JobPostingListFilter(status: JobPostingStatus::Raw)));
         self::assertSame(
-            ['Newest', 'Middle', 'Older'],
-            array_map(
-                static fn (JobPosting $posting): string => $posting->getTitle(),
-                $this->repository()->findAllNewestFirst(),
-            ),
+            ['Disliked'],
+            $this->titles(new JobPostingListFilter($upworkId, JobPostingStatus::Evaluated, JobPostingVerdict::Dislike)),
         );
     }
 
-    private function posting(string $title, string $createdAt): JobPosting
+    /**
+     * @return list<string>
+     */
+    private function titles(JobPostingListFilter $filter): array
+    {
+        return array_map(
+            static fn (JobPosting $posting): string => $posting->getTitle(),
+            $this->repository()->findNewestFirst($filter),
+        );
+    }
+
+    private function evaluate(JobPosting $posting, JobPostingVerdict $verdict): void
+    {
+        $at = new \DateTimeImmutable('2026-10-14 10:00');
+        $posting->markFiltered($at);
+        $posting->markEvaluated($verdict, StatusReason::fromString('Reason.'), $at);
+    }
+
+    private function posting(string $title, string $createdAt, string $platform = 'Upwork'): JobPosting
     {
         return new JobPosting(
-            $this->upwork(),
+            $this->platform($platform),
             JobPostingDetails::create($title, 'Description.', 'https://example.com/'.$title),
             new \DateTimeImmutable($createdAt),
         );
     }
 
-    private function upwork(): Platform
+    private function platform(string $name): Platform
     {
         $platforms = self::getContainer()->get(PlatformRepository::class);
         self::assertInstanceOf(PlatformRepository::class, $platforms);
-        $upwork = $platforms->findByName('Upwork');
-        self::assertInstanceOf(Platform::class, $upwork);
+        $platform = $platforms->findByName($name);
+        self::assertInstanceOf(Platform::class, $platform);
 
-        return $upwork;
+        return $platform;
     }
 
     private function repository(): JobPostingRepository
