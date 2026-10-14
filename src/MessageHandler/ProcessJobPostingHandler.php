@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Domain\JobPosting\JobPostingAlreadyFiltered;
 use App\Domain\JobPosting\JobPostingServiceInterface;
 use App\Message\ProcessJobPosting;
 use App\Repository\JobPostingRepositoryInterface;
@@ -28,10 +27,6 @@ final readonly class ProcessJobPostingHandler
             throw new UnrecoverableMessageHandlingException(\sprintf('The job posting %d does not exist.', $id));
         }
 
-        try {
-            $this->postingService->filter($posting);
-        } catch (JobPostingAlreadyFiltered) {
-            return;
-        }
+        $this->postingService->process($posting);
     }
 }

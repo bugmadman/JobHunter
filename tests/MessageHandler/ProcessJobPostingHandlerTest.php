@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\MessageHandler;
 
-use App\Domain\JobPosting\JobPostingAlreadyFiltered;
 use App\Domain\JobPosting\JobPostingDetails;
 use App\Domain\JobPosting\JobPostingServiceInterface;
-use App\Domain\JobPosting\JobPostingStatus;
+use App\Domain\Llm\LlmProvider;
 use App\Domain\Platform\PlatformAccessType;
 use App\Entity\JobPosting;
 use App\Entity\Platform;
+use App\Infrastructure\Llm\LlmRequestFailed;
 use App\Message\ProcessJobPosting;
 use App\MessageHandler\ProcessJobPostingHandler;
 use App\Repository\JobPostingRepositoryInterface;
@@ -21,12 +21,12 @@ final class ProcessJobPostingHandlerTest extends TestCase
 {
     private const int ID = 7;
 
-    public function testFiltersThePostingLoadedById(): void
+    public function testProcessesThePostingLoadedById(): void
     {
         $posting = self::posting();
 
         $postingService = $this->createMock(JobPostingServiceInterface::class);
-        $postingService->expects(self::once())->method('filter')->with($posting);
+        $postingService->expects(self::once())->method('process')->with($posting);
 
         self::handler($this->repositoryFinding($posting), $postingService)(new ProcessJobPosting(self::ID));
     }
@@ -34,7 +34,7 @@ final class ProcessJobPostingHandlerTest extends TestCase
     public function testAMissingPostingIsNotRetried(): void
     {
         $postingService = $this->createMock(JobPostingServiceInterface::class);
-        $postingService->expects(self::never())->method('filter');
+        $postingService->expects(self::never())->method('process');
 
         $this->expectException(UnrecoverableMessageHandlingException::class);
         $this->expectExceptionMessage('The job posting 7 does not exist.');
@@ -42,12 +42,13 @@ final class ProcessJobPostingHandlerTest extends TestCase
         self::handler($this->repositoryFinding(null), $postingService)(new ProcessJobPosting(self::ID));
     }
 
-    public function testAnAlreadyFilteredPostingIsAcknowledged(): void
+    public function testAFailedLlmRequestPropagatesForARetry(): void
     {
-        $postingService = $this->createMock(JobPostingServiceInterface::class);
-        $postingService->expects(self::once())
-            ->method('filter')
-            ->willThrowException(JobPostingAlreadyFiltered::withStatus(JobPostingStatus::Rejected));
+        $failure = LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 503');
+        $postingService = self::createStub(JobPostingServiceInterface::class);
+        $postingService->method('process')->willThrowException($failure);
+
+        $this->expectExceptionObject($failure);
 
         self::handler($this->repositoryFinding(self::posting()), $postingService)(new ProcessJobPosting(self::ID));
     }

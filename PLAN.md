@@ -174,7 +174,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] Keyword filter by `Skill` + edge case tests
 - [x] [C] Wire the keyword filter into the handler (rejection finalizes the status)
 - [x] [C] LLM matching using the platform `Prompt`
-- [ ] [C] Wire LLM matching into the handler (like/dislike + reason)
+- [x] [C] Wire LLM matching into the handler (like/dislike + reason)
 
 ## Phase 11 — Results UI (custom pages, not EasyAdmin)
 

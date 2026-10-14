@@ -475,6 +475,152 @@ final class JobPostingServiceTest extends TestCase
         ];
     }
 
+    public function testProcessingARawPostingFiltersThenEvaluatesIt(): void
+    {
+        $posting = self::rawPosting();
+        $php = SkillName::fromString('php');
+        $keywordFilter = self::createStub(KeywordFilterInterface::class);
+        $keywordFilter->method('matchingSkills')->willReturn([$php]);
+        $llm = $this->createMock(LlmServiceInterface::class);
+        $llm->expects(self::once())->method('generate')->willReturn(new LlmResponse(self::LLM_RESPONSE));
+        $postings = $this->createMock(JobPostingRepositoryInterface::class);
+        $postings->expects(self::exactly(2))->method('save')->with($posting);
+
+        self::service(
+            $postings,
+            self::cvProfilesFinding(self::analysedCv('PHP')),
+            $keywordFilter,
+            prompts: self::promptsFinding(self::generatedPrompt()),
+            llm: $llm,
+            evaluationParser: self::parserReturning(JobPostingVerdict::Like),
+        )->process($posting);
+
+        self::assertSame(JobPostingStatus::Evaluated, $posting->getStatus());
+        self::assertSame(JobPostingVerdict::Like, $posting->getVerdict());
+        self::assertEquals(
+            [
+                new JobPostingStatusChanged(JobPostingStatus::Raw, JobPostingStatus::Filtered, null, self::now()),
+                new JobPostingStatusChanged(
+                    JobPostingStatus::Filtered,
+                    JobPostingStatus::Evaluated,
+                    StatusReason::fromString('Fits.'),
+                    self::now(),
+                ),
+            ],
+            $posting->releaseEvents(),
+        );
+    }
+
+    public function testProcessingARawPostingTheFilterRejectsSkipsTheLlm(): void
+    {
+        $posting = self::rawPosting();
+        $keywordFilter = self::createStub(KeywordFilterInterface::class);
+        $keywordFilter->method('matchingSkills')->willReturn([]);
+        $llm = $this->createMock(LlmServiceInterface::class);
+        $llm->expects(self::never())->method('generate');
+
+        self::service(
+            self::repositorySaving($posting),
+            self::cvProfilesFinding(self::analysedCv('Go')),
+            $keywordFilter,
+            llm: $llm,
+        )->process($posting);
+
+        self::assertFinalStatus(
+            $posting,
+            JobPostingStatus::Rejected,
+            'None of the CV skills appear in the posting',
+        );
+    }
+
+    public function testProcessingAFilteredPostingOnlyEvaluatesIt(): void
+    {
+        $posting = self::filteredPosting();
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->expects(self::never())->method('findLatestAnalysed');
+        $llm = self::createStub(LlmServiceInterface::class);
+        $llm->method('generate')->willReturn(new LlmResponse(self::LLM_RESPONSE));
+
+        self::service(
+            self::repositorySaving($posting),
+            $cvProfiles,
+            self::keywordFilterNeverCalled(),
+            prompts: self::promptsFinding(self::generatedPrompt()),
+            llm: $llm,
+            evaluationParser: self::parserReturning(JobPostingVerdict::Dislike),
+        )->process($posting);
+
+        self::assertSame(JobPostingStatus::Evaluated, $posting->getStatus());
+        self::assertSame(JobPostingVerdict::Dislike, $posting->getVerdict());
+    }
+
+    public function testAFailedLlmRequestAfterTheFilterLeavesThePostingFiltered(): void
+    {
+        $posting = self::rawPosting();
+        $failure = LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 503');
+        $keywordFilter = self::createStub(KeywordFilterInterface::class);
+        $keywordFilter->method('matchingSkills')->willReturn([SkillName::fromString('php')]);
+        $llm = self::createStub(LlmServiceInterface::class);
+        $llm->method('generate')->willThrowException($failure);
+        $postings = $this->createMock(JobPostingRepositoryInterface::class);
+        $postings->expects(self::once())
+            ->method('save')
+            ->with(self::callback(
+                static fn (JobPosting $saved): bool => $saved === $posting
+                    && JobPostingStatus::Filtered === $saved->getStatus(),
+            ));
+
+        try {
+            self::service(
+                $postings,
+                self::cvProfilesFinding(self::analysedCv('PHP')),
+                $keywordFilter,
+                prompts: self::promptsFinding(self::generatedPrompt()),
+                llm: $llm,
+            )->process($posting);
+            self::fail('Expected the LLM failure to propagate.');
+        } catch (LlmRequestFailed $exception) {
+            self::assertSame($failure, $exception);
+        }
+
+        self::assertSame(JobPostingStatus::Filtered, $posting->getStatus());
+    }
+
+    /**
+     * @param \Closure(JobPosting): void $toStatus
+     */
+    #[DataProvider('finalStatuses')]
+    public function testProcessingAPostingInAFinalStatusChangesNothing(\Closure $toStatus, string $status): void
+    {
+        $posting = self::rawPosting();
+        $toStatus($posting);
+        $posting->releaseEvents();
+
+        $postings = $this->createMock(JobPostingRepositoryInterface::class);
+        $postings->expects(self::never())->method('save');
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->expects(self::never())->method('findLatestAnalysed');
+        $llm = $this->createMock(LlmServiceInterface::class);
+        $llm->expects(self::never())->method('generate');
+
+        self::service($postings, $cvProfiles, self::keywordFilterNeverCalled(), llm: $llm)->process($posting);
+
+        self::assertSame($status, $posting->getStatus()->value);
+        self::assertSame([], $posting->releaseEvents());
+    }
+
+    /**
+     * @return iterable<string, array{\Closure(JobPosting): void, string}>
+     */
+    public static function finalStatuses(): iterable
+    {
+        foreach (self::notFiltered() as $name => $case) {
+            if ('raw' !== $name) {
+                yield $name => $case;
+            }
+        }
+    }
+
     private static function assertEvaluationFailed(JobPosting $posting, string $reason): void
     {
         self::assertSame(JobPostingStatus::Failed, $posting->getStatus());

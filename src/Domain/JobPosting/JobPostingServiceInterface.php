@@ -16,6 +16,15 @@ interface JobPostingServiceInterface
     public function create(Platform $platform, JobPostingDetails $details): JobPosting;
 
     /**
+     * Takes a posting through the pipeline from its current status: a raw one goes through the keyword filter, and a
+     * filtered one (just now, or by an earlier delivery whose LLM request failed) through the LLM evaluation. A
+     * posting in a final status is left alone, so a redelivered message changes nothing.
+     *
+     * @throws LlmRequestFailed the posting stays filtered, so the call can be retried
+     */
+    public function process(JobPosting $posting): void;
+
+    /**
      * Runs a raw posting through the keyword filter against the skills of the latest analysed CV: filtered when it
      * names at least one of them, rejected when it names none, failed for good when there are no CV skills to match.
      *

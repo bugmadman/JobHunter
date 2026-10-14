@@ -59,6 +59,17 @@ final readonly class JobPostingService implements JobPostingServiceInterface
         return $posting;
     }
 
+    public function process(JobPosting $posting): void
+    {
+        if (JobPostingStatus::Raw === $posting->getStatus()) {
+            $this->filter($posting);
+        }
+
+        if (JobPostingStatus::Filtered === $posting->getStatus()) {
+            $this->evaluate($posting);
+        }
+    }
+
     public function filter(JobPosting $posting): void
     {
         if (JobPostingStatus::Raw !== $posting->getStatus()) {
