@@ -212,7 +212,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] 14.2 EasyAdmin CRUD for scan instructions
 - [x] [C] 14.3 `GET /api/v1/scan-instructions` behind the intake API key: the platforms with their instructions and the intake POST format
 - [x] [S] 14.4 Bootstrap prompt on the intake API key page (the key is shown only there, right after it is generated): the prompt with the server URL and the key filled in (a placeholder otherwise), a copy button
-- [ ] [S] 14.5 Fill in the Upwork scan instruction (move the collection procedure from `platforms/upwork.md`)
+- [x] [S] 14.5 Upwork scan instruction template in `platforms/upwork.md` (the owner's own searches go only into the DB, through the settings)
 
 ## Open questions
 
