@@ -208,7 +208,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 
 ## Phase 14 — Scan instructions
 
-- [ ] [S] 14.1 `ScanInstruction` entity (platform → text, updatedAt; one per platform) + migration
+- [x] [S] 14.1 `ScanInstruction` entity (platform → text, updatedAt; one per platform) + migration
 - [ ] [S] 14.2 EasyAdmin CRUD for scan instructions
 - [ ] [C] 14.3 `GET /api/v1/scan-instructions` behind the intake API key: the platforms with their instructions and the intake POST format
 - [ ] [S] 14.4 "Bootstrap prompt" page: the public prompt with the server URL and the API key filled in, a copy button
