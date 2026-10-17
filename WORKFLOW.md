@@ -6,6 +6,8 @@ How the work is run. The method doesn't depend on the project: it relies on two 
 
 - **NOTES.md** — a structured record of the current decisions, grouped by topic, plus "Rejected alternatives" (what was rejected and why) and an "Inbox" for the user's raw thoughts: ideas, doubts, solution options, fragments of requirements, written as is, as thoughts come.
 - **PLAN.md** — a structured implementation plan with a task checklist. The source of truth about what to do and in what order.
+- **Task numbers** — every task in `PLAN.md` has a stable number `<phase>.<n>` (`1.3`), given once and never changed: a task inserted later takes the next free number in its phase, so the numbers within a phase need not run in order. Commits and discussions refer to a task by its number.
+- **Code review** — `[x]` means done and committed. The user checks every step's result, but reviews the code only selectively: a task whose code the user has reviewed gets ` — reviewed` at the end of its line.
 
 ## The cycle
 
@@ -32,5 +34,6 @@ Example: not "Bootstrap the project", but separately — "Initialize the project
 
 - A step is committed only after the user has seen the finished result and explicitly said to commit it. A yes to making changes is not a yes to committing: don't bundle "make the changes and commit" into one question — make the changes, show them, then ask.
 - "Commit and continue" covers the step just shown, not the next one.
+- A commit of a `PLAN.md` task ends with the trailer `Task: <number>`, in the trailer block next to any other trailers, so `git log --grep 'Task: 1.3'` finds the task's code. A commit outside the plan has none.
 - Never bypass the hooks (`--no-verify`) without asking. If a hook rejects a commit, explain why and fix it or ask.
 - Chain whatever follows a commit (another repository's commit, the next step) with `&&`, so that a rejected commit stops it.

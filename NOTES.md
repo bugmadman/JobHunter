@@ -140,6 +140,7 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - Claude can't run `/code-review ultra` (multi-agent cloud review) itself — the owner runs it (paid); Claude only suggests it for important parts.
 - Tests are written by Claude too, in the same "code → checks → review" cycle. A test is mandatory for every business branch/rule (`JobPostingStageLog` status transitions, keyword filter edge cases, CV schema validation, prompt generation, LLM integration via mocks at the boundary). The coverage % is a signal for ourselves, not a hard threshold.
 - Rule files: `AGENTS.md` is the single source of the project rules, for people and any AI tool; `WORKFLOW.md` is the project-independent working method; `CLAUDE.md` is only the Claude Code entry point (imports both, plus the Claude-only model and agent rules); `CONTRIBUTING.md` is a pointer for people. The owner's personal rules (chat language, local translations of the docs) live in an uncommitted `CLAUDE.local.md`, which Claude Code loads by itself.
+- The owner sees each step's result before the commit, but reviews the code only selectively. The early tasks were reviewed to make sure the code follows the owner's standards, and the rules were refined until it did; reviewing all of it isn't worth it now. Reviewed tasks are marked in PLAN.md, and commits carry the task number (see WORKFLOW.md).
 - AGENTS.md holds only what the tools don't do: `strict_types`, style, `readonly`, `mixed` are covered by CS-Fixer/Rector/PHPStan — we don't duplicate them in the rules.
 
 ## Code structure
@@ -204,6 +205,7 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - "Cheap writer / expensive reviewer" or the other way round; a review by the same model that wrote the code → a strong model writes, a different independent model reviews.
 - Duplicating in the rules (AGENTS.md) what the tools check → not duplicated.
 - Testing Symfony's own login limiter behavior (a different email from the same IP isn't blocked by the per-email limit, a successful login resets the counter) → not tested. Tests cover our logic, not the framework's: the key and the reset live in `DefaultLoginRateLimiter`, which Symfony tests itself, and such tests would break on a Symfony upgrade with no change in our code. What is ours is the config (5 attempts, 15 minutes, on `main`, blocks even the right password), and that is tested. A custom limiter (e.g. a different key for a multi-user version) would be our code and gets tested.
+- Recording manual verification and the commit hash per task (a column in PLAN.md or a separate file) → stable task numbers, a `Task:` trailer in the commit, and a `reviewed` mark only on tasks whose code the owner reviewed. A hash can't go into its own commit (amend changes it) and goes stale after a rebase; a separate file duplicates the plan and drifts from it.
 
 ## Inbox
 
