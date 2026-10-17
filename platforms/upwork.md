@@ -8,6 +8,7 @@ Context for collecting and matching Upwork job postings. Decisions are recorded 
 - **API: possible later, not now.** Upwork has a GraphQL API (`marketplaceJobPostingsSearch`, scope "Read marketplace Job Postings") that requires an API key application with a verified account; approval is not guaranteed and takes time. Worth applying for once automatic collection is planned: it would be the only platform of the four with an official read API. The adapter would go behind `PlatformClientInterface`.
 - **RSS: gone.** Upwork turned off its job search RSS feeds in 2024.
 - Scraping without the owner's session (a headless browser on the server) is the hardest option here: Upwork sits behind Cloudflare bot protection and requires login for the useful fields.
+- The owner's searches (keywords, filters) live in the Upwork scan instruction in the DB, served to Claude by the API (see NOTES, "Job sources and platforms").
 
 ## What to collect per posting
 
@@ -27,4 +28,3 @@ Context for collecting and matching Upwork job postings. Decisions are recorded 
 ## Open
 
 - Whether to apply for the API key now (lead time) or only when the automatic collection phase starts.
-- How the owner's saved searches (keywords, filters) are stored: in this file, in the platform's settings in the DB, or in Claude Code's instructions.
