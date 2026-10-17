@@ -200,7 +200,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] 13.1 `trusted_proxies` + `X-Forwarded-*` headers, so that behind the tunnel Symfony sees HTTPS (`https://` links, secure cookies) and the login limiter sees the client's IP, not the tunnel's; must land before the tunnel ingress rule, otherwise anyone can lock the owner out
 - [x] [C] 13.2 Prod docker-compose configuration: `compose.prod.yaml`, run with `-f compose.yaml -f compose.prod.yaml` so the dev override isn't merged; on the server `.env.local` sets `COMPOSE_FILE=compose.yaml:compose.prod.yaml`, so the `make` targets pick the prod set too (`APP_ENV=prod`, no profiler or debug, no DB port)
 - [x] [S] 13.3 Prod `php.ini` override: `opcache.validate_timestamps=0`, `zend.assertions=-1`
-- [ ] [S] 13.8 Data migration inserting the four platforms (`Upwork`, `LinkedIn`, `Glassdoor`, `Indeed`) when they are missing: a fresh dev or prod DB has none (only the fixtures create them), so the intake API rejects every posting; blocks the phone check and the first scan
+- [x] [S] 13.8 Data migration inserting the four platforms (`Upwork`, `LinkedIn`, `Glassdoor`, `Indeed`) when they are missing: a fresh dev or prod DB has none (only the fixtures create them), so the intake API rejects every posting; blocks the phone check and the first scan
 - [ ] [S] 13.4 Ingress rule in the existing Cloudflare Tunnel: `jobhunter.madbugs.dev` → `localhost:APP_PORT` on the server
 - [ ] [S] 13.5 Verify from a phone: login, job posting list, POSTing a job posting via the API over HTTPS
 - [x] [S] 13.6 README: installation and first run
