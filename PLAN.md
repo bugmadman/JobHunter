@@ -204,7 +204,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [S] 13.4 Ingress rule in the existing Cloudflare Tunnel: `jobhunter.madbugs.dev` → `localhost:APP_PORT` on the server
 - [ ] [S] 13.5 Verify from a phone: login, job posting list, POSTing a job posting via the API over HTTPS
 - [x] [S] 13.6 README: installation and first run
-- [ ] [S] 13.7 README: external access (an example with Cloudflare Tunnel; `cloudflared` is not part of our compose — everyone has their own setup)
+- [x] [S] 13.7 README: external access (an example with Cloudflare Tunnel; `cloudflared` is not part of our compose — everyone has their own setup)
 
 ## Phase 14 — Scan instructions
 

@@ -71,6 +71,21 @@ make deploy
 
 Back up the database (the `postgres_data` volume) and `.env.local`. `LLM_KEY_ENCRYPTION_KEY` in `.env.local` is the only way to decrypt the LLM keys stored in the database: if it is lost or changed, the keys have to be entered again.
 
+### External access
+
+The app speaks plain HTTP on `127.0.0.1:APP_PORT`; HTTPS and the public address come from a reverse proxy on the same host. It is not part of this compose setup: use the one you already run. An example with a Cloudflare Tunnel, `cloudflared` installed on the host (not in a container), in its config:
+
+```yaml
+ingress:
+  - hostname: jobhunter.example.com
+    service: http://localhost:8080
+  - service: http_status:404
+```
+
+Use your `APP_PORT` in place of `8080`. Cloudflare terminates HTTPS and sends `X-Forwarded-For` and `X-Forwarded-Proto`, which the app trusts from `SYMFONY_TRUSTED_PROXIES` only.
+
+Any other reverse proxy (nginx, Caddy) works the same way: on the host, connecting to `127.0.0.1:APP_PORT`, setting `X-Forwarded-For` to the client's address and `X-Forwarded-Proto` to `https`, replacing whatever the client sent. A proxy in another container connects from a different address than the one in `SYMFONY_TRUSTED_PROXIES`, so the app would ignore those headers.
+
 ## First run
 
 1. Create your account (there is no sign-up page):
