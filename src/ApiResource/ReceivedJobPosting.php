@@ -25,11 +25,14 @@ use App\State\JobPostingIntakeProcessor;
             input: JobPostingIntake::class,
             collectDenormalizationErrors: true,
             processor: JobPostingIntakeProcessor::class,
+            name: self::INTAKE_ROUTE,
         ),
     ],
 )]
 final readonly class ReceivedJobPosting
 {
+    public const string INTAKE_ROUTE = 'api_job_posting_intake';
+
     private function __construct(
         #[ApiProperty(identifier: true)]
         public int $id,

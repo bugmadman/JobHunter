@@ -16,6 +16,11 @@ interface ScanInstructionRepositoryInterface
      */
     public function findPlatformsWithoutInstruction(): array;
 
+    /**
+     * @return list<ScanInstruction> ordered by platform name, with their platforms loaded
+     */
+    public function findAllOrderedByPlatformName(): array;
+
     public function save(ScanInstruction $scanInstruction): void;
 
     public function remove(ScanInstruction $scanInstruction): void;

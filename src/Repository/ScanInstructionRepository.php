@@ -36,6 +36,14 @@ final class ScanInstructionRepository extends ServiceEntityRepository implements
             ->getResult();
     }
 
+    public function findAllOrderedByPlatformName(): array
+    {
+        /* @var list<ScanInstruction> */
+        return $this->getEntityManager()
+            ->createQuery(\sprintf('SELECT s, p FROM %s s JOIN s.platform p ORDER BY p.name', ScanInstruction::class))
+            ->getResult();
+    }
+
     public function save(ScanInstruction $scanInstruction): void
     {
         $this->getEntityManager()->persist($scanInstruction);
