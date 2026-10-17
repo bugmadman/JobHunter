@@ -20,6 +20,7 @@ admin:
         llm_provider_keys: LLM keys
         llm_model_selections: LLM models
         prompts: Prompts
+        scan_instructions: Scan instructions
         api_key: Intake API key
         back_to_app: Back to job postings
     llm_provider_key:
@@ -53,6 +54,17 @@ admin:
         saved: The prompt is saved.
         empty_text: The prompt text must not be empty.
         generation_in_progress: The prompt is being generated. Wait for the draft, then edit it.
+    scan_instruction:
+        singular: Scan instruction
+        plural: Scan instructions
+        index_title: Platform scan instructions
+        new_title: Add a scan instruction
+        edit_title: 'Scan instruction for %platform%'
+        platform: Platform
+        text: Text
+        updated_at: Updated
+        saved: The scan instruction is saved.
+        empty_text: The scan instruction text must not be empty.
     api_key:
         title: Job posting intake API key
         description: Job postings are sent to the API with this key in a request header.

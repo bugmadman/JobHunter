@@ -41,6 +41,11 @@ final class DashboardController extends AbstractDashboardController
         );
         yield MenuItem::linkToRoute('admin.menu.api_key', 'fa fa-plug', 'admin_api_key_index');
         yield MenuItem::linkTo(PromptCrudController::class, 'admin.menu.prompts', 'fa fa-pen');
+        yield MenuItem::linkTo(
+            ScanInstructionCrudController::class,
+            'admin.menu.scan_instructions',
+            'fa fa-magnifying-glass',
+        );
         yield MenuItem::linkToRoute('admin.menu.back_to_app', 'fa fa-arrow-left', 'app_home');
     }
 }

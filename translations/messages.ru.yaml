@@ -20,6 +20,7 @@ admin:
         llm_provider_keys: Ключи LLM
         llm_model_selections: Модели LLM
         prompts: Промпты
+        scan_instructions: Инструкции скана
         api_key: API-ключ приёма
         back_to_app: К вакансиям
     llm_provider_key:
@@ -53,6 +54,17 @@ admin:
         saved: Промпт сохранён.
         empty_text: Текст промпта не может быть пустым.
         generation_in_progress: Промпт генерируется. Дождитесь черновика, потом редактируйте.
+    scan_instruction:
+        singular: Инструкция скана
+        plural: Инструкции скана
+        index_title: Инструкции скана площадок
+        new_title: Добавить инструкцию скана
+        edit_title: 'Инструкция скана для %platform%'
+        platform: Площадка
+        text: Текст
+        updated_at: Обновлено
+        saved: Инструкция скана сохранена.
+        empty_text: Текст инструкции скана не может быть пустым.
     api_key:
         title: API-ключ для приёма вакансий
         description: Вакансии отправляются в API с этим ключом в заголовке запроса.
