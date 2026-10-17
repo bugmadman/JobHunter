@@ -104,5 +104,6 @@ Any other reverse proxy (nginx, Caddy) works the same way: on the host, connecti
 
 3. **CV**: upload your CV as a PDF. The analysis runs in the background; the page updates when it is done.
 4. **Prompts**: generate the matching prompt for each platform from the analysed CV, and edit it if needed.
-5. Send job postings to `POST /api/v1/job-postings` with the intake key as a Bearer token. The API documentation is at `/api/v1/docs`.
-6. **Job postings**: review the matched postings and generate a cover letter for the ones you apply to.
+5. **Scan instructions** (in **Settings**): write what to search on each platform.
+6. Copy the **bootstrap prompt** from the **Intake API key** page into Claude: it fetches the scan instructions and sends the postings to `POST /api/v1/job-postings` with the intake key as a Bearer token. The API documentation is at `/api/v1/docs`.
+7. **Job postings**: review the matched postings and generate a cover letter for the ones you apply to.

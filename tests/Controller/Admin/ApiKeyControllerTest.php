@@ -33,6 +33,17 @@ final class ApiKeyControllerTest extends WebTestCase
         self::assertSelectorNotExists('[data-api-key]');
     }
 
+    public function testTheBootstrapPromptHasAPlaceholderInsteadOfTheKey(): void
+    {
+        $client = self::createClient();
+        $this->logInAsOwner($client);
+        $client->request('GET', '/admin/api-key');
+
+        $prompt = $client->getCrawler()->filter('[data-bootstrap-prompt]')->text(normalizeWhitespace: false);
+        self::assertStringContainsString('GET http://localhost/api/v1/scan-instructions', $prompt);
+        self::assertStringContainsString('"Authorization: Bearer <API key>"', $prompt);
+    }
+
     public function testRegeneratesTheKeyAndShowsItOnce(): void
     {
         $client = self::createClient();
@@ -51,6 +62,10 @@ final class ApiKeyControllerTest extends WebTestCase
             (string) $client->getResponse()->headers->get('Cache-Control'),
         );
         self::assertSelectorTextSame('[data-api-key]', $apiKey->value());
+        self::assertStringContainsString(
+            '"Authorization: Bearer '.$apiKey->value().'"',
+            $client->getCrawler()->filter('[data-bootstrap-prompt]')->text(normalizeWhitespace: false),
+        );
     }
 
     public function testRejectsACrossSiteRequest(): void

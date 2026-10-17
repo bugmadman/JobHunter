@@ -23,4 +23,22 @@
             {{- (has_key ? 'admin.api_key.regenerate' : 'admin.api_key.generate')|trans -}}
         </button>
     </form>
+
+    <h2 class="h5 mt-4">{{ 'admin.api_key.bootstrap.title'|trans }}</h2>
+    <p>{{ 'admin.api_key.bootstrap.description'|trans }}</p>
+    {% if not new_key %}
+        <p class="text-body-secondary">{{ 'admin.api_key.bootstrap.key_placeholder'|trans }}</p>
+    {% endif %}
+    <div data-controller="clipboard" data-clipboard-copied-label-value="{{ 'admin.api_key.bootstrap.copied'|trans }}">
+        <label for="bootstrap-prompt" class="visually-hidden">{{ 'admin.api_key.bootstrap.title'|trans }}</label>
+        <textarea id="bootstrap-prompt" class="form-control mb-2 font-monospace" rows="14" readonly
+                  data-clipboard-target="source" data-bootstrap-prompt>
+            {{- include('admin/_bootstrap_prompt.txt.twig', {
+                base_url: app.request.schemeAndHttpHost,
+                api_key: new_key ?: '<API key>',
+            }) -}}
+        </textarea>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-clipboard-target="button"
+                data-action="clipboard#copy">{{ 'admin.api_key.bootstrap.copy'|trans }}</button>
+    </div>
 {% endblock %}

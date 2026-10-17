@@ -74,6 +74,12 @@ admin:
         generated: 'The new key. Copy it now: it won''t be shown again.'
         generate: Generate a key
         regenerate: Generate a new key
+        bootstrap:
+            title: Bootstrap prompt
+            description: Paste it into Claude to scan the platforms. Claude fetches the scan instructions from the API and sends the postings back.
+            key_placeholder: The key is shown only once, so the prompt has a placeholder in its place. Generate a new key to get the prompt with the key filled in, or put the key in yourself.
+            copy: Copy
+            copied: Copied
     form:
         save: Save
         cancel: Cancel
