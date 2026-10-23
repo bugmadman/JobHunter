@@ -6,6 +6,7 @@ namespace App\Infrastructure\Llm;
 
 use App\Domain\Llm\ApiKey;
 use App\Domain\Llm\LlmModel;
+use App\Domain\Llm\LlmModelList;
 use App\Domain\Llm\LlmProvider;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -14,13 +15,30 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 #[AsTaggedItem(index: LlmProvider::Gemini->value)]
 final readonly class GeminiClient implements LlmClientInterface
 {
-    private const string URL = 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent';
+    private const string MODELS_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
     /**
      * Gemini sends nothing until the whole answer is ready, so the default idle timeout
      * (default_socket_timeout, 60 s) would cut off a slow model reading a PDF.
      */
-    private const int TIMEOUT_SECONDS = 300;
+    private const int GENERATE_TIMEOUT_SECONDS = 300;
+
+    /**
+     * A total limit per request, not an idle one: the list is loaded while a settings page renders,
+     * and a slow call must fail with a reason before PHP's 30 s max_execution_time kills the page.
+     * The page cap keeps the sum of all requests under it too.
+     */
+    private const int LIST_MAX_DURATION_SECONDS = 10;
+
+    private const int LIST_PAGE_SIZE = 1000;
+
+    private const int LIST_MAX_PAGES = 2;
+
+    /**
+     * Whole name words, not suffixes: the models returning audio or images may have more words after them,
+     * e.g. `gemini-2.5-flash-image-preview`, `gemini-2.0-flash-preview-image-generation`.
+     */
+    private const array NON_TEXT_NAME_WORDS = ['tts', 'image'];
 
     public function __construct(
         private HttpClientInterface $httpClient,
@@ -29,11 +47,100 @@ final readonly class GeminiClient implements LlmClientInterface
 
     public function generate(LlmRequest $request, LlmModel $model, ApiKey $apiKey): LlmResponse
     {
+        $payload = $this->request(
+            'POST',
+            \sprintf('%s/%s:generateContent', self::MODELS_URL, rawurlencode($model->value)),
+            ['json' => $this->body($request), 'timeout' => self::GENERATE_TIMEOUT_SECONDS],
+            $apiKey,
+        );
+        $text = $this->text($payload, $apiKey);
+
+        if (null !== $request->responseSchema && !json_validate($text)) {
+            throw $this->failure('the response is not valid JSON', $apiKey);
+        }
+
+        return new LlmResponse($text);
+    }
+
+    public function listModels(ApiKey $apiKey): LlmModelList
+    {
+        $models = [];
+        $pageToken = null;
+
+        for ($page = 0; $page < self::LIST_MAX_PAGES; ++$page) {
+            $query = ['pageSize' => self::LIST_PAGE_SIZE];
+
+            if (null !== $pageToken) {
+                $query['pageToken'] = $pageToken;
+            }
+
+            $payload = $this->request(
+                'GET',
+                self::MODELS_URL,
+                ['query' => $query, 'max_duration' => self::LIST_MAX_DURATION_SECONDS],
+                $apiKey,
+            );
+            $entries = $payload['models'] ?? [];
+
+            if (!\is_array($entries)) {
+                throw $this->failure('malformed model list', $apiKey);
+            }
+
+            foreach ($entries as $entry) {
+                $model = \is_array($entry) ? $this->textModel($entry) : null;
+
+                if (null !== $model) {
+                    $models[] = $model;
+                }
+            }
+
+            $pageToken = $payload['nextPageToken'] ?? null;
+
+            if (!\is_string($pageToken) || '' === $pageToken) {
+                return new LlmModelList(...$models);
+            }
+        }
+
+        throw $this->failure(\sprintf('the model list has more than %d pages', self::LIST_MAX_PAGES), $apiKey);
+    }
+
+    /**
+     * @param array<mixed> $entry
+     */
+    private function textModel(array $entry): ?LlmModel
+    {
+        $methods = $entry['supportedGenerationMethods'] ?? null;
+
+        if (!\is_array($methods) || !\in_array('generateContent', $methods, true)) {
+            return null;
+        }
+
+        $name = $entry['name'] ?? null;
+
+        if (!\is_string($name)) {
+            return null;
+        }
+
+        $name = trim(str_starts_with($name, 'models/') ? substr($name, \strlen('models/')) : $name);
+
+        if ('' === $name || [] !== array_intersect(explode('-', $name), self::NON_TEXT_NAME_WORDS)) {
+            return null;
+        }
+
+        return LlmModel::fromString($name);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @return array<mixed>
+     */
+    private function request(string $method, string $url, array $options, ApiKey $apiKey): array
+    {
         try {
-            $response = $this->httpClient->request('POST', \sprintf(self::URL, rawurlencode($model->value)), [
+            $response = $this->httpClient->request($method, $url, [
+                ...$options,
                 'headers' => ['x-goog-api-key' => $apiKey->value()],
-                'json' => $this->body($request),
-                'timeout' => self::TIMEOUT_SECONDS,
                 'max_redirects' => 0,
             ]);
             $status = $response->getStatusCode();
@@ -53,13 +160,7 @@ final readonly class GeminiClient implements LlmClientInterface
             throw $this->failure('malformed JSON response', $apiKey);
         }
 
-        $text = $this->text($payload, $apiKey);
-
-        if (null !== $request->responseSchema && !json_validate($text)) {
-            throw $this->failure('the response is not valid JSON', $apiKey);
-        }
-
-        return new LlmResponse($text);
+        return $payload;
     }
 
     /**

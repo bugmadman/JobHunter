@@ -6,6 +6,7 @@ namespace App\Tests\Infrastructure\Llm;
 
 use App\Domain\Llm\ApiKey;
 use App\Domain\Llm\LlmModel;
+use App\Domain\Llm\LlmModelList;
 use App\Infrastructure\Llm\GeminiClient;
 use App\Infrastructure\Llm\JsonSchema;
 use App\Infrastructure\Llm\LlmAttachment;
@@ -245,6 +246,162 @@ final class GeminiClientTest extends TestCase
         }
     }
 
+    public function testListsTheModelsWithTheKeyInAHeader(): void
+    {
+        $response = self::json(['models' => [self::model('models/gemini-2.5-flash')]]);
+
+        $models = self::listModels(new MockHttpClient($response));
+
+        self::assertSame(['gemini-2.5-flash'], self::names($models));
+        self::assertSame('GET', $response->getRequestMethod());
+        self::assertSame(
+            'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000',
+            $response->getRequestUrl(),
+        );
+        self::assertContains('x-goog-api-key: '.self::API_KEY, self::requestOption($response, 'headers'));
+        self::assertSame(10.0, $response->getRequestOptions()['max_duration'] ?? null);
+        self::assertSame(0, $response->getRequestOptions()['max_redirects'] ?? null);
+    }
+
+    public function testListsOnlyTheModelsGeneratingText(): void
+    {
+        $response = self::json(['models' => [
+            self::model('models/gemini-2.5-flash', ['generateContent', 'countTokens', 'createCachedContent']),
+            self::model('models/gemini-embedding-001', ['embedContent', 'countTextTokens']),
+            self::model('models/imagen-4.0-generate-001', ['predict']),
+            self::model('models/gemini-2.5-flash-native-audio-latest', ['countTokens', 'bidiGenerateContent']),
+            self::model('models/gemini-2.5-flash-preview-tts'),
+            self::model('models/gemini-2.5-flash-image'),
+            self::model('models/gemini-2.5-flash-image-preview'),
+            self::model('models/gemini-2.0-flash-preview-image-generation'),
+            self::model('models/gemini-2.5-pro'),
+            self::model('models/gemma-3-27b-it'),
+            self::model('models/gemini-imagery-pro'),
+            self::model('gemini-2.0-flash'),
+            self::model('models/'),
+            ['name' => 'models/gemini-no-methods'],
+            ['supportedGenerationMethods' => ['generateContent']],
+            'models/gemini-not-an-object',
+        ]]);
+
+        self::assertSame(
+            ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemma-3-27b-it', 'gemini-imagery-pro', 'gemini-2.0-flash'],
+            self::names(self::listModels(new MockHttpClient($response))),
+        );
+    }
+
+    public function testListsNoModelsWhenTheKeyHasNone(): void
+    {
+        self::assertCount(0, self::listModels(new MockHttpClient(self::json([]))));
+    }
+
+    public function testListsTheModelsOfAllPages(): void
+    {
+        $first = self::json([
+            'models' => [self::model('models/gemini-2.5-flash')],
+            'nextPageToken' => 'page 2',
+        ]);
+        $second = self::json(['models' => [self::model('models/gemini-2.5-pro')], 'nextPageToken' => '']);
+        $httpClient = new MockHttpClient([$first, $second]);
+
+        $models = self::listModels($httpClient);
+
+        self::assertSame(['gemini-2.5-flash', 'gemini-2.5-pro'], self::names($models));
+        self::assertSame(2, $httpClient->getRequestsCount());
+        self::assertSame(
+            'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&pageToken=page%202',
+            $second->getRequestUrl(),
+        );
+    }
+
+    public function testFailsWhenThePagesNeverEnd(): void
+    {
+        $httpClient = new MockHttpClient(
+            static fn (): MockResponse => self::json(['models' => [], 'nextPageToken' => 'next']),
+        );
+
+        try {
+            self::listModels($httpClient);
+            self::fail('The request must fail.');
+        } catch (LlmRequestFailed $exception) {
+            self::assertSame(
+                'The gemini request failed: the model list has more than 2 pages',
+                $exception->getMessage(),
+            );
+        }
+
+        self::assertSame(2, $httpClient->getRequestsCount());
+    }
+
+    /**
+     * @return iterable<string, array{MockResponse, string}>
+     */
+    public static function listFailures(): iterable
+    {
+        yield 'transport error' => [
+            new MockResponse('', ['error' => 'Could not resolve host']),
+            'transport error: Could not resolve host',
+        ];
+        yield 'invalid key' => [
+            self::json(
+                ['error' => ['code' => 400, 'message' => 'API key not valid.', 'status' => 'INVALID_ARGUMENT']],
+                400,
+            ),
+            'HTTP 400: API key not valid.',
+        ];
+        yield 'quota exceeded' => [
+            self::json(['error' => ['code' => 429, 'message' => 'Quota exceeded.']], 429),
+            'HTTP 429: Quota exceeded.',
+        ];
+        yield 'malformed JSON' => [new MockResponse('{"models":'), 'malformed JSON response'];
+        yield 'models not a list' => [self::json(['models' => 'gemini-2.5-flash']), 'malformed model list'];
+    }
+
+    #[DataProvider('listFailures')]
+    public function testFailsToListTheModelsWithAReason(MockResponse $response, string $reason): void
+    {
+        $this->expectException(LlmRequestFailed::class);
+        $this->expectExceptionMessage('The gemini request failed: '.$reason);
+
+        self::listModels(new MockHttpClient($response));
+    }
+
+    #[DataProvider('failuresEchoingTheKey')]
+    public function testNeverPutsTheKeyIntoTheModelListFailure(MockResponse $response): void
+    {
+        try {
+            self::listModels(new MockHttpClient($response));
+            self::fail('The request must fail.');
+        } catch (LlmRequestFailed $exception) {
+            self::assertStringNotContainsString(self::API_KEY, $exception->getMessage());
+            self::assertStringContainsString('x-goog-api-key: ***', $exception->getMessage());
+            self::assertNull($exception->getPrevious());
+        }
+    }
+
+    private static function listModels(MockHttpClient $httpClient): LlmModelList
+    {
+        return new GeminiClient($httpClient)->listModels(ApiKey::fromString(self::API_KEY));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function names(LlmModelList $models): array
+    {
+        return array_map(static fn (LlmModel $model): string => $model->value, iterator_to_array($models, false));
+    }
+
+    /**
+     * @param list<string> $methods
+     *
+     * @return array<string, mixed>
+     */
+    private static function model(string $name, array $methods = ['generateContent', 'countTokens']): array
+    {
+        return ['name' => $name, 'displayName' => $name, 'supportedGenerationMethods' => $methods];
+    }
+
     private static function generate(MockResponse $response, LlmRequest $request): LlmResponse
     {
         return new GeminiClient(new MockHttpClient($response))->generate(
@@ -265,7 +422,7 @@ final class GeminiClientTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param array<mixed> $payload
      */
     private static function json(array $payload, int $status = 200): MockResponse
     {
