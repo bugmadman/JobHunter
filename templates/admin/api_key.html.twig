@@ -18,7 +18,7 @@
     {% endif %}
 
     <form method="post" action="{{ path('admin_api_key_regenerate') }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token('api_key_regenerate') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('api_key_regenerate') }}" data-controller="csrf-protection">
         <button type="submit" class="btn btn-primary">
             {{- (has_key ? 'admin.api_key.regenerate' : 'admin.api_key.generate')|trans -}}
         </button>
