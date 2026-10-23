@@ -223,6 +223,11 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [C] 15.4 Model selection edit form: a saved model that has left the list is shown as the current value, marked unavailable
 - [ ] [S] 15.5 "Refresh list" button in the model selection form: drops the cached list and reloads it
 
+## Phase 16 — Collection classes instead of lists
+
+- [ ] [C] 16.1 `SkillNameList` for `KeywordFilterInterface::matchingSkills()`: the skills to look for and the result, each name once; the "no match" check in `JobPostingService` through the collection, not `[] ===`
+- [ ] [C] 16.2 A violations collection for `JsonSchemaValidatorInterface::validate()` instead of `list<string>`: empty means the JSON matches; the CV analysis and evaluation parsers use it
+
 ## Open questions
 
 - Final field schema of `CvProfile` (to be clarified in Phase 6)
