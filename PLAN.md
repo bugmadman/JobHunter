@@ -215,6 +215,14 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] 14.4 Bootstrap prompt on the intake API key page (the key is shown only there, right after it is generated): the prompt with the server URL and the key filled in (a placeholder otherwise), a copy button
 - [x] [S] 14.5 Upwork scan instruction template in `platforms/upwork.md` (the owner's own searches go only into the DB, through the settings)
 
+## Phase 15 — Model list from the provider
+
+- [ ] [C] 15.1 `LlmClientInterface::listModels()` + the Gemini implementation: `models.list` with the key in a header, only models with `generateContent`, minus `…-tts` and `…-image` by name, without the `models/` prefix
+- [ ] [C] 15.2 `LlmService` returns a provider's model list through `cache.app` with a 24-hour TTL: a failure is not cached, the cached list is dropped when the provider key is saved or deleted
+- [ ] [C] 15.3 Model selection form: a choice from the provider list instead of free text, the submitted model checked against the list; no key → a hint to add it, no form; the call fails → an error with the reason
+- [ ] [C] 15.4 Model selection edit form: a saved model that has left the list is shown as the current value, marked unavailable
+- [ ] [S] 15.5 "Refresh list" button in the model selection form: drops the cached list and reloads it
+
 ## Open questions
 
 - Final field schema of `CvProfile` (to be clarified in Phase 6)
