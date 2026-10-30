@@ -4,17 +4,26 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Admin;
 
+use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmModel;
+use App\Domain\Llm\LlmModelList;
+use App\Domain\Llm\LlmModelNotAvailable;
 use App\Domain\Llm\LlmProvider;
 use App\Domain\Llm\LlmServiceInterface;
 use App\Domain\Llm\LlmTask;
 use App\Entity\LlmModelSelection;
+use App\Infrastructure\Llm\LlmRequestFailed;
+use App\Infrastructure\Security\ApiKeyDecryptionFailed;
+use App\Infrastructure\Security\InvalidEncryptionKey;
 use App\Repository\LlmModelSelectionRepositoryInterface;
 use App\Tests\Controller\LogsInAsOwner;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\DomCrawler\Crawler;
 
 final class LlmModelSelectionCrudControllerTest extends WebTestCase
 {
@@ -41,6 +50,7 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
     {
         $client = $this->loggedInClient();
         $this->storeSelection($client, LlmTask::Matching);
+        $this->stubLlmService($client)->method('listModels')->willReturn(self::modelList());
 
         $client->request('GET', self::NEW_URL);
 
@@ -60,11 +70,37 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
         self::assertSelectorNotExists(\sprintf('a[href$="%s"]', self::NEW_URL));
     }
 
-    public function testSelectsTheModelThroughTheService(): void
+    public function testTheNewFormOffersTheProviderModelsSortedByName(): void
     {
         $client = $this->loggedInClient();
         $this->mockLlmService($client)
-            ->expects(self::once())
+            ->method('listModels')
+            ->with(LlmProvider::Gemini)
+            ->willReturn(self::modelList());
+
+        $crawler = $client->request('GET', self::NEW_URL);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            ['Choose a model', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'],
+            $crawler->filter('select[name="llm_model_selection[model]"] option')->each(
+                static fn (Crawler $option): string => $option->text(),
+            ),
+        );
+        self::assertSame(
+            ['', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'],
+            $crawler->filter('select[name="llm_model_selection[model]"] option')->each(
+                static fn (Crawler $option): string => (string) $option->attr('value'),
+            ),
+        );
+    }
+
+    public function testSelectsTheModelThroughTheService(): void
+    {
+        $client = $this->loggedInClient();
+        $llmService = $this->mockLlmService($client);
+        $llmService->method('listModels')->willReturn(self::modelList());
+        $llmService->expects(self::once())
             ->method('selectModel')
             ->with(
                 LlmTask::CvAnalysis,
@@ -76,7 +112,7 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
         $this->submit($client, [
             'llm_model_selection[task]' => 'cv_analysis',
             'llm_model_selection[provider]' => 'gemini',
-            'llm_model_selection[model]' => ' gemini-2.5-flash-lite ',
+            'llm_model_selection[model]' => 'gemini-2.5-flash-lite',
         ]);
 
         self::assertResponseRedirects(self::INDEX_URL);
@@ -84,15 +120,14 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
         self::assertSelectorTextContains('#flash-messages', 'The model is saved.');
     }
 
-    #[TestWith(['   ', 'This value should not be blank.'])]
-    #[TestWith([
-        'm-is-longer-than-a-hundred-characters-m-is-longer-than-a-hundred-characters-m-is-longer-than-a-hundred',
-        'This value is too long.',
-    ])]
-    public function testRejectsAnInvalidModel(string $model, string $error): void
+    #[TestWith(['', 'This value should not be blank.'])]
+    #[TestWith(['gemini-1.0-pro', 'The selected choice is invalid.'])]
+    public function testRejectsAModelOutsideTheList(string $model, string $error): void
     {
         $client = $this->loggedInClient();
-        $this->mockLlmService($client)->expects(self::never())->method('selectModel');
+        $llmService = $this->mockLlmService($client);
+        $llmService->method('listModels')->willReturn(self::modelList());
+        $llmService->expects(self::never())->method('selectModel');
 
         $client->request('GET', self::NEW_URL);
         $this->submit($client, [
@@ -105,12 +140,87 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
         self::assertSelectorTextContains('.invalid-feedback', $error);
     }
 
+    public function testShowsTheServiceRefusalOfAModelAsAFieldError(): void
+    {
+        $client = $this->loggedInClient();
+        $llmService = $this->mockLlmService($client);
+        $llmService->method('listModels')->willReturn(self::modelList());
+        $llmService->expects(self::once())->method('selectModel')->willThrowException(
+            LlmModelNotAvailable::forProvider(LlmProvider::Gemini, LlmModel::fromString('gemini-2.5-pro')),
+        );
+
+        $client->request('GET', self::NEW_URL);
+        $this->submit($client, [
+            'llm_model_selection[task]' => 'cv_analysis',
+            'llm_model_selection[provider]' => 'gemini',
+            'llm_model_selection[model]' => 'gemini-2.5-pro',
+        ]);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains(
+            '.invalid-feedback',
+            "This model is not in the provider's model list. Choose another one.",
+        );
+    }
+
+    #[TestWith([self::NEW_URL])]
+    #[TestWith([self::INDEX_URL.'/%d/edit'])]
+    public function testWithoutAKeyShowsAHintToAddItInsteadOfTheForm(string $url): void
+    {
+        $client = $this->loggedInClient();
+        $id = $this->storeSelection($client, LlmTask::Matching)->getId();
+        $this->stubLlmService($client)
+            ->method('listModels')
+            ->willThrowException(ApiKeyNotSet::forProvider(LlmProvider::Gemini));
+
+        $client->request('GET', \sprintf($url, $id));
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('form[name="llm_model_selection"]');
+        self::assertSelectorTextContains('.alert-warning', 'Add the Gemini key first');
+        self::assertSelectorExists('a[href$="/admin/llm-provider-key/new"]');
+    }
+
+    /**
+     * @return iterable<string, array{\Exception, string}>
+     */
+    public static function modelListFailures(): iterable
+    {
+        yield 'request failed' => [
+            LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 400: API key not valid.'),
+            'The model list could not be loaded: The gemini request failed: HTTP 400: API key not valid.',
+        ];
+        yield 'key not decrypted' => [
+            ApiKeyDecryptionFailed::create(),
+            'The model list could not be loaded: The API key cannot be decrypted',
+        ];
+        yield 'no encryption key' => [
+            InvalidEncryptionKey::notSet(),
+            'The model list could not be loaded: LLM_KEY_ENCRYPTION_KEY is not set',
+        ];
+    }
+
+    #[DataProvider('modelListFailures')]
+    public function testWhenTheListFailsShowsTheReasonInsteadOfTheForm(\Exception $failure, string $error): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubLlmService($client)->method('listModels')->willThrowException($failure);
+
+        $client->request('GET', self::NEW_URL);
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('form[name="llm_model_selection"]');
+        self::assertSelectorTextContains('.alert-danger', $error);
+        self::assertSelectorNotExists('a[href$="/admin/llm-provider-key/new"]');
+    }
+
     public function testTheEditFormIsFilledAndChangesTheModelOfItsTask(): void
     {
         $client = $this->loggedInClient();
         $id = $this->storeSelection($client, LlmTask::Matching)->getId();
-        $this->mockLlmService($client)
-            ->expects(self::once())
+        $llmService = $this->mockLlmService($client);
+        $llmService->method('listModels')->willReturn(self::modelList());
+        $llmService->expects(self::once())
             ->method('selectModel')
             ->with(
                 LlmTask::Matching,
@@ -120,11 +230,28 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
 
         $client->request('GET', self::INDEX_URL.'/'.$id.'/edit');
         self::assertSelectorNotExists('select[name="llm_model_selection[task]"]');
-        self::assertInputValueSame('llm_model_selection[model]', 'gemini-2.5-flash');
+        self::assertSelectorExists(
+            'select[name="llm_model_selection[model]"] option[value="gemini-2.5-flash"][selected]',
+        );
 
         $this->submit($client, ['llm_model_selection[model]' => 'gemini-2.5-pro']);
 
         self::assertResponseRedirects(self::INDEX_URL);
+    }
+
+    public function testTheEditFormOfAModelMissingFromTheListPreselectsThePlaceholder(): void
+    {
+        $client = $this->loggedInClient();
+        $id = $this->storeSelection($client, LlmTask::Matching)->getId();
+        $this->stubLlmService($client)
+            ->method('listModels')
+            ->willReturn(new LlmModelList(LlmModel::fromString('gemini-2.5-pro')));
+
+        $client->request('GET', self::INDEX_URL.'/'.$id.'/edit');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('select[name="llm_model_selection[model]"] option[value=""][selected]');
+        self::assertSelectorNotExists('select[name="llm_model_selection[model]"] option[value="gemini-2.5-flash"]');
     }
 
     public function testDeletesTheSelectionThroughTheService(): void
@@ -179,6 +306,23 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
         $modelSelections->save($selection);
 
         return $selection;
+    }
+
+    private static function modelList(): LlmModelList
+    {
+        return new LlmModelList(
+            LlmModel::fromString('gemini-2.5-pro'),
+            LlmModel::fromString('gemini-2.5-flash-lite'),
+            LlmModel::fromString('gemini-2.5-flash'),
+        );
+    }
+
+    private function stubLlmService(KernelBrowser $client): LlmServiceInterface&Stub
+    {
+        $llmService = self::createStub(LlmServiceInterface::class);
+        $client->getContainer()->set(LlmServiceInterface::class, $llmService);
+
+        return $llmService;
     }
 
     private function mockLlmService(KernelBrowser $client): LlmServiceInterface&MockObject

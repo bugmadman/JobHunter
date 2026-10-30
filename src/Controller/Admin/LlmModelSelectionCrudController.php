@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmModel;
+use App\Domain\Llm\LlmModelNotAvailable;
 use App\Domain\Llm\LlmProvider;
 use App\Domain\Llm\LlmServiceInterface;
 use App\Domain\Llm\LlmTask;
@@ -12,6 +14,9 @@ use App\Entity\LlmModelSelection;
 use App\Form\LlmModelSelectionData;
 use App\Form\LlmModelSelectionType;
 use App\Form\LlmProviderKeyType;
+use App\Infrastructure\Llm\LlmRequestFailed;
+use App\Infrastructure\Security\ApiKeyDecryptionFailed;
+use App\Infrastructure\Security\InvalidEncryptionKey;
 use App\Repository\LlmModelSelectionRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -22,9 +27,12 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGeneratorInterface;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Translation\TranslatableMessage;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * new() and edit() are replaced with forms bound to a DTO, as in LlmProviderKeyCrudController: the entity has
@@ -38,6 +46,7 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
         private readonly LlmServiceInterface $llmService,
         private readonly LlmModelSelectionRepositoryInterface $modelSelections,
         private readonly AdminUrlGeneratorInterface $adminUrlGenerator,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -90,17 +99,15 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
     public function new(AdminContext $context): Response
     {
         $data = new LlmModelSelectionData();
-        $form = $this->createForm(LlmModelSelectionType::class, $data, ['tasks' => $this->tasksWithoutModel()]);
-        $form->handleRequest($context->getRequest());
+        // A second provider would need its own choice before the model list can be loaded
+        $data->provider = LlmProvider::cases()[0];
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            \assert(null !== $data->task);
-            $this->select($data->task, $data);
-
-            return $this->redirectToIndexAfterSave();
-        }
-
-        return $this->renderForm($form, new TranslatableMessage('admin.llm_model_selection.new_title'));
+        return $this->handleForm(
+            $context->getRequest(),
+            $data,
+            new TranslatableMessage('admin.llm_model_selection.new_title'),
+            $this->tasksWithoutModel(),
+        );
     }
 
     /**
@@ -116,18 +123,14 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
         $data->task = $selection->getTask();
         $data->provider = $selection->getProvider();
         $data->model = $selection->getModel()->value;
-        $form = $this->createForm(LlmModelSelectionType::class, $data);
-        $form->handleRequest($context->getRequest());
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->select($selection->getTask(), $data);
-
-            return $this->redirectToIndexAfterSave();
-        }
-
-        return $this->renderForm($form, new TranslatableMessage('admin.llm_model_selection.edit_title', [
-            '%task%' => new TranslatableMessage(LlmModelSelectionType::taskLabel($selection->getTask())),
-        ]));
+        return $this->handleForm(
+            $context->getRequest(),
+            $data,
+            new TranslatableMessage('admin.llm_model_selection.edit_title', [
+                '%task%' => new TranslatableMessage(LlmModelSelectionType::taskLabel($selection->getTask())),
+            ]),
+        );
     }
 
     /**
@@ -138,10 +141,53 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
         $this->llmService->deleteModelSelection($entityInstance->getTask());
     }
 
-    private function select(LlmTask $task, LlmModelSelectionData $data): void
-    {
-        \assert(null !== $data->provider && null !== $data->model);
-        $this->llmService->selectModel($task, $data->provider, LlmModel::fromString($data->model));
+    /**
+     * @param list<LlmTask>|null $tasks the task choices of a new selection; null keeps the task of the data
+     */
+    private function handleForm(
+        Request $request,
+        LlmModelSelectionData $data,
+        TranslatableMessage $title,
+        ?array $tasks = null,
+    ): Response {
+        $provider = $data->provider;
+        \assert(null !== $provider);
+
+        try {
+            $form = $this->createForm(LlmModelSelectionType::class, $data, [
+                'tasks' => $tasks,
+                'provider' => $provider,
+                'models' => $this->llmService->listModels($provider),
+            ]);
+            $form->handleRequest($request);
+
+            if ($form->isSubmitted() && $form->isValid()) {
+                \assert(null !== $data->task && null !== $data->model);
+
+                try {
+                    $this->llmService->selectModel($data->task, $provider, LlmModel::fromString($data->model));
+
+                    return $this->redirectToIndexAfterSave();
+                } catch (LlmModelNotAvailable) {
+                    $form->get('model')->addError(new FormError(
+                        $this->translator->trans('admin.llm_model_selection.model_not_available'),
+                    ));
+                }
+            }
+        } catch (ApiKeyNotSet) {
+            return $this->renderModelListUnavailable($title, new TranslatableMessage(
+                'admin.llm_model_selection.api_key_not_set',
+                ['%provider%' => new TranslatableMessage(LlmProviderKeyType::providerLabel($provider))],
+            ), $this->apiKeyUrl());
+        } catch (LlmRequestFailed|ApiKeyDecryptionFailed|InvalidEncryptionKey $e) {
+            // The messages never hold the key: LlmRequestFailed has it masked, the others never had it
+            return $this->renderModelListUnavailable($title, new TranslatableMessage(
+                'admin.llm_model_selection.model_list_failed',
+                ['%reason%' => $e->getMessage()],
+            ));
+        }
+
+        return $this->renderForm($form, $title);
     }
 
     /**
@@ -169,11 +215,33 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
         ]);
     }
 
+    private function renderModelListUnavailable(
+        TranslatableMessage $title,
+        TranslatableMessage $message,
+        ?string $apiKeyUrl = null,
+    ): Response {
+        return $this->render('admin/llm_model_list_unavailable.html.twig', [
+            'title' => $title,
+            'message' => $message,
+            'api_key_url' => $apiKeyUrl,
+            'index_url' => $this->indexUrl(),
+        ]);
+    }
+
     private function redirectToIndexAfterSave(): Response
     {
         $this->addFlash('success', 'admin.llm_model_selection.saved');
 
         return $this->redirect($this->indexUrl());
+    }
+
+    private function apiKeyUrl(): string
+    {
+        return $this->adminUrlGenerator
+            ->unsetAll()
+            ->setController(LlmProviderKeyCrudController::class)
+            ->setAction(Action::NEW)
+            ->generateUrl();
     }
 
     private function indexUrl(): string

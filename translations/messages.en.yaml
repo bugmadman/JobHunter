@@ -42,6 +42,12 @@ admin:
         provider: Provider
         model: Model
         saved: The model is saved.
+        model_placeholder: Choose a model
+        model_not_available: This model is not in the provider's model list. Choose another one.
+        api_key_not_set: 'Add the %provider% key first: the model list is loaded from the provider with it.'
+        add_api_key: Add the key
+        model_list_failed: 'The model list could not be loaded: %reason%'
+        back_to_list: Back to the list
     prompt:
         singular: Prompt
         plural: Prompts

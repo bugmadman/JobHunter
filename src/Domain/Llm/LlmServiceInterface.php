@@ -29,6 +29,14 @@ interface LlmServiceInterface
      */
     public function listModels(LlmProvider $provider): LlmModelList;
 
+    /**
+     * @throws LlmModelNotAvailable
+     * @throws LlmClientNotFound
+     * @throws ApiKeyNotSet
+     * @throws ApiKeyDecryptionFailed
+     * @throws InvalidEncryptionKey
+     * @throws LlmRequestFailed
+     */
     public function selectModel(LlmTask $task, LlmProvider $provider, LlmModel $model): void;
 
     public function deleteModelSelection(LlmTask $task): void;

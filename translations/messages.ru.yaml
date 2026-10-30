@@ -42,6 +42,12 @@ admin:
         provider: Провайдер
         model: Модель
         saved: Модель сохранена.
+        model_placeholder: Выберите модель
+        model_not_available: Этой модели нет в списке моделей провайдера. Выберите другую.
+        api_key_not_set: 'Сначала добавьте ключ %provider%: список моделей загружается у провайдера по этому ключу.'
+        add_api_key: Добавить ключ
+        model_list_failed: 'Не удалось загрузить список моделей: %reason%'
+        back_to_list: Вернуться к списку
     prompt:
         singular: Промпт
         plural: Промпты

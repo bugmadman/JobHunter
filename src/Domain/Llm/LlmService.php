@@ -94,6 +94,10 @@ final readonly class LlmService implements LlmServiceInterface
 
     public function selectModel(LlmTask $task, LlmProvider $provider, LlmModel $model): void
     {
+        if (!$this->listModels($provider)->contains($model)) {
+            throw LlmModelNotAvailable::forProvider($provider, $model);
+        }
+
         $selection = $this->modelSelections->findByTask($task);
 
         if (null === $selection) {

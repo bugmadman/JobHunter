@@ -10,6 +10,7 @@ use App\Domain\Llm\EncryptedApiKey;
 use App\Domain\Llm\LlmClientNotFound;
 use App\Domain\Llm\LlmModel;
 use App\Domain\Llm\LlmModelList;
+use App\Domain\Llm\LlmModelNotAvailable;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmProvider;
 use App\Domain\Llm\LlmService;
@@ -144,23 +145,54 @@ final class LlmServiceTest extends TestCase
             ->with(self::callback(static fn (LlmModelSelection $saved): bool => LlmTask::Matching === $saved->getTask()
                 && 'gemini-2.5-flash' === $saved->getModel()->value));
 
-        self::service(modelSelections: $modelSelections)
+        self::service(self::providerKeys(), self::encryptor(), $modelSelections, self::listingClient())
             ->selectModel(LlmTask::Matching, LlmProvider::Gemini, LlmModel::fromString('gemini-2.5-flash'));
     }
 
     public function testChangesTheModelOfAConfiguredTask(): void
     {
-        $selection = new LlmModelSelection(LlmTask::Matching, LlmProvider::Gemini, LlmModel::fromString('old-model'));
+        $selection = new LlmModelSelection(
+            LlmTask::Matching,
+            LlmProvider::Gemini,
+            LlmModel::fromString('gemini-2.5-flash'),
+        );
 
         $modelSelections = $this->createMock(LlmModelSelectionRepositoryInterface::class);
         $modelSelections->method('findByTask')->with(LlmTask::Matching)->willReturn($selection);
         $modelSelections->expects(self::once())
             ->method('save')
             ->with(self::callback(static fn (LlmModelSelection $saved): bool => $saved === $selection
-                && 'new-model' === $saved->getModel()->value));
+                && 'gemini-2.5-pro' === $saved->getModel()->value));
 
-        self::service(modelSelections: $modelSelections)
-            ->selectModel(LlmTask::Matching, LlmProvider::Gemini, LlmModel::fromString('new-model'));
+        self::service(self::providerKeys(), self::encryptor(), $modelSelections, self::listingClient())
+            ->selectModel(LlmTask::Matching, LlmProvider::Gemini, LlmModel::fromString('gemini-2.5-pro'));
+    }
+
+    public function testRefusesAModelMissingFromTheProviderList(): void
+    {
+        $modelSelections = $this->createMock(LlmModelSelectionRepositoryInterface::class);
+        $modelSelections->expects(self::never())->method('save');
+
+        $this->expectException(LlmModelNotAvailable::class);
+        $this->expectExceptionMessage(
+            'The "gemini-1.0-pro" model is not in the model list of the "gemini" LLM provider.',
+        );
+
+        self::service(self::providerKeys(), self::encryptor(), $modelSelections, self::listingClient())
+            ->selectModel(LlmTask::Matching, LlmProvider::Gemini, LlmModel::fromString('gemini-1.0-pro'));
+    }
+
+    public function testSelectsNoModelWhenTheProviderListCannotBeLoaded(): void
+    {
+        $providerKeys = self::createStub(LlmProviderKeyRepositoryInterface::class);
+        $providerKeys->method('findByProvider')->willReturn(null);
+        $modelSelections = $this->createMock(LlmModelSelectionRepositoryInterface::class);
+        $modelSelections->expects(self::never())->method('save');
+
+        $this->expectException(ApiKeyNotSet::class);
+
+        self::service($providerKeys, self::encryptor(), $modelSelections, self::listingClient())
+            ->selectModel(LlmTask::Matching, LlmProvider::Gemini, LlmModel::fromString('gemini-2.5-flash'));
     }
 
     public function testDeletesTheModelSelection(): void
@@ -446,6 +478,17 @@ final class LlmServiceTest extends TestCase
             $clients,
             $cache ?? new ArrayAdapter(),
         );
+    }
+
+    /**
+     * @return array<string, LlmClientInterface>
+     */
+    private static function listingClient(): array
+    {
+        $client = self::createStub(LlmClientInterface::class);
+        $client->method('listModels')->willReturn(self::modelList());
+
+        return ['gemini' => $client];
     }
 
     private static function modelList(): LlmModelList

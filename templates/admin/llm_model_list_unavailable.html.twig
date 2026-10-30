@@ -1,0 +1,11 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}{{ title|trans }}{% endblock %}
+
+{% block main %}
+    <div class="alert {{ api_key_url ? 'alert-warning' : 'alert-danger' }}">{{ message|trans }}</div>
+    {% if api_key_url %}
+        <a href="{{ api_key_url }}" class="btn btn-primary">{{ 'admin.llm_model_selection.add_api_key'|trans }}</a>
+    {% endif %}
+    <a href="{{ index_url }}" class="btn btn-secondary">{{ 'admin.llm_model_selection.back_to_list'|trans }}</a>
+{% endblock %}
