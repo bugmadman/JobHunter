@@ -13,6 +13,7 @@ Check:
 - Correctness: edge cases, logic errors, invariants of domain entities (AGENTS.md, "Development principles")
 - Compliance with the task: exactly what the task asks for, nothing extra
 - Tests cover business branches, not getters
+- Every added or changed comment, docblock text included, in code and configs: list each one and name the trap it explains for a future reader. A comment that restates the code, the method or class name, or a `@throws` next to it is a finding (AGENTS.md, the comments rule)
 
 Don't repeat what PHPStan, PHP-CS-Fixer, PHPCS and Rector catch. Review the diff and run the checks; don't redo the developer's verification experiments or research beyond the change.
 

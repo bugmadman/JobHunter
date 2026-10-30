@@ -16,7 +16,7 @@ How the work is run. The method doesn't depend on the project: it relies on two 
 3. Tasks from `PLAN.md` are done one at a time and marked as done.
 4. If new considerations come up during implementation, they go back into the `NOTES.md` inbox as one line, unverified, and the cycle repeats.
 
-Don't start implementing a task unless it is recorded in `PLAN.md`. Don't turn `PLAN.md` into a dumping ground — if an item from `NOTES.md` hasn't been thought through yet and isn't ready to become a task, discuss it with the user before adding it to the plan.
+Don't start implementing a task unless it is recorded in `PLAN.md` and the user has explicitly asked to start it. Agreeing to a task or a decision is not that request: it is recorded in `NOTES.md`/`PLAN.md`, and those changes may be committed on their own, but no code is written until the user asks. Never start a task while the user is still checking the previous one: the working tree holds only the task under check. Don't turn `PLAN.md` into a dumping ground — if an item from `NOTES.md` hasn't been thought through yet and isn't ready to become a task, discuss it with the user before adding it to the plan.
 
 ## Task granularity
 

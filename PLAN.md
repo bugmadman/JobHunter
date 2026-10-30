@@ -222,11 +222,17 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] 15.3 Model selection form: a choice from the provider list instead of free text, the submitted model checked against the list; no key → a hint to add it, no form; the call fails → an error with the reason — reviewed
 - [ ] [C] 15.4 Model selection edit form: a saved model that has left the list is shown as the current value, marked unavailable
 - [ ] [S] 15.5 "Refresh list" button in the model selection form: drops the cached list and reloads it
+- [ ] [C] 15.6 Gemini model list by an allowlist of the text families instead of the `…-tts`/`…-image` denylist: `gemini-<version>-(flash|flash-lite|pro)` with an optional `-preview`, plus `gemini-(flash|flash-lite|pro)-latest`
 
 ## Phase 16 — Collection classes instead of lists
 
 - [ ] [C] 16.1 `SkillNameList` for `KeywordFilterInterface::matchingSkills()`: the skills to look for and the result, each name once; the "no match" check in `JobPostingService` through the collection, not `[] ===`
 - [ ] [C] 16.2 A violations collection for `JsonSchemaValidatorInterface::validate()` instead of `list<string>`: empty means the JSON matches; the CV analysis and evaluation parsers use it
+
+## Phase 17 — Aligning the code with the rules
+
+- [ ] [S] 17.1 Recheck every comment in the code, tests and configs against the comments rule and remove or rewrite the ones that restate the code: already found `config/packages/doctrine.yaml` (the ParaTest recipe line), `JobPostingComment`, `CoverLetterServiceInterface::edit()`, `CvStorageInterface`
+- [ ] [S] 17.2 Recheck every exception class and inline `throw` in the code against the exception base class rule and fix the ones that don't follow it: already found `InvalidEncryptionKey` (`\InvalidArgumentException` → `\RuntimeException`), the inline `\InvalidArgumentException` in `User`
 
 ## Open questions
 
