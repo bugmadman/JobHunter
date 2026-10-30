@@ -104,6 +104,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] 3.25 `User.locale` (a `Locale` enum: `en`, `ru`; default `en`) + migration
 - [x] [S] 3.26 The request locale is taken from the logged-in user's `locale` (EasyAdmin included)
 - [x] [S] 3.27 Language switcher in the interface, saves `User.locale`
+- [x] [S] 3.28 The same language switcher in EasyAdmin: a shared Twig partial, rendered in the admin header next to the user menu (an override of `@EasyAdmin/layout.html.twig`, block `header_custom_menu`)
 
 ## Phase 4 — LLM settings
 

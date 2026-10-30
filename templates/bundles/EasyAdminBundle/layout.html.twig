@@ -1,0 +1,8 @@
+{% extends '@!EasyAdmin/layout.html.twig' %}
+
+{% block header_custom_menu %}
+    <div class="d-flex align-items-center gap-3">
+        {{ include('_locale_switcher.html.twig') }}
+        {{ parent() }}
+    </div>
+{% endblock %}

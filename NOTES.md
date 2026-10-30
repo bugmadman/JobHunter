@@ -80,7 +80,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
   - add comments to a job posting;
   - mark "applied / not applied" — a separate field, not the same as like/dislike.
 - Login — form login (Symfony Security), the account is created with a console command.
-- Interface languages: English (the default) and Russian. Every UI string goes through the Symfony translator (`translations/`), no hardcoded texts in templates or code; EasyAdmin ships its own Russian translations. The language is a setting of the user stored in the DB (one field on `User`, a switcher in the UI): the same on the phone and the computer, unlike `Accept-Language`; no URL prefix, there's no SEO to serve. The language of generated texts (cover letter) is a separate decision, made in Phase 12.
+- Interface languages: English (the default) and Russian. Every UI string goes through the Symfony translator (`translations/`), no hardcoded texts in templates or code; EasyAdmin ships its own Russian translations. The language is a setting of the user stored in the DB (one field on `User`, a switcher in the UI and in EasyAdmin): the same on the phone and the computer, unlike `Accept-Language`; no URL prefix, there's no SEO to serve. The language of generated texts (cover letter) is a separate decision, made in Phase 12.
 - Console command output is English only, not through the translator: the CLI has no user locale, so a `ru` key would never be shown.
 
 ## Applications
@@ -184,6 +184,7 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - Storing LLM API keys in the DB as is → encryption, since the server is on the internet.
 - EasyAdmin as the main interface for everything, including job postings → only settings and reference data; work screens are custom pages, responsive for phones.
 - Choosing the interface language by `Accept-Language` or a URL prefix (`/en/`, `/ru/`) → a user setting in the DB: the same language on every device, no routing complexity for a single user.
+- EasyAdmin's built-in locale switcher (`Dashboard::setLocales()`) → our own switcher in the admin header: the built-in one only adds `?_locale=` to the URL and doesn't save `User.locale`, so the next page would go back to the saved language.
 - Tailwind / Pico CSS / own CSS → Bootstrap 5: Tailwind without Node.js needs `tailwind-bundle` with its own binary and a `--watch` process, and would look different from the Bootstrap-based EasyAdmin; Pico is niche and may stall; own CSS means writing everything by hand.
 - Code split by type only (`src/ValueObject`, `src/Exception`) → `src/Domain` grouped by area: exceptions of every area would pile up in one folder.
 - Full modules (`src/User/`, `src/JobPosting/` with entities inside) → Symfony's own folders stay: maker-bundle, recipes and Doctrine/API Platform mapping expect them.
