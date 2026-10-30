@@ -236,6 +236,12 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [S] 17.1 Recheck every comment in the code, tests and configs against the comments rule and remove or rewrite the ones that restate the code: already found `config/packages/doctrine.yaml` (the ParaTest recipe line), `JobPostingComment`, `CoverLetterServiceInterface::edit()`, `CvStorageInterface`
 - [ ] [S] 17.2 Recheck every exception class and inline `throw` in the code against the exception base class rule and fix the ones that don't follow it: already found `InvalidEncryptionKey` (`\InvalidArgumentException` → `\RuntimeException`), the inline `\InvalidArgumentException` in `User`
 
+## Phase 18 — LLM settings checked before the work is started
+
+- [ ] [C] 18.1 CV upload: until the CV analysis model is selected and its provider key is set, the page shows what is missing with a link to the settings instead of the form; `CvService::upload()` refuses too
+- [ ] [C] 18.2 Prompt generation: the same check for the prompt generation task, the button replaced by the hint; the service refuses too
+- [ ] [C] 18.3 Cover letter: the same check for the cover letter task, the button replaced by the hint; the service refuses too
+
 ## Open questions
 
 - Final field schema of `CvProfile` (to be clarified in Phase 6)
