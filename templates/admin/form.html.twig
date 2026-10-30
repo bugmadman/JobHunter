@@ -9,4 +9,5 @@
         <button type="submit" class="btn btn-primary">{{ 'admin.form.save'|trans }}</button>
         <a href="{{ index_url }}" class="btn btn-secondary">{{ 'admin.form.cancel'|trans }}</a>
     {{ form_end(form) }}
+    {% block after_form %}{% endblock %}
 {% endblock %}

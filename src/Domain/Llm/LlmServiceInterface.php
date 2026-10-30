@@ -30,6 +30,11 @@ interface LlmServiceInterface
     public function listModels(LlmProvider $provider): LlmModelList;
 
     /**
+     * The next listModels() call loads the list from the provider again.
+     */
+    public function forgetModelList(LlmProvider $provider): void;
+
+    /**
      * @throws LlmModelNotAvailable
      * @throws LlmClientNotFound
      * @throws ApiKeyNotSet

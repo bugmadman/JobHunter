@@ -92,6 +92,11 @@ final readonly class LlmService implements LlmServiceInterface
         return new LlmModelList(...array_map(LlmModel::fromString(...), $names));
     }
 
+    public function forgetModelList(LlmProvider $provider): void
+    {
+        $this->cache->delete(self::modelListCacheKey($provider));
+    }
+
     public function selectModel(LlmTask $task, LlmProvider $provider, LlmModel $model): void
     {
         if (!$this->listModels($provider)->contains($model)) {
@@ -127,11 +132,6 @@ final readonly class LlmService implements LlmServiceInterface
         $apiKey = $this->findApiKey($provider) ?? throw ApiKeyNotSet::forProvider($provider);
 
         return $client->generate($request, $selection->getModel(), $apiKey);
-    }
-
-    private function forgetModelList(LlmProvider $provider): void
-    {
-        $this->cache->delete(self::modelListCacheKey($provider));
     }
 
     private static function modelListCacheKey(LlmProvider $provider): string

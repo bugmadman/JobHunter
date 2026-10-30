@@ -342,6 +342,39 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
         self::assertResponseRedirects(self::INDEX_URL);
     }
 
+    #[TestWith([self::NEW_URL])]
+    #[TestWith([self::INDEX_URL.'/%d/edit'])]
+    public function testRefreshingDropsTheCachedListAndReturnsToTheForm(string $url): void
+    {
+        $client = $this->loggedInClient();
+        $url = \sprintf($url, $this->storeSelection($client, LlmTask::Matching)->getId());
+        $llmService = $this->mockLlmService($client);
+        $llmService->method('listModels')->willReturn(self::modelList());
+        $llmService->expects(self::once())->method('forgetModelList')->with(LlmProvider::Gemini);
+
+        $client->request('GET', $url);
+        $this->refreshModelList($client);
+
+        self::assertResponseRedirects($url);
+        $client->followRedirect();
+        self::assertSelectorTextContains('#flash-messages', 'The model list is reloaded from the provider.');
+    }
+
+    public function testRefreshingRejectsACrossSiteRequest(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockLlmService($client)->expects(self::never())->method('forgetModelList');
+
+        $client->request(
+            'POST',
+            self::INDEX_URL.'/refresh-model-list',
+            ['_csrf_token' => 'b8L2Vq9xR4mT7nK1wZ3cY6pA', 'provider' => 'gemini', 'entity_id' => ''],
+            server: ['HTTP_SEC_FETCH_SITE' => 'cross-site'],
+        );
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
     public function testRedirectsAnonymousToLogin(): void
     {
         $client = self::createClient();
@@ -368,6 +401,12 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
         $form = $client->getCrawler()->filter('form[name="llm_model_selection"]')->form();
         $form->disableValidation();
         $client->submit($form, $fields, self::SAME_ORIGIN);
+    }
+
+    private function refreshModelList(KernelBrowser $client): void
+    {
+        $form = $client->getCrawler()->filter('form[action$="/refresh-model-list"]')->form();
+        $client->submit($form, [], self::SAME_ORIGIN);
     }
 
     private function storeSelection(KernelBrowser $client, LlmTask $task): LlmModelSelection

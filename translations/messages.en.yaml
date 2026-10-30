@@ -49,6 +49,8 @@ admin:
         add_api_key: Add the key
         model_list_failed: 'The model list could not be loaded: %reason%'
         back_to_list: Back to the list
+        refresh_model_list: Refresh the model list
+        model_list_refreshed: The model list is reloaded from the provider.
     prompt:
         singular: Prompt
         plural: Prompts

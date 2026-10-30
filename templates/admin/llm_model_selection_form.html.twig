@@ -1,0 +1,10 @@
+{% extends 'admin/form.html.twig' %}
+
+{% block after_form %}
+    <form method="post" action="{{ path('admin_llm_model_selection_refresh_model_list') }}" class="mt-3">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('llm_model_list_refresh') }}" data-controller="csrf-protection">
+        <input type="hidden" name="provider" value="{{ provider.value }}">
+        <input type="hidden" name="entity_id" value="{{ entity_id }}">
+        <button type="submit" class="btn btn-outline-secondary">{{ 'admin.llm_model_selection.refresh_model_list'|trans }}</button>
+    </form>
+{% endblock %}

@@ -461,6 +461,17 @@ final class LlmServiceTest extends TestCase
         self::assertFalse($cache->hasItem('llm.model_list.gemini'));
     }
 
+    public function testForgettingTheModelListReloadsItFromTheProvider(): void
+    {
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::exactly(2))->method('listModels')->willReturn(self::modelList());
+        $service = self::service(self::providerKeys(), self::encryptor(), clients: ['gemini' => $client]);
+
+        $service->listModels(LlmProvider::Gemini);
+        $service->forgetModelList(LlmProvider::Gemini);
+        $service->listModels(LlmProvider::Gemini);
+    }
+
     /**
      * @param array<string, LlmClientInterface> $clients
      */

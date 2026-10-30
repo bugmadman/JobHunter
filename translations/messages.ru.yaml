@@ -49,6 +49,8 @@ admin:
         add_api_key: Добавить ключ
         model_list_failed: 'Не удалось загрузить список моделей: %reason%'
         back_to_list: Вернуться к списку
+        refresh_model_list: Обновить список моделей
+        model_list_refreshed: Список моделей заново загружен у провайдера.
     prompt:
         singular: Промпт
         plural: Промпты

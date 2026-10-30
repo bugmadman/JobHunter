@@ -19,6 +19,7 @@ use App\Infrastructure\Security\ApiKeyDecryptionFailed;
 use App\Infrastructure\Security\InvalidEncryptionKey;
 use App\Repository\LlmModelSelectionRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -105,8 +106,9 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
         return $this->handleForm(
             $context->getRequest(),
             $data,
+            null,
             new TranslatableMessage('admin.llm_model_selection.new_title'),
-            $this->tasksWithoutModel(),
+            tasks: $this->tasksWithoutModel(),
         );
     }
 
@@ -127,10 +129,35 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
         return $this->handleForm(
             $context->getRequest(),
             $data,
+            $selection->getId(),
             new TranslatableMessage('admin.llm_model_selection.edit_title', [
                 '%task%' => new TranslatableMessage(LlmModelSelectionType::taskLabel($selection->getTask())),
             ]),
             currentModel: $selection->getModel(),
+        );
+    }
+
+    #[AdminRoute('/refresh-model-list', name: 'refresh_model_list', options: ['methods' => ['POST']])]
+    public function refreshModelList(Request $request): Response
+    {
+        // Checked here, not with #[IsCsrfTokenValid]: its exception is an authentication failure,
+        // which sends the logged-in owner to the login page instead of answering 403
+        if (!$this->isCsrfTokenValid('llm_model_list_refresh', $request->request->getString('_csrf_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        $provider = LlmProvider::tryFrom($request->request->getString('provider'))
+            ?? throw $this->createNotFoundException('Unknown LLM provider.');
+        $this->llmService->forgetModelList($provider);
+        $this->addFlash('success', 'admin.llm_model_selection.model_list_refreshed');
+
+        $entityId = $request->request->getString('entity_id');
+        $this->adminUrlGenerator->unsetAll()->setController(self::class);
+
+        return $this->redirect(
+            '' === $entityId
+                ? $this->adminUrlGenerator->setAction(Action::NEW)->generateUrl()
+                : $this->adminUrlGenerator->setAction(Action::EDIT)->setEntityId($entityId)->generateUrl(),
         );
     }
 
@@ -143,11 +170,13 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
     }
 
     /**
-     * @param list<LlmTask>|null $tasks the task choices of a new selection; null keeps the task of the data
+     * @param int|null           $entityId the edited selection; null for a new one
+     * @param list<LlmTask>|null $tasks    the task choices of a new selection; null keeps the task of the data
      */
     private function handleForm(
         Request $request,
         LlmModelSelectionData $data,
+        ?int $entityId,
         TranslatableMessage $title,
         ?array $tasks = null,
         ?LlmModel $currentModel = null,
@@ -190,7 +219,7 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
             ));
         }
 
-        return $this->renderForm($form, $title);
+        return $this->renderForm($form, $title, $provider, $entityId);
     }
 
     /**
@@ -209,12 +238,18 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
     /**
      * @param FormInterface<LlmModelSelectionData> $form
      */
-    private function renderForm(FormInterface $form, TranslatableMessage $title): Response
-    {
-        return $this->render('admin/form.html.twig', [
+    private function renderForm(
+        FormInterface $form,
+        TranslatableMessage $title,
+        LlmProvider $provider,
+        ?int $entityId,
+    ): Response {
+        return $this->render('admin/llm_model_selection_form.html.twig', [
             'form' => $form,
             'title' => $title,
             'index_url' => $this->indexUrl(),
+            'provider' => $provider,
+            'entity_id' => $entityId,
         ]);
     }
 
