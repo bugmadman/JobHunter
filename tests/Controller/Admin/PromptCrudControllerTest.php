@@ -46,6 +46,17 @@ final class PromptCrudControllerTest extends WebTestCase
         self::assertSelectorNotExists('.action-delete');
     }
 
+    public function testEmptyIndexPointsToThePromptsPage(): void
+    {
+        $client = $this->loggedInClient();
+
+        $client->request('GET', self::INDEX_URL);
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('.no-results', 'appears after "Generate prompt"');
+        self::assertSelectorExists('.no-results a[href="/prompts"]');
+    }
+
     public function testIndexOffersNoEditingWhileGenerating(): void
     {
         $client = $this->loggedInClient();

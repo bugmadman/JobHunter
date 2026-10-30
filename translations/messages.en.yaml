@@ -63,6 +63,8 @@ admin:
         saved: The prompt is saved.
         empty_text: The prompt text must not be empty.
         generation_in_progress: The prompt is being generated. Wait for the draft, then edit it.
+        empty: 'No prompts yet. A platform''s prompt appears after "Generate prompt" on the Prompts page; here it can only be edited.'
+        empty_link: Open the Prompts page
     scan_instruction:
         singular: Scan instruction
         plural: Scan instructions

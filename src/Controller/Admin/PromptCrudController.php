@@ -65,6 +65,7 @@ final class PromptCrudController extends AbstractCrudController
             ->setEntityLabelInSingular('admin.prompt.singular')
             ->setEntityLabelInPlural('admin.prompt.plural')
             ->setPageTitle(Crud::PAGE_INDEX, 'admin.prompt.index_title')
+            ->overrideTemplate('crud/index', 'admin/prompt_index.html.twig')
             ->setSearchFields(null);
     }
 

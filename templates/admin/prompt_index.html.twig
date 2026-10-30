@@ -1,0 +1,10 @@
+{% extends '@EasyAdmin/crud/index.html.twig' %}
+
+{% block table_body_empty %}
+    <tr class="no-results">
+        <td colspan="100">
+            {{ 'admin.prompt.empty'|trans }}
+            <a href="{{ path('app_prompt_index') }}">{{ 'admin.prompt.empty_link'|trans }}</a>
+        </td>
+    </tr>
+{% endblock %}

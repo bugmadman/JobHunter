@@ -151,6 +151,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] 7.7 `platforms/linkedin.md`
 - [x] [S] 7.8 `platforms/glassdoor.md`
 - [x] [S] 7.9 `platforms/indeed.md`
+- [x] [S] 7.10 Empty prompt list in EasyAdmin: instead of "No results found", a hint that a prompt appears after "Generate prompt" on the Prompts page, with a link to it
 
 ## Phase 8 — Job posting domain
 

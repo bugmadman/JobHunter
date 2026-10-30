@@ -47,6 +47,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 
 - Each platform has its own prompt, not one global prompt.
 - A platform prompt is auto-generated from the CV profile; the owner accepts it as is or edits it manually.
+- A prompt is created only by generation on the Prompts page; EasyAdmin only edits it (no "Add" button), and its empty list points to that page.
 - Postponed: in the long run, the owner's comments on job postings should influence the adjustment of the prompt (feedback owner → prompt).
 
 ## Processing pipeline
