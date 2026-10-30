@@ -222,7 +222,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] 15.3 Model selection form: a choice from the provider list instead of free text, the submitted model checked against the list; no key → a hint to add it, no form; the call fails → an error with the reason — reviewed
 - [x] [C] 15.4 Model selection edit form: a saved model that has left the list is shown as the current value, marked unavailable — reviewed
 - [x] [S] 15.5 "Refresh list" button in the model selection form: drops the cached list and reloads it
-- [ ] [C] 15.6 Gemini model list by an allowlist of the text families instead of the `…-tts`/`…-image` denylist: `gemini-<version>-(flash|flash-lite|pro)` with an optional `-preview`, plus `gemini-(flash|flash-lite|pro)-latest`
+- [x] [C] 15.6 Gemini model list by an allowlist of the text families instead of the `…-tts`/`…-image` denylist: `gemini-<version>-(flash|flash-lite|pro)` with an optional `-preview`, plus `gemini-(flash|flash-lite|pro)-latest`
 
 ## Phase 16 — Collection classes instead of lists
 

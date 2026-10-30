@@ -35,10 +35,11 @@ final readonly class GeminiClient implements LlmClientInterface
     private const int LIST_MAX_PAGES = 2;
 
     /**
-     * Whole name words, not suffixes: the models returning audio or images may have more words after them,
-     * e.g. `gemini-2.5-flash-image-preview`, `gemini-2.0-flash-preview-image-generation`.
+     * An allowlist, not a denylist: Google keeps adding image, music, speech and agent models with
+     * `generateContent` under unpredictable names, so a new family stays hidden until it is added here.
      */
-    private const array NON_TEXT_NAME_WORDS = ['tts', 'image'];
+    private const string TEXT_MODEL_NAME = '/^gemini-(?:\d+(?:\.\d+)?-(?:flash|flash-lite|pro)(?:-preview)?'
+        .'|(?:flash|flash-lite|pro)-latest)$/D';
 
     public function __construct(
         private HttpClientInterface $httpClient,
@@ -121,9 +122,9 @@ final readonly class GeminiClient implements LlmClientInterface
             return null;
         }
 
-        $name = trim(str_starts_with($name, 'models/') ? substr($name, \strlen('models/')) : $name);
+        $name = str_starts_with($name, 'models/') ? substr($name, \strlen('models/')) : $name;
 
-        if ('' === $name || [] !== array_intersect(explode('-', $name), self::NON_TEXT_NAME_WORDS)) {
+        if (1 !== preg_match(self::TEXT_MODEL_NAME, $name)) {
             return null;
         }
 

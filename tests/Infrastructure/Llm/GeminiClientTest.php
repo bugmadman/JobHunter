@@ -270,23 +270,68 @@ final class GeminiClientTest extends TestCase
             self::model('models/gemini-embedding-001', ['embedContent', 'countTextTokens']),
             self::model('models/imagen-4.0-generate-001', ['predict']),
             self::model('models/gemini-2.5-flash-native-audio-latest', ['countTokens', 'bidiGenerateContent']),
-            self::model('models/gemini-2.5-flash-preview-tts'),
-            self::model('models/gemini-2.5-flash-image'),
-            self::model('models/gemini-2.5-flash-image-preview'),
-            self::model('models/gemini-2.0-flash-preview-image-generation'),
-            self::model('models/gemini-2.5-pro'),
-            self::model('models/gemma-3-27b-it'),
-            self::model('models/gemini-imagery-pro'),
             self::model('gemini-2.0-flash'),
             self::model('models/'),
-            ['name' => 'models/gemini-no-methods'],
+            ['name' => 'models/gemini-2.5-pro'],
             ['supportedGenerationMethods' => ['generateContent']],
-            'models/gemini-not-an-object',
+            'models/gemini-2.5-pro',
         ]]);
 
         self::assertSame(
-            ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemma-3-27b-it', 'gemini-imagery-pro', 'gemini-2.0-flash'],
+            ['gemini-2.5-flash', 'gemini-2.0-flash'],
             self::names(self::listModels(new MockHttpClient($response))),
+        );
+    }
+
+    public function testListsOnlyTheTextFamilies(): void
+    {
+        $textModels = [
+            'gemini-2.5-flash',
+            'gemini-2.5-flash-lite',
+            'gemini-2.5-pro',
+            'gemini-3-pro-preview',
+            'gemini-3.1-flash-lite-preview',
+            'gemini-10.25-flash',
+            'gemini-flash-latest',
+            'gemini-flash-lite-latest',
+            'gemini-pro-latest',
+        ];
+        $otherModels = [
+            'gemini-2.5-flash-preview-tts',
+            'gemini-2.5-flash-image',
+            'gemini-2.5-flash-image-preview',
+            'gemini-2.0-flash-preview-image-generation',
+            'gemini-2.5-flash-preview-05-20',
+            'gemini-2.0-flash-001',
+            'gemini-2.5-computer-use-preview-10-2025',
+            'gemini-2.5-flash-native-audio-latest',
+            'gemini-imagery-pro',
+            'gemini-ultra-latest',
+            'gemini-2.5-ultra',
+            'gemini-latest',
+            'gemini-2.-flash',
+            'gemini-2.5.1-flash',
+            'gemini-2.5-flash-latest',
+            'gemini-2.5-flash-preview-preview',
+            'gemini-2.5-flash ',
+            "gemini-2.5-flash\n",
+            'xgemini-2.5-flash',
+            'gemma-3-27b-it',
+            'nano-banana-pro-preview',
+            'lyria-realtime-exp',
+            'gemini-2.5-flash-transcribe',
+            'antigravity-preview',
+            'deep-research-pro-preview',
+            'models/models/gemini-2.5-flash',
+        ];
+        $entries = array_map(
+            static fn (string $name): array => self::model('models/'.$name),
+            [...$textModels, ...$otherModels],
+        );
+
+        self::assertSame(
+            $textModels,
+            self::names(self::listModels(new MockHttpClient(self::json(['models' => $entries])))),
         );
     }
 
