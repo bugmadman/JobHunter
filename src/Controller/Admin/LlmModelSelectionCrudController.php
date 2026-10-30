@@ -130,6 +130,7 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
             new TranslatableMessage('admin.llm_model_selection.edit_title', [
                 '%task%' => new TranslatableMessage(LlmModelSelectionType::taskLabel($selection->getTask())),
             ]),
+            currentModel: $selection->getModel(),
         );
     }
 
@@ -149,6 +150,7 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
         LlmModelSelectionData $data,
         TranslatableMessage $title,
         ?array $tasks = null,
+        ?LlmModel $currentModel = null,
     ): Response {
         $provider = $data->provider;
         \assert(null !== $provider);
@@ -158,6 +160,7 @@ final class LlmModelSelectionCrudController extends AbstractCrudController
                 'tasks' => $tasks,
                 'provider' => $provider,
                 'models' => $this->llmService->listModels($provider),
+                'current_model' => $currentModel,
             ]);
             $form->handleRequest($request);
 

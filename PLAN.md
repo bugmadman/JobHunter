@@ -220,7 +220,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] 15.1 `LlmClientInterface::listModels()` + the Gemini implementation: `models.list` with the key in a header, only models with `generateContent`, minus `…-tts` and `…-image` by name, without the `models/` prefix
 - [x] [C] 15.2 `LlmService` returns a provider's model list through `cache.app` with a 24-hour TTL: a failure is not cached, the cached list is dropped when the provider key is saved or deleted — reviewed
 - [x] [C] 15.3 Model selection form: a choice from the provider list instead of free text, the submitted model checked against the list; no key → a hint to add it, no form; the call fails → an error with the reason — reviewed
-- [ ] [C] 15.4 Model selection edit form: a saved model that has left the list is shown as the current value, marked unavailable
+- [x] [C] 15.4 Model selection edit form: a saved model that has left the list is shown as the current value, marked unavailable
 - [ ] [S] 15.5 "Refresh list" button in the model selection form: drops the cached list and reloads it
 - [ ] [C] 15.6 Gemini model list by an allowlist of the text families instead of the `…-tts`/`…-image` denylist: `gemini-<version>-(flash|flash-lite|pro)` with an optional `-preview`, plus `gemini-(flash|flash-lite|pro)-latest`
 

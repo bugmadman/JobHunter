@@ -239,7 +239,7 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
         self::assertResponseRedirects(self::INDEX_URL);
     }
 
-    public function testTheEditFormOfAModelMissingFromTheListPreselectsThePlaceholder(): void
+    public function testTheEditFormShowsASavedModelMissingFromTheListAsUnavailable(): void
     {
         $client = $this->loggedInClient();
         $id = $this->storeSelection($client, LlmTask::Matching)->getId();
@@ -250,8 +250,80 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
         $client->request('GET', self::INDEX_URL.'/'.$id.'/edit');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorExists('select[name="llm_model_selection[model]"] option[value=""][selected]');
-        self::assertSelectorNotExists('select[name="llm_model_selection[model]"] option[value="gemini-2.5-flash"]');
+        self::assertSelectorTextSame(
+            'select[name="llm_model_selection[model]"] option[value="gemini-2.5-flash"][selected]',
+            'gemini-2.5-flash (unavailable)',
+        );
+        self::assertSelectorTextSame(
+            'select[name="llm_model_selection[model]"] option[value="gemini-2.5-pro"]',
+            'gemini-2.5-pro',
+        );
+    }
+
+    public function testTheEditFormShowsNoUnavailableModelWhileTheSavedOneIsListed(): void
+    {
+        $client = $this->loggedInClient();
+        $id = $this->storeSelection($client, LlmTask::Matching)->getId();
+        $this->stubLlmService($client)->method('listModels')->willReturn(self::modelList());
+
+        $crawler = $client->request('GET', self::INDEX_URL.'/'.$id.'/edit');
+
+        self::assertSame(
+            ['Choose a model', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'],
+            $crawler->filter('select[name="llm_model_selection[model]"] option')->each(
+                static fn (Crawler $option): string => $option->text(),
+            ),
+        );
+    }
+
+    public function testResubmittingAnUnavailableSavedModelShowsTheServiceRefusal(): void
+    {
+        $client = $this->loggedInClient();
+        $id = $this->storeSelection($client, LlmTask::Matching)->getId();
+        $llmService = $this->mockLlmService($client);
+        $llmService->method('listModels')->willReturn(new LlmModelList(LlmModel::fromString('gemini-2.5-pro')));
+        $llmService->expects(self::once())
+            ->method('selectModel')
+            ->with(
+                LlmTask::Matching,
+                LlmProvider::Gemini,
+                self::callback(static fn (LlmModel $model): bool => 'gemini-2.5-flash' === $model->value),
+            )
+            ->willThrowException(
+                LlmModelNotAvailable::forProvider(LlmProvider::Gemini, LlmModel::fromString('gemini-2.5-flash')),
+            );
+
+        $client->request('GET', self::INDEX_URL.'/'.$id.'/edit');
+        $this->submit($client, []);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains(
+            '.invalid-feedback',
+            "This model is not in the provider's model list. Choose another one.",
+        );
+        self::assertSelectorExists(
+            'select[name="llm_model_selection[model]"] option[value="gemini-2.5-flash"][selected]',
+        );
+    }
+
+    public function testAnUnavailableSavedModelIsReplacedByOneFromTheList(): void
+    {
+        $client = $this->loggedInClient();
+        $id = $this->storeSelection($client, LlmTask::Matching)->getId();
+        $llmService = $this->mockLlmService($client);
+        $llmService->method('listModels')->willReturn(new LlmModelList(LlmModel::fromString('gemini-2.5-pro')));
+        $llmService->expects(self::once())
+            ->method('selectModel')
+            ->with(
+                LlmTask::Matching,
+                LlmProvider::Gemini,
+                self::callback(static fn (LlmModel $model): bool => 'gemini-2.5-pro' === $model->value),
+            );
+
+        $client->request('GET', self::INDEX_URL.'/'.$id.'/edit');
+        $this->submit($client, ['llm_model_selection[model]' => 'gemini-2.5-pro']);
+
+        self::assertResponseRedirects(self::INDEX_URL);
     }
 
     public function testDeletesTheSelectionThroughTheService(): void

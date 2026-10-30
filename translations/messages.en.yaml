@@ -43,6 +43,7 @@ admin:
         model: Model
         saved: The model is saved.
         model_placeholder: Choose a model
+        model_unavailable: '%model% (unavailable)'
         model_not_available: This model is not in the provider's model list. Choose another one.
         api_key_not_set: 'Add the %provider% key first: the model list is loaded from the provider with it.'
         add_api_key: Add the key

@@ -13,12 +13,18 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * @extends AbstractType<LlmModelSelectionData>
  */
 final class LlmModelSelectionType extends AbstractType
 {
+    public function __construct(
+        private readonly TranslatorInterface $translator,
+    ) {
+    }
+
     public static function taskLabel(LlmTask $task): string
     {
         return 'llm.task.'.$task->value;
@@ -32,6 +38,8 @@ final class LlmModelSelectionType extends AbstractType
         $provider = $options['provider'];
         /** @var LlmModelList $models */
         $models = $options['models'];
+        /** @var LlmModel|null $currentModel */
+        $currentModel = $options['current_model'];
 
         if (null !== $tasks) {
             $builder->add('task', EnumType::class, [
@@ -51,9 +59,8 @@ final class LlmModelSelectionType extends AbstractType
                 'label' => 'admin.llm_model_selection.provider',
             ])
             ->add('model', ChoiceType::class, [
-                'choices' => self::modelChoices($models),
+                'choices' => $this->modelChoices($models, $currentModel),
                 'choice_translation_domain' => false,
-                // Without a placeholder a saved model missing from the list would silently show the first one
                 'placeholder' => 'admin.llm_model_selection.model_placeholder',
                 'label' => 'admin.llm_model_selection.model',
             ]);
@@ -64,21 +71,33 @@ final class LlmModelSelectionType extends AbstractType
         $resolver->setDefaults([
             'data_class' => LlmModelSelectionData::class,
             'tasks' => null,
+            'current_model' => null,
         ]);
         $resolver->setRequired(['provider', 'models']);
         $resolver->setAllowedTypes('tasks', ['null', LlmTask::class.'[]']);
         $resolver->setAllowedTypes('provider', LlmProvider::class);
         $resolver->setAllowedTypes('models', LlmModelList::class);
+        $resolver->setAllowedTypes('current_model', ['null', LlmModel::class]);
     }
 
     /**
      * @return array<string, string>
      */
-    private static function modelChoices(LlmModelList $models): array
+    private function modelChoices(LlmModelList $models, ?LlmModel $currentModel): array
     {
         $names = array_map(static fn (LlmModel $model): string => $model->value, iterator_to_array($models, false));
         sort($names);
+        $choices = array_combine($names, $names);
 
-        return array_combine($names, $names);
+        if (null === $currentModel || $models->contains($currentModel)) {
+            return $choices;
+        }
+
+        // A retired model stays a valid choice, so submitting it unchanged reaches LlmService and gets its refusal
+        $label = $this->translator->trans('admin.llm_model_selection.model_unavailable', [
+            '%model%' => $currentModel->value,
+        ]);
+
+        return [$label => $currentModel->value] + $choices;
     }
 }
