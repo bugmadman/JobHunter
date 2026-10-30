@@ -279,6 +279,59 @@ final class LlmServiceTest extends TestCase
             ->generate(LlmTask::Matching, new LlmRequest('Say hello'));
     }
 
+    public function testAcceptsATaskWithASelectedModelAndAKeyWithoutDecryptingIt(): void
+    {
+        $providerKeys = $this->createMock(LlmProviderKeyRepositoryInterface::class);
+        $providerKeys->expects(self::once())
+            ->method('findByProvider')
+            ->with(LlmProvider::Gemini)
+            ->willReturn(new LlmProviderKey(LlmProvider::Gemini, new EncryptedApiKey('ciphertext')));
+
+        $encryptor = $this->createMock(ApiKeyEncryptorInterface::class);
+        $encryptor->expects(self::never())->method('decrypt');
+
+        $modelSelections = $this->createMock(LlmModelSelectionRepositoryInterface::class);
+        $modelSelections->expects(self::once())
+            ->method('findByTask')
+            ->with(LlmTask::CvAnalysis)
+            ->willReturn(new LlmModelSelection(
+                LlmTask::CvAnalysis,
+                LlmProvider::Gemini,
+                LlmModel::fromString('gemini-2.5-flash'),
+            ));
+
+        self::service($providerKeys, $encryptor, $modelSelections, $this->clientNeverCalled())
+            ->assertConfigured(LlmTask::CvAnalysis);
+    }
+
+    public function testRefusesATaskWithoutASelectedModel(): void
+    {
+        $modelSelections = self::createStub(LlmModelSelectionRepositoryInterface::class);
+        $modelSelections->method('findByTask')->willReturn(null);
+
+        try {
+            self::service(self::providerKeys(), self::encryptor(), $modelSelections)
+                ->assertConfigured(LlmTask::CvAnalysis);
+            self::fail('Expected the task to be refused.');
+        } catch (LlmModelNotSelected $e) {
+            self::assertSame(LlmTask::CvAnalysis, $e->task);
+        }
+    }
+
+    public function testRefusesATaskWithoutTheKeyOfTheSelectedProvider(): void
+    {
+        $providerKeys = self::createStub(LlmProviderKeyRepositoryInterface::class);
+        $providerKeys->method('findByProvider')->willReturn(null);
+
+        try {
+            self::service($providerKeys, self::encryptor(), self::modelSelections())
+                ->assertConfigured(LlmTask::Matching);
+            self::fail('Expected the task to be refused.');
+        } catch (ApiKeyNotSet $e) {
+            self::assertSame(LlmProvider::Gemini, $e->provider);
+        }
+    }
+
     public function testListsTheModelsOfTheProviderWithItsKey(): void
     {
         $client = $this->createMock(LlmClientInterface::class);

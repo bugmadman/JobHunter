@@ -159,6 +159,10 @@ llm:
         prompt_generation: Генерация промпта
         matching: Матчинг
         cover_letter: Сопроводительное письмо
+    settings_missing:
+        model_not_selected: 'Сначала выберите в настройках модель для задачи «%task%».'
+        api_key_not_set: 'Сначала добавьте в настройках ключ %provider%.'
+        open_settings: Открыть настройки
 
 job_posting:
     index:

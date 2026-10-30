@@ -44,8 +44,15 @@ final readonly class CvService implements CvServiceInterface
     ) {
     }
 
+    public function assertCanUpload(): void
+    {
+        $this->llm->assertConfigured(LlmTask::CvAnalysis);
+    }
+
     public function upload(CvUpload $upload): CvProfile
     {
+        $this->assertCanUpload();
+
         $file = CvFile::create(bin2hex(random_bytes(16)).'.pdf', $upload->originalName);
         $this->storage->store($upload, $file);
 

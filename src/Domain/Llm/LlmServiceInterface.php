@@ -47,6 +47,15 @@ interface LlmServiceInterface
     public function deleteModelSelection(LlmTask $task): void;
 
     /**
+     * Checks the saved settings only, without calling the provider: an invalid key or a retired model still fails
+     * in generate().
+     *
+     * @throws LlmModelNotSelected
+     * @throws ApiKeyNotSet        the key of the selected model's provider
+     */
+    public function assertConfigured(LlmTask $task): void;
+
+    /**
      * @throws LlmModelNotSelected
      * @throws LlmClientNotFound
      * @throws ApiKeyNotSet

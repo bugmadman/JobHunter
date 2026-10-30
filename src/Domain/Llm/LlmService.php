@@ -123,6 +123,16 @@ final readonly class LlmService implements LlmServiceInterface
         }
     }
 
+    public function assertConfigured(LlmTask $task): void
+    {
+        $selection = $this->modelSelections->findByTask($task) ?? throw LlmModelNotSelected::forTask($task);
+        $provider = $selection->getProvider();
+
+        if (null === $this->providerKeys->findByProvider($provider)) {
+            throw ApiKeyNotSet::forProvider($provider);
+        }
+    }
+
     public function generate(LlmTask $task, LlmRequest $request): LlmResponse
     {
         $selection = $this->modelSelections->findByTask($task) ?? throw LlmModelNotSelected::forTask($task);

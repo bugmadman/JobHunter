@@ -4,14 +4,24 @@ declare(strict_types=1);
 
 namespace App\Domain\Cv;
 
+use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmModelNotSelected;
 use App\Entity\CvProfile;
 use App\Infrastructure\Llm\LlmRequestFailed;
 
 interface CvServiceInterface
 {
     /**
+     * @throws LlmModelNotSelected
+     * @throws ApiKeyNotSet
+     */
+    public function assertCanUpload(): void;
+
+    /**
      * Every upload is a new profile: the latest one is the current CV.
      *
+     * @throws LlmModelNotSelected
+     * @throws ApiKeyNotSet
      * @throws InvalidCvFile
      */
     public function upload(CvUpload $upload): CvProfile;

@@ -93,6 +93,42 @@ final class CvServiceTest extends TestCase
         self::service(cvProfiles: $cvProfiles, storage: $storage)->upload(new CvUpload('/tmp/phpUpload', "\0"));
     }
 
+    public function testChecksTheCvAnalysisTaskBeforeAnUpload(): void
+    {
+        $llm = $this->createMock(LlmServiceInterface::class);
+        $llm->expects(self::once())->method('assertConfigured')->with(LlmTask::CvAnalysis);
+
+        self::service(llm: $llm)->assertCanUpload();
+    }
+
+    #[DataProvider('missingSettings')]
+    public function testRefusesAnUploadBeforeStoringAnythingWhileTheLlmSettingsAreMissing(
+        \Throwable $missing,
+    ): void {
+        $llm = self::createStub(LlmServiceInterface::class);
+        $llm->method('assertConfigured')->willThrowException($missing);
+
+        $storage = $this->createMock(CvStorageInterface::class);
+        $storage->expects(self::never())->method('store');
+
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->expects(self::never())->method('save');
+
+        $this->expectExceptionObject($missing);
+
+        self::service(cvProfiles: $cvProfiles, storage: $storage, llm: $llm)
+            ->upload(new CvUpload('/tmp/phpUpload', 'cv.pdf'));
+    }
+
+    /**
+     * @return iterable<string, array{\Throwable}>
+     */
+    public static function missingSettings(): iterable
+    {
+        yield 'no model selected' => [LlmModelNotSelected::forTask(LlmTask::CvAnalysis)];
+        yield 'no api key' => [ApiKeyNotSet::forProvider(LlmProvider::Gemini)];
+    }
+
     public function testAnalysisSendsTheStoredPdfWithTheParserSchemaAndSavesTheResult(): void
     {
         $profile = self::pendingProfile();

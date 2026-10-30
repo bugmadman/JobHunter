@@ -13,6 +13,10 @@ use App\Domain\Cv\LanguageLevel;
 use App\Domain\Cv\LanguageProficiency;
 use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Cv\Seniority;
+use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmModelNotSelected;
+use App\Domain\Llm\LlmProvider;
+use App\Domain\Llm\LlmTask;
 use App\Domain\Skill\SkillName;
 use App\Entity\CvProfile;
 use App\Entity\Skill;
@@ -55,6 +59,8 @@ final class CvControllerTest extends WebTestCase
     public function testShowsAPdfUploadForm(): void
     {
         $client = $this->loggedInClient();
+        $this->mockCvService($client)->expects(self::once())->method('assertCanUpload');
+
         $client->request('GET', self::URL);
 
         self::assertResponseIsSuccessful();
@@ -150,6 +156,75 @@ final class CvControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(422);
         self::assertSelectorTextContains('.invalid-feedback', 'This file name can\'t be used.');
+        self::assertSame([], $this->queuedMessages($client));
+    }
+
+    public function testShowsTheMissingModelWithALinkToTheSettingsInsteadOfTheForm(): void
+    {
+        $client = $this->loggedInClient();
+        $cvService = $this->mockCvService($client);
+        $cvService->method('assertCanUpload')->willThrowException(LlmModelNotSelected::forTask(LlmTask::CvAnalysis));
+        $cvService->expects(self::never())->method('upload');
+
+        $client->request('GET', self::URL);
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('form[name="cv_upload"]');
+        self::assertSelectorTextContains(
+            '.alert-warning',
+            'Choose a model for the "CV analysis" task in the settings first.',
+        );
+        self::assertSelectorExists('a[href="/admin/llm-model-selection/new"]');
+    }
+
+    public function testShowsTheMissingKeyWithALinkToTheSettingsInsteadOfTheForm(): void
+    {
+        $client = $this->loggedInClient();
+        $cvService = $this->mockCvService($client);
+        $cvService->method('assertCanUpload')->willThrowException(ApiKeyNotSet::forProvider(LlmProvider::Gemini));
+        $cvService->expects(self::never())->method('upload');
+
+        $client->request('GET', self::URL);
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('form[name="cv_upload"]');
+        self::assertSelectorTextContains('.alert-warning', 'Add the Gemini key in the settings first.');
+        self::assertSelectorExists('a[href="/admin/llm-provider-key/new"]');
+    }
+
+    public function testRefusesASubmitOfAFormOpenedBeforeTheSettingsWereRemoved(): void
+    {
+        $client = $this->loggedInClient();
+        $cvService = $this->mockCvService($client);
+        $calls = 0;
+        $cvService->method('assertCanUpload')->willReturnCallback(static function () use (&$calls): void {
+            if (++$calls > 1) {
+                throw LlmModelNotSelected::forTask(LlmTask::CvAnalysis);
+            }
+        });
+        $cvService->expects(self::never())->method('upload');
+
+        $this->submit($client, $this->pdf('cv.pdf'));
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorExists('a[href="/admin/llm-model-selection/new"]');
+        self::assertSame([], $this->queuedMessages($client));
+    }
+
+    public function testShowsTheUploadRefusedByTheServiceInsteadOfFailing(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockCvService($client)
+            ->expects(self::once())
+            ->method('upload')
+            ->willThrowException(ApiKeyNotSet::forProvider(LlmProvider::Gemini));
+
+        $this->submit($client, $this->pdf('cv.pdf'));
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorNotExists('form[name="cv_upload"]');
+        self::assertSelectorTextContains('.alert-warning', 'Add the Gemini key in the settings first.');
+        self::assertSelectorExists('a[href="/admin/llm-provider-key/new"]');
         self::assertSame([], $this->queuedMessages($client));
     }
 

@@ -159,6 +159,10 @@ llm:
         prompt_generation: Prompt generation
         matching: Matching
         cover_letter: Cover letter
+    settings_missing:
+        model_not_selected: 'Choose a model for the "%task%" task in the settings first.'
+        api_key_not_set: 'Add the %provider% key in the settings first.'
+        open_settings: Open the settings
 
 job_posting:
     index:
