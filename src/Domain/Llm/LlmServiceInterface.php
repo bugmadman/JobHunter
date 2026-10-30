@@ -18,6 +18,17 @@ interface LlmServiceInterface
 
     public function deleteApiKey(LlmProvider $provider): void;
 
+    /**
+     * Cached for 24 hours per provider; a failure is not cached.
+     *
+     * @throws LlmClientNotFound
+     * @throws ApiKeyNotSet
+     * @throws ApiKeyDecryptionFailed
+     * @throws InvalidEncryptionKey
+     * @throws LlmRequestFailed
+     */
+    public function listModels(LlmProvider $provider): LlmModelList;
+
     public function selectModel(LlmTask $task, LlmProvider $provider, LlmModel $model): void;
 
     public function deleteModelSelection(LlmTask $task): void;

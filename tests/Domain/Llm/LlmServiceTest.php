@@ -9,6 +9,7 @@ use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\EncryptedApiKey;
 use App\Domain\Llm\LlmClientNotFound;
 use App\Domain\Llm\LlmModel;
+use App\Domain\Llm\LlmModelList;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmProvider;
 use App\Domain\Llm\LlmService;
@@ -17,15 +18,21 @@ use App\Entity\LlmModelSelection;
 use App\Entity\LlmProviderKey;
 use App\Infrastructure\Llm\LlmClientInterface;
 use App\Infrastructure\Llm\LlmRequest;
+use App\Infrastructure\Llm\LlmRequestFailed;
 use App\Infrastructure\Llm\LlmResponse;
 use App\Infrastructure\Security\ApiKeyEncryptorInterface;
 use App\Infrastructure\Security\InvalidEncryptionKey;
 use App\Repository\LlmModelSelectionRepositoryInterface;
 use App\Repository\LlmProviderKeyRepositoryInterface;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
+use Symfony\Contracts\Cache\CacheInterface;
 
 final class LlmServiceTest extends TestCase
 {
+    private const int DAY = 24 * 60 * 60;
+
     public function testSavesANewProviderKeyEncrypted(): void
     {
         $apiKey = ApiKey::fromString('AIza-secret');
@@ -240,6 +247,188 @@ final class LlmServiceTest extends TestCase
             ->generate(LlmTask::Matching, new LlmRequest('Say hello'));
     }
 
+    public function testListsTheModelsOfTheProviderWithItsKey(): void
+    {
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::once())
+            ->method('listModels')
+            ->with(self::callback(static fn (ApiKey $apiKey): bool => 'AIza-secret' === $apiKey->value()))
+            ->willReturn(self::modelList());
+
+        $models = self::service(self::providerKeys(), self::encryptor(), clients: ['gemini' => $client])
+            ->listModels(LlmProvider::Gemini);
+
+        self::assertSame(['gemini-2.5-flash', 'gemini-2.5-pro'], self::names($models));
+    }
+
+    public function testServesTheModelListFromTheCacheForADay(): void
+    {
+        $clock = new MockClock();
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::once())->method('listModels')->willReturn(self::modelList());
+        $service = self::service(
+            self::providerKeys(),
+            self::encryptor(),
+            clients: ['gemini' => $client],
+            cache: new ArrayAdapter(clock: $clock),
+        );
+
+        $service->listModels(LlmProvider::Gemini);
+        $clock->sleep(self::DAY - 1);
+
+        self::assertSame(
+            ['gemini-2.5-flash', 'gemini-2.5-pro'],
+            self::names($service->listModels(LlmProvider::Gemini)),
+        );
+    }
+
+    public function testFetchesTheModelListAgainAfterADay(): void
+    {
+        $clock = new MockClock();
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::exactly(2))->method('listModels')->willReturn(self::modelList());
+        $service = self::service(
+            self::providerKeys(),
+            self::encryptor(),
+            clients: ['gemini' => $client],
+            cache: new ArrayAdapter(clock: $clock),
+        );
+
+        $service->listModels(LlmProvider::Gemini);
+        $clock->sleep(self::DAY + 1);
+        $service->listModels(LlmProvider::Gemini);
+    }
+
+    public function testCachesOnlyTheModelNames(): void
+    {
+        $cache = new ArrayAdapter();
+        $client = self::createStub(LlmClientInterface::class);
+        $client->method('listModels')->willReturn(self::modelList());
+
+        self::service(self::providerKeys(), self::encryptor(), clients: ['gemini' => $client], cache: $cache)
+            ->listModels(LlmProvider::Gemini);
+
+        self::assertSame(
+            ['llm.model_list.gemini' => serialize(['gemini-2.5-flash', 'gemini-2.5-pro'])],
+            $cache->getValues(),
+        );
+    }
+
+    public function testDoesNotCacheAFailedModelListRequest(): void
+    {
+        $cache = new ArrayAdapter();
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::exactly(2))
+            ->method('listModels')
+            ->willReturnOnConsecutiveCalls(
+                self::throwException(LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 503')),
+                self::modelList(),
+            );
+        $service = self::service(
+            self::providerKeys(),
+            self::encryptor(),
+            clients: ['gemini' => $client],
+            cache: $cache,
+        );
+
+        try {
+            $service->listModels(LlmProvider::Gemini);
+            self::fail('The failed request was expected to throw.');
+        } catch (LlmRequestFailed) {
+            self::assertFalse($cache->hasItem('llm.model_list.gemini'));
+        }
+
+        self::assertSame(
+            ['gemini-2.5-flash', 'gemini-2.5-pro'],
+            self::names($service->listModels(LlmProvider::Gemini)),
+        );
+    }
+
+    public function testDoesNotCacheAnEmptyModelList(): void
+    {
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::exactly(2))->method('listModels')->willReturn(new LlmModelList());
+        $service = self::service(self::providerKeys(), self::encryptor(), clients: ['gemini' => $client]);
+
+        $service->listModels(LlmProvider::Gemini);
+
+        self::assertCount(0, $service->listModels(LlmProvider::Gemini));
+    }
+
+    public function testFailsToListModelsWithoutAKeyForTheProvider(): void
+    {
+        $providerKeys = self::createStub(LlmProviderKeyRepositoryInterface::class);
+        $providerKeys->method('findByProvider')->willReturn(null);
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::never())->method('listModels');
+
+        $this->expectException(ApiKeyNotSet::class);
+
+        self::service($providerKeys, self::encryptor(), clients: ['gemini' => $client])
+            ->listModels(LlmProvider::Gemini);
+    }
+
+    public function testFailsToListModelsWithoutAClientForTheProvider(): void
+    {
+        $encryptor = $this->createMock(ApiKeyEncryptorInterface::class);
+        $encryptor->expects(self::never())->method('decrypt');
+
+        $this->expectException(LlmClientNotFound::class);
+
+        self::service(self::providerKeys(), $encryptor)->listModels(LlmProvider::Gemini);
+    }
+
+    public function testSavingTheKeyDropsTheCachedModelList(): void
+    {
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::exactly(2))->method('listModels')->willReturn(self::modelList());
+        $encryptor = self::createStub(ApiKeyEncryptorInterface::class);
+        $encryptor->method('decrypt')->willReturn(ApiKey::fromString('AIza-secret'));
+        $encryptor->method('encrypt')->willReturn(new EncryptedApiKey('new-ciphertext'));
+        $service = self::service(self::providerKeys(), $encryptor, clients: ['gemini' => $client]);
+
+        $service->listModels(LlmProvider::Gemini);
+        $service->saveApiKey(LlmProvider::Gemini, ApiKey::fromString('AIza-new'));
+        $service->listModels(LlmProvider::Gemini);
+    }
+
+    public function testAFailedKeySaveKeepsTheCachedModelList(): void
+    {
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::once())->method('listModels')->willReturn(self::modelList());
+        $encryptor = self::createStub(ApiKeyEncryptorInterface::class);
+        $encryptor->method('decrypt')->willReturn(ApiKey::fromString('AIza-secret'));
+        $encryptor->method('encrypt')->willThrowException(InvalidEncryptionKey::notSet());
+        $service = self::service(self::providerKeys(), $encryptor, clients: ['gemini' => $client]);
+
+        $service->listModels(LlmProvider::Gemini);
+
+        try {
+            $service->saveApiKey(LlmProvider::Gemini, ApiKey::fromString('AIza-new'));
+            self::fail('The failed encryption was expected to throw.');
+        } catch (InvalidEncryptionKey) {
+            $service->listModels(LlmProvider::Gemini);
+        }
+    }
+
+    public function testDeletingTheKeyDropsTheCachedModelList(): void
+    {
+        $cache = new ArrayAdapter();
+        $client = self::createStub(LlmClientInterface::class);
+        $client->method('listModels')->willReturn(self::modelList());
+        $service = self::service(
+            self::providerKeys(),
+            self::encryptor(),
+            clients: ['gemini' => $client],
+            cache: $cache,
+        );
+
+        $service->listModels(LlmProvider::Gemini);
+        $service->deleteApiKey(LlmProvider::Gemini);
+
+        self::assertFalse($cache->hasItem('llm.model_list.gemini'));
+    }
+
     /**
      * @param array<string, LlmClientInterface> $clients
      */
@@ -248,13 +437,28 @@ final class LlmServiceTest extends TestCase
         ?ApiKeyEncryptorInterface $encryptor = null,
         ?LlmModelSelectionRepositoryInterface $modelSelections = null,
         array $clients = [],
+        ?CacheInterface $cache = null,
     ): LlmService {
         return new LlmService(
             $providerKeys ?? self::createStub(LlmProviderKeyRepositoryInterface::class),
             $encryptor ?? self::createStub(ApiKeyEncryptorInterface::class),
             $modelSelections ?? self::createStub(LlmModelSelectionRepositoryInterface::class),
             $clients,
+            $cache ?? new ArrayAdapter(),
         );
+    }
+
+    private static function modelList(): LlmModelList
+    {
+        return new LlmModelList(LlmModel::fromString('gemini-2.5-flash'), LlmModel::fromString('gemini-2.5-pro'));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function names(LlmModelList $models): array
+    {
+        return array_map(static fn (LlmModel $model): string => $model->value, iterator_to_array($models, false));
     }
 
     private static function providerKeys(): LlmProviderKeyRepositoryInterface
