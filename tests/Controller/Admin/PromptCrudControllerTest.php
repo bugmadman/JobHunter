@@ -6,6 +6,8 @@ namespace App\Tests\Controller\Admin;
 
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvFile;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Prompt\PromptGenerationInProgress;
 use App\Domain\Prompt\PromptServiceInterface;
 use App\Domain\Prompt\PromptText;
@@ -118,7 +120,7 @@ final class PromptCrudControllerTest extends WebTestCase
     {
         $client = $this->loggedInClient();
         $prompt = $this->storePrompt($client, null);
-        $prompt->markGenerationFailed();
+        $prompt->markGenerationFailed(LlmFailure::create(LlmFailureCause::Unexpected));
 
         $client->request('GET', self::editUrl($prompt));
 

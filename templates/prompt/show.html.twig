@@ -18,7 +18,10 @@
                 {{- 'prompt.show.pending'|trans -}}
             </div>
         {% elseif status == 'failed' %}
-            <div class="alert alert-danger" role="alert">{{ 'prompt.show.failed'|trans }}</div>
+            {{ include('llm/_failure.html.twig', {
+                message: 'prompt.show.failed',
+                failure: prompt.generationFailure,
+            }) }}
         {% endif %}
 
         {% if prompt and prompt.text %}

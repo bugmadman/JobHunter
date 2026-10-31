@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Prompt;
 
 use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmFailure;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Entity\Platform;
 use App\Entity\Prompt;
@@ -36,7 +37,8 @@ interface PromptServiceInterface
      * Asks the LLM for a draft from the prompt's CV profile and saves it as the prompt's text, marked done.
      *
      * A failed LLM request leaves the generation pending, so the call can be retried. Any other failure (an empty
-     * response, the LLM settings missing) marks the generation failed and saves it first; the old text stays.
+     * response, the LLM settings missing) marks the generation failed with its cause and saves it first; the old text
+     * stays.
      *
      * @throws PromptGenerationAlreadyFinished the generation is not pending; nothing is called or saved
      * @throws PromptGenerationFailed
@@ -45,9 +47,9 @@ interface PromptServiceInterface
     public function generate(Prompt $prompt): void;
 
     /**
-     * Marks a still pending generation failed once its retries are used up; a finished one is left as it is.
+     * Marks a still pending generation failed once its retries are used up; a finished one keeps its own result.
      */
-    public function giveUpGeneration(Prompt $prompt): void;
+    public function giveUpGeneration(Prompt $prompt, LlmFailure $failure): void;
 
     /**
      * Replaces the prompt's text with a hand-written one, marked edited, and saves it.

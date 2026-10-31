@@ -22,6 +22,8 @@ use App\Domain\JobPosting\KeywordFilterInterface;
 use App\Domain\JobPosting\StatusReason;
 use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmClientNotFound;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmProvider;
 use App\Domain\Llm\LlmServiceInterface;
@@ -316,7 +318,7 @@ final class JobPostingServiceTest extends TestCase
         yield 'edited after a failed generation' => [
             static function (): Prompt {
                 $prompt = new Prompt(self::platform(), self::analysedCv());
-                $prompt->markGenerationFailed();
+                $prompt->markGenerationFailed(LlmFailure::create(LlmFailureCause::Unexpected));
                 $prompt->edit(PromptText::fromString('Hand-written.'));
 
                 return $prompt;
@@ -355,7 +357,7 @@ final class JobPostingServiceTest extends TestCase
         yield 'first generation failed' => [
             static function (): Prompt {
                 $prompt = new Prompt(self::platform(), self::analysedCv());
-                $prompt->markGenerationFailed();
+                $prompt->markGenerationFailed(LlmFailure::create(LlmFailureCause::Unexpected));
 
                 return $prompt;
             },

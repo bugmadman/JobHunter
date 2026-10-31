@@ -7,6 +7,8 @@ namespace App\Tests\Controller;
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvFile;
 use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmProvider;
 use App\Domain\Llm\LlmTask;
@@ -115,7 +117,7 @@ final class PromptControllerTest extends WebTestCase
         $this->mockPromptService($client)->expects(self::once())->method('assertCanGenerate');
         $platform = $this->platform(3);
         $prompt = $this->prompt($platform, 11);
-        $prompt->markGenerationFailed();
+        $prompt->markGenerationFailed(LlmFailure::create(LlmFailureCause::EmptyResponse));
         $prompt->edit(PromptText::fromString('Hand-written.'));
         $this->stubPlatforms($client)->method('findById')->willReturn($platform);
         $this->stubPrompts($client)->method('findByPlatform')->willReturn($prompt);
@@ -123,9 +125,30 @@ final class PromptControllerTest extends WebTestCase
         $client->request('GET', '/prompts/3');
 
         self::assertSelectorTextContains('turbo-frame#prompt-3', 'Edited by hand');
-        self::assertSelectorTextContains('turbo-frame#prompt-3 .alert-danger', 'The generation failed.');
+        $alert = 'turbo-frame#prompt-3 .alert-danger';
+        self::assertSelectorTextContains($alert, 'The generation failed.');
+        self::assertSelectorTextContains($alert, 'Reason: The model returned an empty answer.');
         self::assertSelectorExists('form[data-turbo-confirm^="The prompt was edited by hand."]');
         self::assertSelectorExists('turbo-frame#prompt-3 a[href="/admin/prompt/11/edit"]');
+    }
+
+    public function testShowsTheProviderTextOfAFailedGenerationAsGiven(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockPromptService($client)->expects(self::once())->method('assertCanGenerate');
+        $platform = $this->platform(3);
+        $prompt = $this->prompt($platform, 11);
+        $providerText = 'The gemini request failed: HTTP 403: <b>billing</b> account has an outstanding balance';
+        $prompt->markGenerationFailed(LlmFailure::create(LlmFailureCause::Provider, $providerText));
+        $this->stubPlatforms($client)->method('findById')->willReturn($platform);
+        $this->stubPrompts($client)->method('findByPlatform')->willReturn($prompt);
+
+        $client->request('GET', '/prompts/3');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('turbo-frame#prompt-3 .alert-danger', 'The generation failed.');
+        self::assertSelectorTextContains('turbo-frame#prompt-3 .alert-danger', 'Reason: '.$providerText);
+        self::assertSelectorNotExists('turbo-frame#prompt-3 .alert-danger b');
     }
 
     public function testShowsTheMissingModelWithALinkToTheSettingsInsteadOfTheGenerateButton(): void

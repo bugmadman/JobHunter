@@ -9,6 +9,8 @@ use App\Domain\Cv\LanguageProficiency;
 use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmClientNotFound;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Llm\LlmServiceInterface;
@@ -95,31 +97,29 @@ final readonly class PromptService implements PromptServiceInterface
                 self::describe($prompt->getCvProfile()),
             )));
             $text = PromptText::fromString($response->text);
+        } catch (EmptyPromptText $exception) {
+            $this->failGeneration($prompt, LlmFailure::create(LlmFailureCause::EmptyResponse), $exception);
         } catch (
-            EmptyPromptText
-            |LlmModelNotSelected
+            LlmModelNotSelected
             |LlmClientNotFound
             |ApiKeyNotSet
             |ApiKeyDecryptionFailed
             |InvalidEncryptionKey $exception
         ) {
-            $prompt->markGenerationFailed();
-            $this->prompts->save($prompt);
-
-            throw PromptGenerationFailed::because($exception);
+            $this->failGeneration($prompt, LlmFailure::fromThrowable($exception), $exception);
         }
 
         $prompt->markGenerated($text);
         $this->prompts->save($prompt);
     }
 
-    public function giveUpGeneration(Prompt $prompt): void
+    public function giveUpGeneration(Prompt $prompt, LlmFailure $failure): void
     {
         if (LlmOperationStatus::Pending !== $prompt->getGenerationStatus()) {
             return;
         }
 
-        $prompt->markGenerationFailed();
+        $prompt->markGenerationFailed($failure);
         $this->prompts->save($prompt);
     }
 
@@ -127,6 +127,14 @@ final readonly class PromptService implements PromptServiceInterface
     {
         $prompt->edit($text);
         $this->prompts->save($prompt);
+    }
+
+    private function failGeneration(Prompt $prompt, LlmFailure $failure, \Throwable $cause): never
+    {
+        $prompt->markGenerationFailed($failure);
+        $this->prompts->save($prompt);
+
+        throw PromptGenerationFailed::because($cause);
     }
 
     private static function describe(CvProfile $cvProfile): string

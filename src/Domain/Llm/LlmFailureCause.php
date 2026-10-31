@@ -11,6 +11,7 @@ enum LlmFailureCause: string
     case ApiKeyUnreadable = 'api_key_unreadable';
     case FileUnreadable = 'file_unreadable';
     case InvalidResponse = 'invalid_response';
+    case EmptyResponse = 'empty_response';
     case Provider = 'provider';
     case Unexpected = 'unexpected';
 }

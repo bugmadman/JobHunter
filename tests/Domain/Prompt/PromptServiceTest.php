@@ -12,6 +12,8 @@ use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Cv\Seniority;
 use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmClientNotFound;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Llm\LlmProvider;
@@ -261,15 +263,17 @@ final class PromptServiceTest extends TestCase
         }
 
         self::assertSame(LlmOperationStatus::Pending, $prompt->getGenerationStatus());
+        self::assertNull($prompt->getGenerationFailure());
     }
 
     /**
      * @param class-string<\Throwable> $expectedCause
      */
     #[DataProvider('permanentFailures')]
-    public function testPermanentFailureMarksTheGenerationFailedKeepingTheOldText(
+    public function testPermanentFailureMarksTheGenerationFailedWithItsCauseKeepingTheOldText(
         ?\Throwable $llmFailure,
         string $expectedCause,
+        LlmFailureCause $cause,
     ): void {
         $llm = self::createStub(LlmServiceInterface::class);
         if (null === $llmFailure) {
@@ -293,24 +297,42 @@ final class PromptServiceTest extends TestCase
         }
 
         self::assertSame(LlmOperationStatus::Failed, $prompt->getGenerationStatus());
+        self::assertEquals(LlmFailure::create($cause), $prompt->getGenerationFailure());
         self::assertSame('Old prompt.', $prompt->getText());
         self::assertSame(PromptSource::Generated, $prompt->getSource());
     }
 
     /**
-     * @return iterable<string, array{?\Throwable, class-string<\Throwable>}>
+     * @return iterable<string, array{?\Throwable, class-string<\Throwable>, LlmFailureCause}>
      */
     public static function permanentFailures(): iterable
     {
         yield 'no model selected' => [
             LlmModelNotSelected::forTask(LlmTask::PromptGeneration),
             LlmModelNotSelected::class,
+            LlmFailureCause::ModelNotSelected,
         ];
-        yield 'no client' => [LlmClientNotFound::forProvider(LlmProvider::Gemini), LlmClientNotFound::class];
-        yield 'no api key' => [ApiKeyNotSet::forProvider(LlmProvider::Gemini), ApiKeyNotSet::class];
-        yield 'undecryptable api key' => [ApiKeyDecryptionFailed::create(), ApiKeyDecryptionFailed::class];
-        yield 'no encryption key' => [InvalidEncryptionKey::notSet(), InvalidEncryptionKey::class];
-        yield 'blank response' => [null, EmptyPromptText::class];
+        yield 'no client' => [
+            LlmClientNotFound::forProvider(LlmProvider::Gemini),
+            LlmClientNotFound::class,
+            LlmFailureCause::Unexpected,
+        ];
+        yield 'no api key' => [
+            ApiKeyNotSet::forProvider(LlmProvider::Gemini),
+            ApiKeyNotSet::class,
+            LlmFailureCause::ApiKeyNotSet,
+        ];
+        yield 'undecryptable api key' => [
+            ApiKeyDecryptionFailed::create(),
+            ApiKeyDecryptionFailed::class,
+            LlmFailureCause::ApiKeyUnreadable,
+        ];
+        yield 'no encryption key' => [
+            InvalidEncryptionKey::notSet(),
+            InvalidEncryptionKey::class,
+            LlmFailureCause::ApiKeyUnreadable,
+        ];
+        yield 'blank response' => [null, EmptyPromptText::class, LlmFailureCause::EmptyResponse];
     }
 
     public function testFinishedGenerationIsNotRunAgain(): void
@@ -329,16 +351,18 @@ final class PromptServiceTest extends TestCase
         self::service($prompts, llm: $llm)->generate($prompt);
     }
 
-    public function testGivingUpMarksAPendingGenerationFailed(): void
+    public function testGivingUpMarksAPendingGenerationFailedWithTheGivenFailure(): void
     {
         $prompt = new Prompt(self::platform(), self::analysedProfile());
+        $failure = LlmFailure::create(LlmFailureCause::Provider, 'The gemini request failed: HTTP 429');
 
         $prompts = $this->createMock(PromptRepositoryInterface::class);
         $prompts->expects(self::once())->method('save')->with($prompt);
 
-        self::service($prompts)->giveUpGeneration($prompt);
+        self::service($prompts)->giveUpGeneration($prompt, $failure);
 
         self::assertSame(LlmOperationStatus::Failed, $prompt->getGenerationStatus());
+        self::assertEquals($failure, $prompt->getGenerationFailure());
     }
 
     public function testGivingUpLeavesAFinishedGenerationAsItIs(): void
@@ -349,9 +373,10 @@ final class PromptServiceTest extends TestCase
         $prompts = $this->createMock(PromptRepositoryInterface::class);
         $prompts->expects(self::never())->method('save');
 
-        self::service($prompts)->giveUpGeneration($prompt);
+        self::service($prompts)->giveUpGeneration($prompt, LlmFailure::create(LlmFailureCause::Unexpected));
 
         self::assertSame(LlmOperationStatus::Done, $prompt->getGenerationStatus());
+        self::assertNull($prompt->getGenerationFailure());
         self::assertSame(self::DRAFT, $prompt->getText());
     }
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Prompt\CvProfileNotAnalysed;
 use App\Domain\Prompt\PromptGenerationAlreadyFinished;
@@ -34,6 +36,12 @@ final class Prompt
 
     #[ORM\Column(length: 32, enumType: LlmOperationStatus::class)]
     private LlmOperationStatus $generationStatus = LlmOperationStatus::Pending;
+
+    #[ORM\Column(length: 32, nullable: true, enumType: LlmFailureCause::class)]
+    private ?LlmFailureCause $generationFailureCause = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $generationFailureMessage = null;
 
     #[ORM\ManyToOne(targetEntity: CvProfile::class)]
     #[ORM\JoinColumn(nullable: false)]
@@ -80,6 +88,19 @@ final class Prompt
         return $this->generationStatus;
     }
 
+    public function getGenerationFailure(): ?LlmFailure
+    {
+        if (LlmOperationStatus::Failed !== $this->generationStatus) {
+            return null;
+        }
+
+        if (null === $this->generationFailureCause) {
+            throw new \LogicException('A failed prompt generation has no failure cause.');
+        }
+
+        return LlmFailure::create($this->generationFailureCause, $this->generationFailureMessage);
+    }
+
     /**
      * The CV profile of the latest generation request; after a failed regeneration the text predates it.
      */
@@ -100,6 +121,8 @@ final class Prompt
         self::assertAnalysed($cvProfile);
 
         $this->generationStatus = LlmOperationStatus::Pending;
+        $this->generationFailureCause = null;
+        $this->generationFailureMessage = null;
         $this->cvProfile = $cvProfile;
     }
 
@@ -118,11 +141,13 @@ final class Prompt
     /**
      * @throws PromptGenerationAlreadyFinished
      */
-    public function markGenerationFailed(): void
+    public function markGenerationFailed(LlmFailure $failure): void
     {
         $this->assertGenerationPending();
 
         $this->generationStatus = LlmOperationStatus::Failed;
+        $this->generationFailureCause = $failure->cause;
+        $this->generationFailureMessage = $failure->providerMessage;
     }
 
     /**

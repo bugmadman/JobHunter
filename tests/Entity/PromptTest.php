@@ -34,6 +34,7 @@ final class PromptTest extends TestCase
         self::assertSame(LlmOperationStatus::Pending, $prompt->getGenerationStatus());
         self::assertNull($prompt->getText());
         self::assertNull($prompt->getSource());
+        self::assertNull($prompt->getGenerationFailure());
     }
 
     public function testPendingCvProfileIsRejected(): void
@@ -62,15 +63,18 @@ final class PromptTest extends TestCase
         self::assertSame(LlmOperationStatus::Done, $prompt->getGenerationStatus());
         self::assertSame('Match PHP jobs.', $prompt->getText());
         self::assertSame(PromptSource::Generated, $prompt->getSource());
+        self::assertNull($prompt->getGenerationFailure());
     }
 
-    public function testFailedFirstGenerationLeavesNoText(): void
+    public function testFailedFirstGenerationKeepsTheCauseAndLeavesNoText(): void
     {
         $prompt = self::pendingPrompt();
+        $failure = LlmFailure::create(LlmFailureCause::Provider, 'The gemini request failed: HTTP 403');
 
-        $prompt->markGenerationFailed();
+        $prompt->markGenerationFailed($failure);
 
         self::assertSame(LlmOperationStatus::Failed, $prompt->getGenerationStatus());
+        self::assertEquals($failure, $prompt->getGenerationFailure());
         self::assertNull($prompt->getText());
         self::assertNull($prompt->getSource());
     }
@@ -87,14 +91,19 @@ final class PromptTest extends TestCase
             self::assertSame('First draft.', $prompt->getText());
         }
 
-        $this->expectException(PromptGenerationAlreadyFinished::class);
-        $prompt->markGenerationFailed();
+        try {
+            $prompt->markGenerationFailed(self::failure());
+            self::fail('A done generation was marked failed.');
+        } catch (PromptGenerationAlreadyFinished) {
+            self::assertSame(LlmOperationStatus::Done, $prompt->getGenerationStatus());
+            self::assertNull($prompt->getGenerationFailure());
+        }
     }
 
     public function testFailedGenerationCannotBeFinishedAgain(): void
     {
         $prompt = self::pendingPrompt();
-        $prompt->markGenerationFailed();
+        $prompt->markGenerationFailed(LlmFailure::create(LlmFailureCause::EmptyResponse));
 
         try {
             $prompt->markGenerated(PromptText::fromString('Late draft.'));
@@ -104,8 +113,15 @@ final class PromptTest extends TestCase
             self::assertNull($prompt->getText());
         }
 
-        $this->expectException(PromptGenerationAlreadyFinished::class);
-        $prompt->markGenerationFailed();
+        try {
+            $prompt->markGenerationFailed(self::failure());
+            self::fail('A failed generation was marked failed again.');
+        } catch (PromptGenerationAlreadyFinished) {
+            self::assertEquals(
+                LlmFailure::create(LlmFailureCause::EmptyResponse),
+                $prompt->getGenerationFailure(),
+            );
+        }
     }
 
     public function testRegenerationKeepsTheTextUntilTheDraftIsReady(): void
@@ -131,9 +147,10 @@ final class PromptTest extends TestCase
         $prompt->edit(PromptText::fromString('Edited.'));
         $prompt->requestGeneration(self::analysedProfile());
 
-        $prompt->markGenerationFailed();
+        $prompt->markGenerationFailed(self::failure());
 
         self::assertSame(LlmOperationStatus::Failed, $prompt->getGenerationStatus());
+        self::assertEquals(self::failure(), $prompt->getGenerationFailure());
         self::assertSame('Edited.', $prompt->getText());
         self::assertSame(PromptSource::Edited, $prompt->getSource());
     }
@@ -150,14 +167,19 @@ final class PromptTest extends TestCase
         self::assertSame(PromptSource::Generated, $prompt->getSource());
     }
 
-    public function testGenerationCanBeRetriedAfterAFailure(): void
+    public function testRetryingAfterAFailureClearsTheCause(): void
     {
         $prompt = self::pendingPrompt();
-        $prompt->markGenerationFailed();
+        $prompt->markGenerationFailed(LlmFailure::create(LlmFailureCause::Provider, 'HTTP 403'));
 
         $prompt->requestGeneration(self::analysedProfile());
 
         self::assertSame(LlmOperationStatus::Pending, $prompt->getGenerationStatus());
+        self::assertNull($prompt->getGenerationFailure());
+
+        $prompt->markGenerationFailed(self::failure());
+
+        self::assertEquals(self::failure(), $prompt->getGenerationFailure());
     }
 
     public function testGenerationCannotBeRequestedWhileGenerating(): void
@@ -201,13 +223,14 @@ final class PromptTest extends TestCase
     public function testWritingAPromptByHandAfterAFailedGeneration(): void
     {
         $prompt = self::pendingPrompt();
-        $prompt->markGenerationFailed();
+        $prompt->markGenerationFailed(self::failure());
 
         $prompt->edit(PromptText::fromString('Written by hand.'));
 
         self::assertSame('Written by hand.', $prompt->getText());
         self::assertSame(PromptSource::Edited, $prompt->getSource());
         self::assertSame(LlmOperationStatus::Failed, $prompt->getGenerationStatus());
+        self::assertEquals(self::failure(), $prompt->getGenerationFailure());
     }
 
     public function testEditingIsRejectedWhileGenerating(): void
@@ -236,6 +259,11 @@ final class PromptTest extends TestCase
         $this->expectException(PromptGenerationAlreadyFinished::class);
 
         self::generatedPrompt('Draft.')->assertGenerationPending();
+    }
+
+    private static function failure(): LlmFailure
+    {
+        return LlmFailure::create(LlmFailureCause::Unexpected);
     }
 
     private static function pendingPrompt(): Prompt

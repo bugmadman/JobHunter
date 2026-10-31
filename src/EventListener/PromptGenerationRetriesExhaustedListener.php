@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Domain\Llm\LlmFailure;
 use App\Domain\Prompt\PromptServiceInterface;
 use App\Message\GeneratePrompt;
 use App\Repository\PromptRepositoryInterface;
@@ -40,7 +41,7 @@ final readonly class PromptGenerationRetriesExhaustedListener
 
         $prompt = $this->prompts->findById($message->promptId);
         if (null !== $prompt) {
-            $this->promptService->giveUpGeneration($prompt);
+            $this->promptService->giveUpGeneration($prompt, LlmFailure::fromThrowable($event->getThrowable()));
         }
     }
 }
