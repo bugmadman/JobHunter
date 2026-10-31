@@ -242,6 +242,13 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] 18.2 Prompt generation: the same check for the prompt generation task, the button replaced by the hint; the service refuses too
 - [x] [C] 18.3 Cover letter: the same check for the cover letter task, the button replaced by the hint; the service refuses too
 
+## Phase 19 — The reason of a failed LLM operation
+
+- [ ] [C] 19.1 `LlmRequestFailed` tells a permanent failure (400, 401/403, 404, a safety block) from a transient one (429, 5xx, network); the Messenger LLM handlers end the operation at once on a permanent one
+- [ ] [C] 19.2 CV analysis: the failure reason is stored on `CvProfile` (when it fails at once and when the retries run out) and shown on the CV page
+- [ ] [C] 19.3 Prompt generation: the same for the prompt
+- [ ] [C] 19.4 Cover letter: the same for the cover letter
+
 ## Open questions
 
 - Final field schema of `CvProfile` (to be clarified in Phase 6)
