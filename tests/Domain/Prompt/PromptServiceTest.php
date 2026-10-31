@@ -90,6 +90,37 @@ final class PromptServiceTest extends TestCase
         self::service($prompts, self::cvProfilesFinding(null))->requestGeneration(self::platform());
     }
 
+    public function testChecksThePromptGenerationTask(): void
+    {
+        $llm = $this->createMock(LlmServiceInterface::class);
+        $llm->expects(self::once())->method('assertConfigured')->with(LlmTask::PromptGeneration);
+
+        self::service(llm: $llm)->assertCanGenerate();
+    }
+
+    #[DataProvider('missingSettings')]
+    public function testRequestIsRejectedBeforeSavingAnythingWhileTheLlmSettingsAreMissing(\Throwable $missing): void
+    {
+        $llm = self::createStub(LlmServiceInterface::class);
+        $llm->method('assertConfigured')->willThrowException($missing);
+
+        $prompts = $this->createMock(PromptRepositoryInterface::class);
+        $prompts->expects(self::never())->method('save');
+
+        $this->expectExceptionObject($missing);
+
+        self::service($prompts, self::cvProfilesFinding(null), $llm)->requestGeneration(self::platform());
+    }
+
+    /**
+     * @return iterable<string, array{\Throwable}>
+     */
+    public static function missingSettings(): iterable
+    {
+        yield 'no model selected' => [LlmModelNotSelected::forTask(LlmTask::PromptGeneration)];
+        yield 'no api key' => [ApiKeyNotSet::forProvider(LlmProvider::Gemini)];
+    }
+
     public function testRequestWhileGeneratingIsRejected(): void
     {
         $platform = self::platform();

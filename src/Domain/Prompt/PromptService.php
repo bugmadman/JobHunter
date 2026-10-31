@@ -61,8 +61,15 @@ final readonly class PromptService implements PromptServiceInterface
     ) {
     }
 
+    public function assertCanGenerate(): void
+    {
+        $this->llm->assertConfigured(LlmTask::PromptGeneration);
+    }
+
     public function requestGeneration(Platform $platform): Prompt
     {
+        $this->assertCanGenerate();
+
         $cvProfile = $this->cvProfiles->findLatestAnalysed() ?? throw AnalysedCvProfileNotFound::create();
 
         $prompt = $this->prompts->findByPlatform($platform);

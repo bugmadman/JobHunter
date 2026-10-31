@@ -1,2 +1,3 @@
-<div class="alert alert-warning">{{ hint|trans }}</div>
-<a href="{{ url }}" class="btn btn-primary">{{ 'llm.settings_missing.open_settings'|trans }}</a>
+<div class="alert alert-warning">{{ missing.hint|trans }}</div>
+<a href="{{ path(missing.settingsRoute) }}" data-turbo-frame="_top"
+   class="btn btn-primary">{{ 'llm.settings_missing.open_settings'|trans }}</a>

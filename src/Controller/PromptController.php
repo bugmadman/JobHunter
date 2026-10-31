@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Prompt\AnalysedCvProfileNotFound;
 use App\Domain\Prompt\PromptGenerationInProgress;
 use App\Domain\Prompt\PromptServiceInterface;
@@ -42,7 +44,15 @@ final class PromptController extends AbstractController
     )]
     public function show(int $platformId): Response
     {
-        return $this->renderPrompt($this->platform($platformId));
+        $platform = $this->platform($platformId);
+
+        try {
+            $this->promptService->assertCanGenerate();
+        } catch (LlmModelNotSelected|ApiKeyNotSet $e) {
+            return $this->renderPrompt($platform, settingsMissing: LlmSettingsHint::from($e));
+        }
+
+        return $this->renderPrompt($platform);
     }
 
     #[Route(
@@ -66,6 +76,12 @@ final class PromptController extends AbstractController
             $this->bus->dispatch(new GeneratePrompt($promptId));
         } catch (PromptGenerationInProgress) {
             // A repeated click while the draft is generating: showing the pending state is the answer
+        } catch (LlmModelNotSelected|ApiKeyNotSet $e) {
+            return $this->renderPrompt(
+                $platform,
+                status: Response::HTTP_UNPROCESSABLE_ENTITY,
+                settingsMissing: LlmSettingsHint::from($e),
+            );
         } catch (AnalysedCvProfileNotFound) {
             return $this->renderPrompt($platform, 'prompt.show.no_analysed_cv', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
@@ -78,12 +94,17 @@ final class PromptController extends AbstractController
         return $this->platforms->findById($id) ?? throw $this->createNotFoundException();
     }
 
-    private function renderPrompt(Platform $platform, ?string $error = null, int $status = Response::HTTP_OK): Response
-    {
-        return $this->render(
-            'prompt/show.html.twig',
-            ['platform' => $platform, 'prompt' => $this->prompts->findByPlatform($platform), 'error' => $error],
-            new Response(status: $status),
-        );
+    private function renderPrompt(
+        Platform $platform,
+        ?string $error = null,
+        int $status = Response::HTTP_OK,
+        ?LlmSettingsHint $settingsMissing = null,
+    ): Response {
+        return $this->render('prompt/show.html.twig', [
+            'platform' => $platform,
+            'prompt' => $this->prompts->findByPlatform($platform),
+            'error' => $error,
+            'settings_missing' => $settingsMissing,
+        ], new Response(status: $status));
     }
 }

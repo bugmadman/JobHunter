@@ -6,6 +6,10 @@ namespace App\Tests\Controller;
 
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvFile;
+use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmModelNotSelected;
+use App\Domain\Llm\LlmProvider;
+use App\Domain\Llm\LlmTask;
 use App\Domain\Platform\PlatformAccessType;
 use App\Domain\Prompt\AnalysedCvProfileNotFound;
 use App\Domain\Prompt\PromptGenerationInProgress;
@@ -17,6 +21,7 @@ use App\Entity\Prompt;
 use App\Message\GeneratePrompt;
 use App\Repository\PlatformRepositoryInterface;
 use App\Repository\PromptRepositoryInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -47,6 +52,7 @@ final class PromptControllerTest extends WebTestCase
     public function testShowsAGenerateButtonWhenThereIsNoPrompt(): void
     {
         $client = $this->loggedInClient();
+        $this->mockPromptService($client)->expects(self::once())->method('assertCanGenerate');
         $this->stubPlatforms($client)->method('findById')->willReturnMap([[3, $this->platform(3)]]);
         $this->stubPrompts($client)->method('findByPlatform')->willReturn(null);
 
@@ -65,6 +71,7 @@ final class PromptControllerTest extends WebTestCase
     public function testShowsAPendingGenerationInAFrameThatReloadsItself(): void
     {
         $client = $this->loggedInClient();
+        $this->mockPromptService($client)->expects(self::once())->method('assertCanGenerate');
         $platform = $this->platform(3);
         $this->stubPlatforms($client)->method('findById')->willReturn($platform);
         $this->stubPrompts($client)->method('findByPlatform')->willReturn(new Prompt($platform, $this->analysedCv()));
@@ -82,6 +89,7 @@ final class PromptControllerTest extends WebTestCase
     public function testShowsAGeneratedPromptWithARegenerateButton(): void
     {
         $client = $this->loggedInClient();
+        $this->mockPromptService($client)->expects(self::once())->method('assertCanGenerate');
         $platform = $this->platform(3);
         $prompt = $this->prompt($platform, 11);
         $prompt->markGenerated(PromptText::fromString("Like PHP.\nDislike Java."));
@@ -104,6 +112,7 @@ final class PromptControllerTest extends WebTestCase
     public function testAsksBeforeRegeneratingAnEditedPrompt(): void
     {
         $client = $this->loggedInClient();
+        $this->mockPromptService($client)->expects(self::once())->method('assertCanGenerate');
         $platform = $this->platform(3);
         $prompt = $this->prompt($platform, 11);
         $prompt->markGenerationFailed();
@@ -117,6 +126,90 @@ final class PromptControllerTest extends WebTestCase
         self::assertSelectorTextContains('turbo-frame#prompt-3 .alert-danger', 'The generation failed.');
         self::assertSelectorExists('form[data-turbo-confirm^="The prompt was edited by hand."]');
         self::assertSelectorExists('turbo-frame#prompt-3 a[href="/admin/prompt/11/edit"]');
+    }
+
+    public function testShowsTheMissingModelWithALinkToTheSettingsInsteadOfTheGenerateButton(): void
+    {
+        $client = $this->loggedInClient();
+        $platform = $this->platform(3);
+        $prompt = $this->prompt($platform, 11);
+        $prompt->markGenerated(PromptText::fromString('Like PHP.'));
+        $this->stubPlatforms($client)->method('findById')->willReturn($platform);
+        $this->stubPrompts($client)->method('findByPlatform')->willReturn($prompt);
+        $this->mockPromptService($client)
+            ->expects(self::once())
+            ->method('assertCanGenerate')
+            ->willThrowException(LlmModelNotSelected::forTask(LlmTask::PromptGeneration));
+
+        $client->request('GET', '/prompts/3');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('turbo-frame#prompt-3 form');
+        self::assertSelectorTextContains('turbo-frame#prompt-3', 'Like PHP.');
+        self::assertSelectorExists('turbo-frame#prompt-3 a[href="/admin/prompt/11/edit"]');
+        self::assertSelectorTextContains(
+            'turbo-frame#prompt-3 .alert-warning',
+            'Choose a model for the "Prompt generation" task in the settings first.',
+        );
+        self::assertSelectorExists(
+            'turbo-frame#prompt-3 a[href="/admin/llm-model-selection/new"][data-turbo-frame="_top"]',
+        );
+    }
+
+    public function testShowsTheMissingKeyWithALinkToTheSettingsInsteadOfTheGenerateButton(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubPlatforms($client)->method('findById')->willReturn($this->platform(3));
+        $this->stubPrompts($client)->method('findByPlatform')->willReturn(null);
+        $this->mockPromptService($client)
+            ->expects(self::once())
+            ->method('assertCanGenerate')
+            ->willThrowException(ApiKeyNotSet::forProvider(LlmProvider::Gemini));
+
+        $client->request('GET', '/prompts/3');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('turbo-frame#prompt-3 form');
+        self::assertSelectorTextContains(
+            'turbo-frame#prompt-3 .alert-warning',
+            'Add the Gemini key in the settings first.',
+        );
+        self::assertSelectorExists(
+            'turbo-frame#prompt-3 a[href="/admin/llm-provider-key/new"][data-turbo-frame="_top"]',
+        );
+    }
+
+    #[DataProvider('missingSettings')]
+    public function testShowsTheGenerationRefusedByTheServiceInsteadOfFailing(
+        \Throwable $missing,
+        string $settingsUrl,
+    ): void {
+        $client = $this->loggedInClient();
+        $this->stubPlatforms($client)->method('findById')->willReturn($this->platform(3));
+        $this->stubPrompts($client)->method('findByPlatform')->willReturn(null);
+        $this->mockPromptService($client)
+            ->expects(self::once())
+            ->method('requestGeneration')
+            ->willThrowException($missing);
+
+        $this->post($client, '/prompts/3/generate');
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorNotExists('turbo-frame#prompt-3 form');
+        self::assertSelectorExists(\sprintf('turbo-frame#prompt-3 .alert-warning + a[href="%s"]', $settingsUrl));
+        self::assertSame([], $this->queuedMessages($client));
+    }
+
+    /**
+     * @return iterable<string, array{\Throwable, string}>
+     */
+    public static function missingSettings(): iterable
+    {
+        yield 'no model selected' => [
+            LlmModelNotSelected::forTask(LlmTask::PromptGeneration),
+            '/admin/llm-model-selection/new',
+        ];
+        yield 'no api key' => [ApiKeyNotSet::forProvider(LlmProvider::Gemini), '/admin/llm-provider-key/new'];
     }
 
     public function testShowReturns404ForAnUnknownPlatform(): void

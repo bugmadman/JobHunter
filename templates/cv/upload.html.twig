@@ -5,8 +5,8 @@
 {% block body %}
     <h1 class="h3">{{ 'cv.upload.title'|trans }}</h1>
 
-    {% if settings_hint is defined %}
-        {{ include('llm/_settings_missing.html.twig', {hint: settings_hint, url: settings_url}) }}
+    {% if settings_missing is defined %}
+        {{ include('llm/_settings_missing.html.twig', {missing: settings_missing}) }}
     {% else %}
         {% form_theme form 'bootstrap_5_layout.html.twig' %}
         {{ form_start(form) }}

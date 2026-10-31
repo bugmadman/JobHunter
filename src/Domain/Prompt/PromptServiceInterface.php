@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Prompt;
 
+use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmModelNotSelected;
 use App\Entity\Platform;
 use App\Entity\Prompt;
 use App\Infrastructure\Llm\LlmRequestFailed;
@@ -11,9 +13,20 @@ use App\Infrastructure\Llm\LlmRequestFailed;
 interface PromptServiceInterface
 {
     /**
+     * @throws LlmModelNotSelected
+     * @throws ApiKeyNotSet
+     */
+    public function assertCanGenerate(): void;
+
+    /**
      * Marks the platform's prompt pending for a generation from the latest analysed CV profile (creating the prompt
      * on the first request) and saves it. The caller dispatches the generation for the returned prompt.
      *
+     * The LLM settings are checked first, as the prompt page hides the button while they are missing: their hint
+     * wins over a missing CV.
+     *
+     * @throws LlmModelNotSelected
+     * @throws ApiKeyNotSet
      * @throws AnalysedCvProfileNotFound
      * @throws PromptGenerationInProgress
      */

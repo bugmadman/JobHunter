@@ -33,16 +33,20 @@
                 <a href="{{ path('admin_prompt_edit', {entityId: prompt.id}) }}" data-turbo-frame="_top"
                    class="btn btn-outline-secondary btn-sm mb-2">{{ 'prompt.show.edit'|trans }}</a>
             {% endif %}
-            <form method="post" action="{{ path('app_prompt_generate', {platformId: platform.id}) }}"
-                  {%- if prompt and prompt.source and prompt.source.value == 'edited' %}
-                      data-turbo-confirm="{{ 'prompt.show.confirm_overwrite_edit'|trans }}"
-                  {%- endif %}>
-                <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
-                       value="{{ csrf_token('prompt_generate') }}">
-                <button type="submit" class="btn btn-primary btn-sm">
-                    {{- (prompt and prompt.text ? 'prompt.show.regenerate' : 'prompt.show.generate')|trans -}}
-                </button>
-            </form>
+            {% if settings_missing %}
+                {{ include('llm/_settings_missing.html.twig', {missing: settings_missing}) }}
+            {% else %}
+                <form method="post" action="{{ path('app_prompt_generate', {platformId: platform.id}) }}"
+                      {%- if prompt and prompt.source and prompt.source.value == 'edited' %}
+                          data-turbo-confirm="{{ 'prompt.show.confirm_overwrite_edit'|trans }}"
+                      {%- endif %}>
+                    <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
+                           value="{{ csrf_token('prompt_generate') }}">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        {{- (prompt and prompt.text ? 'prompt.show.regenerate' : 'prompt.show.generate')|trans -}}
+                    </button>
+                </form>
+            {% endif %}
         {% endif %}
     </turbo-frame>
 {% endblock %}
