@@ -9,6 +9,8 @@ use App\Domain\CoverLetter\CoverLetterNotGenerated;
 use App\Domain\CoverLetter\CoverLetterServiceInterface;
 use App\Domain\CoverLetter\CoverLetterText;
 use App\Domain\CoverLetter\EmptyCoverLetterText;
+use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmModelNotSelected;
 use App\Entity\JobPosting;
 use App\Message\GenerateCoverLetter;
 use App\Repository\CoverLetterRepositoryInterface;
@@ -42,10 +44,13 @@ final class CoverLetterController extends AbstractController
     {
         $posting = $this->posting($id);
 
-        return $this->render('cover_letter/show.html.twig', [
-            'posting' => $posting,
-            'cover_letter' => $this->coverLetters->findLatestByJobPosting($posting),
-        ]);
+        try {
+            $this->coverLetterService->assertCanGenerate();
+        } catch (LlmModelNotSelected|ApiKeyNotSet $e) {
+            return $this->renderCoverLetter($posting, settingsMissing: LlmSettingsHint::from($e));
+        }
+
+        return $this->renderCoverLetter($posting);
     }
 
     #[Route(
@@ -60,13 +65,21 @@ final class CoverLetterController extends AbstractController
             throw $this->createAccessDeniedException('Invalid CSRF token.');
         }
 
+        $posting = $this->posting($id);
+
         try {
-            $coverLetter = $this->coverLetterService->requestGeneration($this->posting($id));
+            $coverLetter = $this->coverLetterService->requestGeneration($posting);
             $coverLetterId = $coverLetter->getId();
             \assert(null !== $coverLetterId);
             $this->bus->dispatch(new GenerateCoverLetter($coverLetterId));
         } catch (CoverLetterGenerationInProgress) {
             // A repeated click while the letter is generating: showing the pending state is the answer
+        } catch (LlmModelNotSelected|ApiKeyNotSet $e) {
+            return $this->renderCoverLetter(
+                $posting,
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                LlmSettingsHint::from($e),
+            );
         }
 
         return $this->redirectToRoute('app_cover_letter_show', ['id' => $id], Response::HTTP_SEE_OTHER);
@@ -108,5 +121,17 @@ final class CoverLetterController extends AbstractController
     private function posting(int $id): JobPosting
     {
         return $this->postings->findById($id) ?? throw $this->createNotFoundException();
+    }
+
+    private function renderCoverLetter(
+        JobPosting $posting,
+        int $status = Response::HTTP_OK,
+        ?LlmSettingsHint $settingsMissing = null,
+    ): Response {
+        return $this->render('cover_letter/show.html.twig', [
+            'posting' => $posting,
+            'cover_letter' => $this->coverLetters->findLatestByJobPosting($posting),
+            'settings_missing' => $settingsMissing,
+        ], new Response(status: $status));
     }
 }

@@ -95,6 +95,55 @@ final class CoverLetterServiceTest extends TestCase
         self::service($coverLetters)->requestGeneration($posting);
     }
 
+    public function testChecksTheCoverLetterTask(): void
+    {
+        $llm = $this->createMock(LlmServiceInterface::class);
+        $llm->expects(self::once())->method('assertConfigured')->with(LlmTask::CoverLetter);
+
+        self::service(llm: $llm)->assertCanGenerate();
+    }
+
+    #[DataProvider('missingSettings')]
+    public function testRequestIsRejectedBeforeSavingAnythingWhileTheLlmSettingsAreMissing(\Throwable $missing): void
+    {
+        $llm = self::createStub(LlmServiceInterface::class);
+        $llm->method('assertConfigured')->willThrowException($missing);
+
+        $coverLetters = $this->createMock(CoverLetterRepositoryInterface::class);
+        $coverLetters->method('findLatestByJobPosting')->willReturn(null);
+        $coverLetters->expects(self::never())->method('save');
+
+        $this->expectExceptionObject($missing);
+
+        self::service($coverLetters, llm: $llm)->requestGeneration(self::posting());
+    }
+
+    public function testTheMissingLlmSettingsWinOverAPendingLetter(): void
+    {
+        $posting = self::posting();
+        $missing = ApiKeyNotSet::forProvider(LlmProvider::Gemini);
+
+        $llm = self::createStub(LlmServiceInterface::class);
+        $llm->method('assertConfigured')->willThrowException($missing);
+
+        $coverLetters = $this->createMock(CoverLetterRepositoryInterface::class);
+        $coverLetters->method('findLatestByJobPosting')->willReturn(self::coverLetter($posting));
+        $coverLetters->expects(self::never())->method('save');
+
+        $this->expectExceptionObject($missing);
+
+        self::service($coverLetters, llm: $llm)->requestGeneration($posting);
+    }
+
+    /**
+     * @return iterable<string, array{\Throwable}>
+     */
+    public static function missingSettings(): iterable
+    {
+        yield 'no model selected' => [LlmModelNotSelected::forTask(LlmTask::CoverLetter)];
+        yield 'no api key' => [ApiKeyNotSet::forProvider(LlmProvider::Gemini)];
+    }
+
     public function testGenerationSendsTheFencedPostingAndTheProfileAndSavesTheLetter(): void
     {
         $coverLetter = self::coverLetter(self::posting(JobPostingDetails::create(

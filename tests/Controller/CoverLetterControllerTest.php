@@ -9,7 +9,11 @@ use App\Domain\CoverLetter\CoverLetterNotGenerated;
 use App\Domain\CoverLetter\CoverLetterServiceInterface;
 use App\Domain\CoverLetter\CoverLetterText;
 use App\Domain\JobPosting\JobPostingDetails;
+use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmOperationStatus;
+use App\Domain\Llm\LlmProvider;
+use App\Domain\Llm\LlmTask;
 use App\Domain\Platform\PlatformAccessType;
 use App\Entity\CoverLetter;
 use App\Entity\JobPosting;
@@ -17,6 +21,7 @@ use App\Entity\Platform;
 use App\Message\GenerateCoverLetter;
 use App\Repository\CoverLetterRepositoryInterface;
 use App\Repository\JobPostingRepositoryInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -35,6 +40,7 @@ final class CoverLetterControllerTest extends WebTestCase
     public function testShowsAGenerateButtonWhenThereIsNoLetter(): void
     {
         $client = $this->loggedInClient();
+        $this->mockCoverLetterService($client)->expects(self::once())->method('assertCanGenerate');
         $this->stubPostings($client)->method('findById')->willReturnMap([[7, $this->posting(7)]]);
         $this->stubCoverLetters($client)->method('findLatestByJobPosting')->willReturn(null);
 
@@ -51,6 +57,7 @@ final class CoverLetterControllerTest extends WebTestCase
     public function testShowsAPendingLetterInAFrameThatReloadsItself(): void
     {
         $client = $this->loggedInClient();
+        $this->mockCoverLetterService($client)->expects(self::once())->method('assertCanGenerate');
         $posting = $this->posting(7);
         $this->stubPostings($client)->method('findById')->willReturn($posting);
         $this->stubCoverLetters($client)->method('findLatestByJobPosting')->willReturn($this->coverLetter($posting));
@@ -68,6 +75,7 @@ final class CoverLetterControllerTest extends WebTestCase
     public function testShowsTheGeneratedLetterInAnEditFormWithACopyButton(): void
     {
         $client = $this->loggedInClient();
+        $this->mockCoverLetterService($client)->expects(self::once())->method('assertCanGenerate');
         $posting = $this->posting(7);
         $coverLetter = $this->coverLetter($posting, 11);
         $coverLetter->markGenerated(CoverLetterText::fromString("Dear team,\nI fit."));
@@ -91,6 +99,7 @@ final class CoverLetterControllerTest extends WebTestCase
     public function testShowsAFailedGenerationWithARetryButton(): void
     {
         $client = $this->loggedInClient();
+        $this->mockCoverLetterService($client)->expects(self::once())->method('assertCanGenerate');
         $posting = $this->posting(7);
         $coverLetter = $this->coverLetter($posting);
         $coverLetter->markGenerationFailed();
@@ -102,6 +111,75 @@ final class CoverLetterControllerTest extends WebTestCase
         self::assertSelectorTextContains('turbo-frame#posting-cover-letter .alert-danger', 'The generation failed.');
         self::assertSelectorNotExists('#cover-letter-text');
         self::assertSelectorExists('turbo-frame#posting-cover-letter form button');
+    }
+
+    public function testShowsTheMissingModelWithALinkToTheSettingsInsteadOfTheGenerateButton(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->posting(7);
+        $coverLetter = $this->coverLetter($posting, 11);
+        $coverLetter->markGenerated(CoverLetterText::fromString('Dear team, I fit.'));
+        $this->stubPostings($client)->method('findById')->willReturn($posting);
+        $this->stubCoverLetters($client)->method('findLatestByJobPosting')->willReturn($coverLetter);
+        $this->mockCoverLetterService($client)
+            ->expects(self::once())
+            ->method('assertCanGenerate')
+            ->willThrowException(LlmModelNotSelected::forTask(LlmTask::CoverLetter));
+
+        $client->request('GET', '/postings/7/cover-letter');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('turbo-frame#posting-cover-letter form[action="/postings/7/cover-letter"]');
+        self::assertSelectorExists('turbo-frame#posting-cover-letter form#cover-letter-form');
+        self::assertSelectorTextContains(
+            'turbo-frame#posting-cover-letter .alert-warning',
+            'Choose a model for the "Cover letter" task in the settings first.',
+        );
+        self::assertSelectorExists(
+            'turbo-frame#posting-cover-letter a[href="/admin/llm-model-selection/new"][data-turbo-frame="_top"]',
+        );
+    }
+
+    public function testShowsTheMissingKeyWithALinkToTheSettingsInsteadOfTheGenerateButton(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubPostings($client)->method('findById')->willReturn($this->posting(7));
+        $this->stubCoverLetters($client)->method('findLatestByJobPosting')->willReturn(null);
+        $this->mockCoverLetterService($client)
+            ->expects(self::once())
+            ->method('assertCanGenerate')
+            ->willThrowException(ApiKeyNotSet::forProvider(LlmProvider::Gemini));
+
+        $client->request('GET', '/postings/7/cover-letter');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('turbo-frame#posting-cover-letter form');
+        self::assertSelectorTextContains(
+            'turbo-frame#posting-cover-letter .alert-warning',
+            'Add the Gemini key in the settings first.',
+        );
+        self::assertSelectorExists(
+            'turbo-frame#posting-cover-letter a[href="/admin/llm-provider-key/new"][data-turbo-frame="_top"]',
+        );
+    }
+
+    public function testAPendingLetterKeepsReloadingWithoutTheSettingsHint(): void
+    {
+        $client = $this->loggedInClient();
+        $posting = $this->posting(7);
+        $this->stubPostings($client)->method('findById')->willReturn($posting);
+        $this->stubCoverLetters($client)->method('findLatestByJobPosting')->willReturn($this->coverLetter($posting));
+        $this->mockCoverLetterService($client)
+            ->expects(self::once())
+            ->method('assertCanGenerate')
+            ->willThrowException(ApiKeyNotSet::forProvider(LlmProvider::Gemini));
+
+        $client->request('GET', '/postings/7/cover-letter');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('turbo-frame#posting-cover-letter [data-controller="frame-reload"]');
+        self::assertSelectorNotExists('turbo-frame#posting-cover-letter .alert-warning');
+        self::assertSelectorNotExists('turbo-frame#posting-cover-letter form');
     }
 
     public function testShowReturns404ForAnUnknownPosting(): void
@@ -144,6 +222,41 @@ final class CoverLetterControllerTest extends WebTestCase
 
         self::assertResponseRedirects('/postings/7/cover-letter', 303);
         self::assertSame([], $this->queuedMessages($client));
+    }
+
+    #[DataProvider('missingSettings')]
+    public function testShowsTheGenerationRefusedByTheServiceInsteadOfFailing(
+        \Throwable $missing,
+        string $settingsUrl,
+    ): void {
+        $client = $this->loggedInClient();
+        $this->stubPostings($client)->method('findById')->willReturn($this->posting(7));
+        $this->stubCoverLetters($client)->method('findLatestByJobPosting')->willReturn(null);
+        $this->mockCoverLetterService($client)
+            ->expects(self::once())
+            ->method('requestGeneration')
+            ->willThrowException($missing);
+
+        $this->post($client, '/postings/7/cover-letter');
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorNotExists('turbo-frame#posting-cover-letter form');
+        self::assertSelectorExists(
+            \sprintf('turbo-frame#posting-cover-letter .alert-warning + a[href="%s"]', $settingsUrl),
+        );
+        self::assertSame([], $this->queuedMessages($client));
+    }
+
+    /**
+     * @return iterable<string, array{\Throwable, string}>
+     */
+    public static function missingSettings(): iterable
+    {
+        yield 'no model selected' => [
+            LlmModelNotSelected::forTask(LlmTask::CoverLetter),
+            '/admin/llm-model-selection/new',
+        ];
+        yield 'no api key' => [ApiKeyNotSet::forProvider(LlmProvider::Gemini), '/admin/llm-provider-key/new'];
     }
 
     public function testGenerateReturns404ForAnUnknownPosting(): void

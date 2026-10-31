@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\CoverLetter;
 
+use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmModelNotSelected;
 use App\Entity\CoverLetter;
 use App\Entity\JobPosting;
 use App\Infrastructure\Llm\LlmRequestFailed;
@@ -11,9 +13,20 @@ use App\Infrastructure\Llm\LlmRequestFailed;
 interface CoverLetterServiceInterface
 {
     /**
+     * @throws LlmModelNotSelected
+     * @throws ApiKeyNotSet
+     */
+    public function assertCanGenerate(): void;
+
+    /**
      * Creates a pending cover letter version for the job posting and saves it. The caller dispatches the generation
      * for the returned letter.
      *
+     * The LLM settings are checked first, as the cover letter frame hides the button while they are missing: their
+     * hint wins over a pending letter.
+     *
+     * @throws LlmModelNotSelected             nothing is saved
+     * @throws ApiKeyNotSet                    nothing is saved
      * @throws CoverLetterGenerationInProgress the posting's latest letter is still pending; nothing is saved
      */
     public function requestGeneration(JobPosting $posting): CoverLetter;

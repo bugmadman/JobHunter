@@ -79,8 +79,15 @@ final readonly class CoverLetterService implements CoverLetterServiceInterface
     ) {
     }
 
+    public function assertCanGenerate(): void
+    {
+        $this->llm->assertConfigured(LlmTask::CoverLetter);
+    }
+
     public function requestGeneration(JobPosting $posting): CoverLetter
     {
+        $this->assertCanGenerate();
+
         if (LlmOperationStatus::Pending === $this->coverLetters->findLatestByJobPosting($posting)?->getStatus()) {
             throw CoverLetterGenerationInProgress::forJobPosting($posting->getTitle());
         }
