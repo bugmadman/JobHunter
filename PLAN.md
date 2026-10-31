@@ -248,6 +248,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [C] 19.2 CV analysis: the failure reason is stored on `CvProfile` (when it fails at once and when the retries run out) and shown on the CV page
 - [ ] [C] 19.3 Prompt generation: the same for the prompt
 - [ ] [C] 19.4 Cover letter: the same for the cover letter
+- [ ] [C] 19.5 Job posting pipeline: a matching request that fails for good (a permanent provider failure, or the retries run out) marks the posting failed with the provider's reason in the stage log, instead of leaving it filtered for good
 
 ## Open questions
 
