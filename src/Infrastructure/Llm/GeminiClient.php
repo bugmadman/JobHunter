@@ -9,6 +9,7 @@ use App\Domain\Llm\LlmModel;
 use App\Domain\Llm\LlmModelList;
 use App\Domain\Llm\LlmProvider;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
+use Symfony\Component\HttpClient\Exception\InvalidArgumentException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -41,6 +42,15 @@ final readonly class GeminiClient implements LlmClientInterface
     private const string TEXT_MODEL_NAME = '/^gemini-(?:\d+(?:\.\d+)?-(?:flash|flash-lite|pro)(?:-preview)?'
         .'|(?:flash|flash-lite|pro)-latest)$/D';
 
+    /** Any other status (429, 5xx, an unexpected one) may pass on a retry. */
+    private const array PERMANENT_STATUSES = [400, 401, 403, 404];
+
+    /**
+     * Content policy verdicts on this very input. Any other reason may pass on a retry: OTHER is opaque,
+     * and MAX_TOKENS depends on how much of the default output limit one run's thinking used up.
+     */
+    private const array PERMANENT_FINISH_REASONS = ['SAFETY', 'RECITATION', 'BLOCKLIST', 'PROHIBITED_CONTENT', 'SPII'];
+
     public function __construct(
         private HttpClientInterface $httpClient,
     ) {
@@ -57,7 +67,7 @@ final readonly class GeminiClient implements LlmClientInterface
         $text = $this->text($payload, $apiKey);
 
         if (null !== $request->responseSchema && !json_validate($text)) {
-            throw $this->failure('the response is not valid JSON', $apiKey);
+            throw $this->transientFailure('the response is not valid JSON', $apiKey);
         }
 
         return new LlmResponse($text);
@@ -84,7 +94,7 @@ final readonly class GeminiClient implements LlmClientInterface
             $entries = $payload['models'] ?? [];
 
             if (!\is_array($entries)) {
-                throw $this->failure('malformed model list', $apiKey);
+                throw $this->transientFailure('malformed model list', $apiKey);
             }
 
             foreach ($entries as $entry) {
@@ -102,7 +112,9 @@ final readonly class GeminiClient implements LlmClientInterface
             }
         }
 
-        throw $this->failure(\sprintf('the model list has more than %d pages', self::LIST_MAX_PAGES), $apiKey);
+        $reason = \sprintf('the model list has more than %d pages', self::LIST_MAX_PAGES);
+
+        throw $this->permanentFailure($reason, $apiKey);
     }
 
     /**
@@ -146,19 +158,27 @@ final readonly class GeminiClient implements LlmClientInterface
             ]);
             $status = $response->getStatusCode();
             $content = $response->getContent(false);
-        } catch (TransportExceptionInterface $exception) {
+        } catch (InvalidArgumentException $exception) {
             // Not chained as previous: HttpClient messages may quote a header value, and the trace holds the options.
-            throw $this->failure('transport error: '.$exception->getMessage(), $apiKey);
+            throw $this->permanentFailure('transport error: '.$exception->getMessage(), $apiKey);
+        } catch (TransportExceptionInterface $exception) {
+            throw $this->transientFailure('transport error: '.$exception->getMessage(), $apiKey);
         }
 
         if ($status < 200 || $status >= 300) {
-            throw $this->failure($this->errorReason($status, $content), $apiKey);
+            $reason = $this->errorReason($status, $content);
+
+            if (\in_array($status, self::PERMANENT_STATUSES, true)) {
+                throw $this->permanentFailure($reason, $apiKey);
+            }
+
+            throw $this->transientFailure($reason, $apiKey);
         }
 
         $payload = $this->decode($content);
 
         if (null === $payload) {
-            throw $this->failure('malformed JSON response', $apiKey);
+            throw $this->transientFailure('malformed JSON response', $apiKey);
         }
 
         return $payload;
@@ -233,22 +253,30 @@ final readonly class GeminiClient implements LlmClientInterface
         $blockReason = \is_array($promptFeedback) ? ($promptFeedback['blockReason'] ?? null) : null;
 
         if (\is_string($blockReason)) {
-            throw $this->failure('the prompt was blocked: '.$blockReason, $apiKey);
+            throw $this->permanentFailure('the prompt was blocked: '.$blockReason, $apiKey);
         }
 
         $candidates = $payload['candidates'] ?? null;
         $candidate = \is_array($candidates) ? ($candidates[0] ?? null) : null;
 
         if (!\is_array($candidate)) {
-            throw $this->failure('the response has no candidates', $apiKey);
+            throw $this->transientFailure('the response has no candidates', $apiKey);
         }
 
         $finishReason = $candidate['finishReason'] ?? null;
 
-        if ('STOP' !== $finishReason) {
-            $finishReason = \is_string($finishReason) ? $finishReason : 'none';
+        if (!\is_string($finishReason)) {
+            throw $this->transientFailure('the generation did not finish normally: none', $apiKey);
+        }
 
-            throw $this->failure('the generation did not finish normally: '.$finishReason, $apiKey);
+        if ('STOP' !== $finishReason) {
+            $reason = 'the generation did not finish normally: '.$finishReason;
+
+            if (\in_array($finishReason, self::PERMANENT_FINISH_REASONS, true)) {
+                throw $this->permanentFailure($reason, $apiKey);
+            }
+
+            throw $this->transientFailure($reason, $apiKey);
         }
 
         $content = $candidate['content'] ?? null;
@@ -264,14 +292,25 @@ final readonly class GeminiClient implements LlmClientInterface
         $text = trim($text);
 
         if ('' === $text) {
-            throw $this->failure('the response has no text', $apiKey);
+            // Not permanent: thinking models now and then end with STOP and no text, and a retry usually gets one.
+            throw $this->transientFailure('the response has no text', $apiKey);
         }
 
         return $text;
     }
 
-    private function failure(string $reason, ApiKey $apiKey): LlmRequestFailed
+    private function permanentFailure(string $reason, ApiKey $apiKey): LlmRequestFailed
     {
-        return LlmRequestFailed::create(LlmProvider::Gemini, str_replace($apiKey->value(), '***', $reason));
+        return LlmRequestFailed::permanent(LlmProvider::Gemini, $this->mask($reason, $apiKey));
+    }
+
+    private function transientFailure(string $reason, ApiKey $apiKey): LlmRequestFailed
+    {
+        return LlmRequestFailed::transient(LlmProvider::Gemini, $this->mask($reason, $apiKey));
+    }
+
+    private function mask(string $reason, ApiKey $apiKey): string
+    {
+        return str_replace($apiKey->value(), '***', $reason);
     }
 }

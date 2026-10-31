@@ -60,7 +60,7 @@ final class AnalyzeCvHandlerTest extends TestCase
 
     public function testAFailedLlmRequestPropagatesForARetry(): void
     {
-        $failure = LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 503');
+        $failure = LlmRequestFailed::transient(LlmProvider::Gemini, 'HTTP 503');
 
         $cvService = self::createStub(CvServiceInterface::class);
         $cvService->method('analyze')->willThrowException($failure);
@@ -70,6 +70,21 @@ final class AnalyzeCvHandlerTest extends TestCase
             self::fail('Expected the failed LLM request to propagate.');
         } catch (LlmRequestFailed $exception) {
             self::assertSame($failure, $exception);
+        }
+    }
+
+    public function testAPermanentLlmFailureIsNotRetried(): void
+    {
+        $failure = LlmRequestFailed::permanent(LlmProvider::Gemini, 'HTTP 403: The billing account is closed.');
+
+        $cvService = self::createStub(CvServiceInterface::class);
+        $cvService->method('analyze')->willThrowException($failure);
+
+        try {
+            self::handler(self::repositoryFinding(self::profile()), $cvService)(new AnalyzeCv(self::ID));
+            self::fail('Expected the permanent LLM failure not to be retried.');
+        } catch (UnrecoverableMessageHandlingException $exception) {
+            self::assertSame($failure, $exception->getPrevious());
         }
     }
 

@@ -187,7 +187,7 @@ final class LlmModelSelectionCrudControllerTest extends WebTestCase
     public static function modelListFailures(): iterable
     {
         yield 'request failed' => [
-            LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 400: API key not valid.'),
+            LlmRequestFailed::permanent(LlmProvider::Gemini, 'HTTP 400: API key not valid.'),
             'The model list could not be loaded: The gemini request failed: HTTP 400: API key not valid.',
         ];
         yield 'key not decrypted' => [

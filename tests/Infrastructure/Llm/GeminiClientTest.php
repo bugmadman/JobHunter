@@ -117,49 +117,79 @@ final class GeminiClientTest extends TestCase
         self::assertSame('{"name":"Ann"}', $result->text);
     }
 
-    public function testFailsWhenTheTextIsNotTheRequestedJson(): void
+    public function testFailsTransientlyWhenTheTextIsNotTheRequestedJson(): void
     {
-        $this->expectException(LlmRequestFailed::class);
-        $this->expectExceptionMessage('The gemini request failed: the response is not valid JSON');
-
-        self::generate(
-            self::success('Sure! {"name":"Ann"}'),
-            new LlmRequest('Extract', responseSchema: JsonSchema::fromString('{"type":"object"}')),
-        );
+        try {
+            self::generate(
+                self::success('Sure! {"name":"Ann"}'),
+                new LlmRequest('Extract', responseSchema: JsonSchema::fromString('{"type":"object"}')),
+            );
+            self::fail('The request must fail.');
+        } catch (LlmRequestFailed $exception) {
+            self::assertSame('The gemini request failed: the response is not valid JSON', $exception->getMessage());
+            self::assertFalse($exception->isPermanent());
+        }
     }
 
     /**
-     * @return iterable<string, array{MockResponse, string}>
+     * @return iterable<string, array{MockResponse, string, bool}>
      */
     public static function failures(): iterable
     {
         yield 'transport error' => [
             new MockResponse('', ['error' => 'Could not resolve host']),
             'transport error: Could not resolve host',
+            false,
         ];
-        yield 'error status with the Gemini message' => [
+        yield 'invalid request with the Gemini message' => [
             self::json(
                 ['error' => ['code' => 400, 'message' => 'API key not valid.', 'status' => 'INVALID_ARGUMENT']],
                 400,
             ),
             'HTTP 400: API key not valid.',
+            true,
         ];
-        yield 'error status without a JSON body' => [new MockResponse('Bad Gateway', ['http_code' => 502]), 'HTTP 502'];
-        yield 'error status with a JSON body without a message' => [self::json(['error' => []], 500), 'HTTP 500'];
+        yield 'unauthenticated' => [self::json(['error' => []], 401), 'HTTP 401', true];
+        yield 'permission denied' => [
+            self::json(['error' => ['code' => 403, 'message' => 'The billing account is not in good standing.']], 403),
+            'HTTP 403: The billing account is not in good standing.',
+            true,
+        ];
+        yield 'unknown model' => [self::json(['error' => []], 404), 'HTTP 404', true];
+        yield 'quota exceeded' => [
+            self::json(['error' => ['code' => 429, 'message' => 'Quota exceeded.']], 429),
+            'HTTP 429: Quota exceeded.',
+            false,
+        ];
+        yield 'error status without a JSON body' => [
+            new MockResponse('Bad Gateway', ['http_code' => 502]),
+            'HTTP 502',
+            false,
+        ];
+        yield 'internal error without a message' => [self::json(['error' => []], 500), 'HTTP 500', false];
+        yield 'overloaded' => [self::json(['error' => []], 503), 'HTTP 503', false];
         yield 'redirect' => [
             new MockResponse('', ['http_code' => 302, 'response_headers' => ['Location' => 'https://example.com']]),
             'HTTP 302',
+            false,
         ];
-        yield 'malformed JSON' => [new MockResponse('{"candidates":'), 'malformed JSON response'];
-        yield 'not a JSON object' => [new MockResponse('"Hello"'), 'malformed JSON response'];
+        yield 'malformed JSON' => [new MockResponse('{"candidates":'), 'malformed JSON response', false];
+        yield 'not a JSON object' => [new MockResponse('"Hello"'), 'malformed JSON response', false];
         yield 'blocked prompt' => [
             self::json(['promptFeedback' => ['blockReason' => 'SAFETY']]),
             'the prompt was blocked: SAFETY',
+            true,
         ];
-        yield 'no candidates' => [self::json([]), 'the response has no candidates'];
+        yield 'no candidates' => [self::json([]), 'the response has no candidates', false];
         yield 'candidate stopped for safety' => [
             self::json(['candidates' => [['finishReason' => 'SAFETY']]]),
             'the generation did not finish normally: SAFETY',
+            true,
+        ];
+        yield 'candidate stopped for recitation' => [
+            self::json(['candidates' => [['finishReason' => 'RECITATION']]]),
+            'the generation did not finish normally: RECITATION',
+            true,
         ];
         yield 'candidate hit the token limit' => [
             self::json(['candidates' => [[
@@ -167,14 +197,22 @@ final class GeminiClientTest extends TestCase
                 'finishReason' => 'MAX_TOKENS',
             ]]]),
             'the generation did not finish normally: MAX_TOKENS',
+            false,
+        ];
+        yield 'candidate stopped for another reason' => [
+            self::json(['candidates' => [['finishReason' => 'OTHER']]]),
+            'the generation did not finish normally: OTHER',
+            false,
         ];
         yield 'candidate without a finish reason' => [
             self::json(['candidates' => [['content' => ['parts' => [['text' => 'Hello']]]]]]),
             'the generation did not finish normally: none',
+            false,
         ];
         yield 'candidate without content' => [
             self::json(['candidates' => [['finishReason' => 'STOP']]]),
             'the response has no text',
+            false,
         ];
         yield 'candidate with only thoughts' => [
             self::json(['candidates' => [[
@@ -182,20 +220,25 @@ final class GeminiClientTest extends TestCase
                 'finishReason' => 'STOP',
             ]]]),
             'the response has no text',
+            false,
         ];
         yield 'candidate with blank text' => [
             self::json(['candidates' => [['content' => ['parts' => [['text' => " \n"]]], 'finishReason' => 'STOP']]]),
             'the response has no text',
+            false,
         ];
     }
 
     #[DataProvider('failures')]
-    public function testFailsWithAReason(MockResponse $response, string $reason): void
+    public function testFailsWithAReason(MockResponse $response, string $reason, bool $permanent): void
     {
-        $this->expectException(LlmRequestFailed::class);
-        $this->expectExceptionMessage('The gemini request failed: '.$reason);
-
-        self::generate($response, new LlmRequest('Say hello'));
+        try {
+            self::generate($response, new LlmRequest('Say hello'));
+            self::fail('The request must fail.');
+        } catch (LlmRequestFailed $exception) {
+            self::assertSame('The gemini request failed: '.$reason, $exception->getMessage());
+            self::assertSame($permanent, $exception->isPermanent());
+        }
     }
 
     public function testFailsOnAPromptThatCannotBeEncoded(): void
@@ -214,6 +257,7 @@ final class GeminiClientTest extends TestCase
                 'transport error: Invalid value for "json" option',
                 $exception->getMessage(),
             );
+            self::assertTrue($exception->isPermanent());
             self::assertNull($exception->getPrevious());
         }
 
@@ -373,19 +417,21 @@ final class GeminiClientTest extends TestCase
                 'The gemini request failed: the model list has more than 2 pages',
                 $exception->getMessage(),
             );
+            self::assertTrue($exception->isPermanent());
         }
 
         self::assertSame(2, $httpClient->getRequestsCount());
     }
 
     /**
-     * @return iterable<string, array{MockResponse, string}>
+     * @return iterable<string, array{MockResponse, string, bool}>
      */
     public static function listFailures(): iterable
     {
         yield 'transport error' => [
             new MockResponse('', ['error' => 'Could not resolve host']),
             'transport error: Could not resolve host',
+            false,
         ];
         yield 'invalid key' => [
             self::json(
@@ -393,22 +439,27 @@ final class GeminiClientTest extends TestCase
                 400,
             ),
             'HTTP 400: API key not valid.',
+            true,
         ];
         yield 'quota exceeded' => [
             self::json(['error' => ['code' => 429, 'message' => 'Quota exceeded.']], 429),
             'HTTP 429: Quota exceeded.',
+            false,
         ];
-        yield 'malformed JSON' => [new MockResponse('{"models":'), 'malformed JSON response'];
-        yield 'models not a list' => [self::json(['models' => 'gemini-2.5-flash']), 'malformed model list'];
+        yield 'malformed JSON' => [new MockResponse('{"models":'), 'malformed JSON response', false];
+        yield 'models not a list' => [self::json(['models' => 'gemini-2.5-flash']), 'malformed model list', false];
     }
 
     #[DataProvider('listFailures')]
-    public function testFailsToListTheModelsWithAReason(MockResponse $response, string $reason): void
+    public function testFailsToListTheModelsWithAReason(MockResponse $response, string $reason, bool $permanent): void
     {
-        $this->expectException(LlmRequestFailed::class);
-        $this->expectExceptionMessage('The gemini request failed: '.$reason);
-
-        self::listModels(new MockHttpClient($response));
+        try {
+            self::listModels(new MockHttpClient($response));
+            self::fail('The request must fail.');
+        } catch (LlmRequestFailed $exception) {
+            self::assertSame('The gemini request failed: '.$reason, $exception->getMessage());
+            self::assertSame($permanent, $exception->isPermanent());
+        }
     }
 
     #[DataProvider('failuresEchoingTheKey')]

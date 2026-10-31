@@ -58,7 +58,7 @@ final class CheckLlmCommandTest extends KernelTestCase
     {
         $llmService = self::createStub(LlmServiceInterface::class);
         $llmService->method('generate')
-            ->willThrowException(LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 403'));
+            ->willThrowException(LlmRequestFailed::permanent(LlmProvider::Gemini, 'HTTP 403'));
 
         $tester = $this->commandTester($llmService);
 

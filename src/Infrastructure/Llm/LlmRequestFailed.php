@@ -8,8 +8,23 @@ use App\Domain\Llm\LlmProvider;
 
 final class LlmRequestFailed extends \RuntimeException
 {
-    public static function create(LlmProvider $provider, string $reason, ?\Throwable $previous = null): self
+    private function __construct(LlmProvider $provider, string $reason, private readonly bool $permanent)
     {
-        return new self(\sprintf('The %s request failed: %s', $provider->value, $reason), 0, $previous);
+        parent::__construct(\sprintf('The %s request failed: %s', $provider->value, $reason));
+    }
+
+    public static function permanent(LlmProvider $provider, string $reason): self
+    {
+        return new self($provider, $reason, true);
+    }
+
+    public static function transient(LlmProvider $provider, string $reason): self
+    {
+        return new self($provider, $reason, false);
+    }
+
+    public function isPermanent(): bool
+    {
+        return $this->permanent;
     }
 }

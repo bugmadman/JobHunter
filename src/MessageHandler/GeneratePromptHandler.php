@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\Domain\Prompt\PromptGenerationAlreadyFinished;
 use App\Domain\Prompt\PromptGenerationFailed;
 use App\Domain\Prompt\PromptServiceInterface;
+use App\Infrastructure\Llm\LlmRequestFailed;
 use App\Message\GeneratePrompt;
 use App\Repository\PromptRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -35,6 +36,12 @@ final readonly class GeneratePromptHandler
             return;
         } catch (PromptGenerationFailed $exception) {
             throw new UnrecoverableMessageHandlingException($exception->getMessage(), 0, $exception);
+        } catch (LlmRequestFailed $exception) {
+            if ($exception->isPermanent()) {
+                throw new UnrecoverableMessageHandlingException($exception->getMessage(), 0, $exception);
+            }
+
+            throw $exception;
         }
     }
 }

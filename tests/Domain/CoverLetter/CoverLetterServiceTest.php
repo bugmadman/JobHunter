@@ -286,7 +286,7 @@ final class CoverLetterServiceTest extends TestCase
     public function testAFailedLlmRequestLeavesTheGenerationPendingForARetry(): void
     {
         $llm = self::createStub(LlmServiceInterface::class);
-        $llm->method('generate')->willThrowException(LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 503'));
+        $llm->method('generate')->willThrowException(LlmRequestFailed::transient(LlmProvider::Gemini, 'HTTP 503'));
 
         $coverLetter = self::coverLetter();
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Domain\JobPosting\JobPostingServiceInterface;
+use App\Infrastructure\Llm\LlmRequestFailed;
 use App\Message\ProcessJobPosting;
 use App\Repository\JobPostingRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -27,6 +28,14 @@ final readonly class ProcessJobPostingHandler
             throw new UnrecoverableMessageHandlingException(\sprintf('The job posting %d does not exist.', $id));
         }
 
-        $this->postingService->process($posting);
+        try {
+            $this->postingService->process($posting);
+        } catch (LlmRequestFailed $exception) {
+            if ($exception->isPermanent()) {
+                throw new UnrecoverableMessageHandlingException($exception->getMessage(), 0, $exception);
+            }
+
+            throw $exception;
+        }
     }
 }

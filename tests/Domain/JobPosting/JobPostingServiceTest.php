@@ -402,7 +402,7 @@ final class JobPostingServiceTest extends TestCase
     public function testFailedLlmRequestLeavesThePostingFilteredForARetry(): void
     {
         $posting = self::filteredPosting();
-        $failure = LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 503');
+        $failure = LlmRequestFailed::transient(LlmProvider::Gemini, 'HTTP 503');
 
         $llm = self::createStub(LlmServiceInterface::class);
         $llm->method('generate')->willThrowException($failure);
@@ -559,7 +559,7 @@ final class JobPostingServiceTest extends TestCase
     public function testAFailedLlmRequestAfterTheFilterLeavesThePostingFiltered(): void
     {
         $posting = self::rawPosting();
-        $failure = LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 503');
+        $failure = LlmRequestFailed::transient(LlmProvider::Gemini, 'HTTP 503');
         $keywordFilter = self::createStub(KeywordFilterInterface::class);
         $keywordFilter->method('matchingSkills')->willReturn([SkillName::fromString('php')]);
         $llm = self::createStub(LlmServiceInterface::class);

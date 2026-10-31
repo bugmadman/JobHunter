@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\Domain\Cv\CvAnalysisAlreadyFinished;
 use App\Domain\Cv\CvAnalysisFailed;
 use App\Domain\Cv\CvServiceInterface;
+use App\Infrastructure\Llm\LlmRequestFailed;
 use App\Message\AnalyzeCv;
 use App\Repository\CvProfileRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -35,6 +36,12 @@ final readonly class AnalyzeCvHandler
             return;
         } catch (CvAnalysisFailed $exception) {
             throw new UnrecoverableMessageHandlingException($exception->getMessage(), 0, $exception);
+        } catch (LlmRequestFailed $exception) {
+            if ($exception->isPermanent()) {
+                throw new UnrecoverableMessageHandlingException($exception->getMessage(), 0, $exception);
+            }
+
+            throw $exception;
         }
     }
 }

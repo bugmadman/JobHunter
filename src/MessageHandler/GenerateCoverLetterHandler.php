@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\Domain\CoverLetter\CoverLetterGenerationAlreadyFinished;
 use App\Domain\CoverLetter\CoverLetterGenerationFailed;
 use App\Domain\CoverLetter\CoverLetterServiceInterface;
+use App\Infrastructure\Llm\LlmRequestFailed;
 use App\Message\GenerateCoverLetter;
 use App\Repository\CoverLetterRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -35,6 +36,12 @@ final readonly class GenerateCoverLetterHandler
             return;
         } catch (CoverLetterGenerationFailed $exception) {
             throw new UnrecoverableMessageHandlingException($exception->getMessage(), 0, $exception);
+        } catch (LlmRequestFailed $exception) {
+            if ($exception->isPermanent()) {
+                throw new UnrecoverableMessageHandlingException($exception->getMessage(), 0, $exception);
+            }
+
+            throw $exception;
         }
     }
 }

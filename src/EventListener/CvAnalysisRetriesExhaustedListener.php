@@ -12,7 +12,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 
 /**
- * Without it a CV whose LLM request failed on every retry would stay pending forever.
+ * Without it a CV whose LLM request failed on every retry, or permanently, would stay pending forever.
  *
  * Must run after Messenger's retry listener (priority 100), which decides willRetry(). The worker resets services
  * only after this event, so a DB error in the handler may have closed the entity manager, and the identity map may

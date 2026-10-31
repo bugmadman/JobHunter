@@ -252,7 +252,7 @@ final class CvServiceTest extends TestCase
     public function testFailedLlmRequestLeavesTheProfilePendingForARetry(): void
     {
         $profile = self::pendingProfile();
-        $failure = LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 503');
+        $failure = LlmRequestFailed::transient(LlmProvider::Gemini, 'HTTP 503');
 
         $llm = self::createStub(LlmServiceInterface::class);
         $llm->method('generate')->willThrowException($failure);

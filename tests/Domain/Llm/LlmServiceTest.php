@@ -406,7 +406,7 @@ final class LlmServiceTest extends TestCase
         $client->expects(self::exactly(2))
             ->method('listModels')
             ->willReturnOnConsecutiveCalls(
-                self::throwException(LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 503')),
+                self::throwException(LlmRequestFailed::transient(LlmProvider::Gemini, 'HTTP 503')),
                 self::modelList(),
             );
         $service = self::service(

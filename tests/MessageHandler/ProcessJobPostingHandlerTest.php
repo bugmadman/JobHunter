@@ -44,13 +44,27 @@ final class ProcessJobPostingHandlerTest extends TestCase
 
     public function testAFailedLlmRequestPropagatesForARetry(): void
     {
-        $failure = LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 503');
+        $failure = LlmRequestFailed::transient(LlmProvider::Gemini, 'HTTP 503');
         $postingService = self::createStub(JobPostingServiceInterface::class);
         $postingService->method('process')->willThrowException($failure);
 
         $this->expectExceptionObject($failure);
 
         self::handler($this->repositoryFinding(self::posting()), $postingService)(new ProcessJobPosting(self::ID));
+    }
+
+    public function testAPermanentLlmFailureIsNotRetried(): void
+    {
+        $failure = LlmRequestFailed::permanent(LlmProvider::Gemini, 'HTTP 403: The billing account is closed.');
+        $postingService = self::createStub(JobPostingServiceInterface::class);
+        $postingService->method('process')->willThrowException($failure);
+
+        try {
+            self::handler($this->repositoryFinding(self::posting()), $postingService)(new ProcessJobPosting(self::ID));
+            self::fail('Expected the permanent LLM failure not to be retried.');
+        } catch (UnrecoverableMessageHandlingException $exception) {
+            self::assertSame($failure, $exception->getPrevious());
+        }
     }
 
     private static function handler(

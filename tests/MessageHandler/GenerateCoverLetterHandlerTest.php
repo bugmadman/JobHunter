@@ -65,7 +65,7 @@ final class GenerateCoverLetterHandlerTest extends TestCase
 
     public function testAFailedLlmRequestPropagatesForARetry(): void
     {
-        $failure = LlmRequestFailed::create(LlmProvider::Gemini, 'HTTP 503');
+        $failure = LlmRequestFailed::transient(LlmProvider::Gemini, 'HTTP 503');
 
         $coverLetterService = self::createStub(CoverLetterServiceInterface::class);
         $coverLetterService->method('generate')->willThrowException($failure);
@@ -77,6 +77,23 @@ final class GenerateCoverLetterHandlerTest extends TestCase
             self::fail('Expected the failed LLM request to propagate.');
         } catch (LlmRequestFailed $exception) {
             self::assertSame($failure, $exception);
+        }
+    }
+
+    public function testAPermanentLlmFailureIsNotRetried(): void
+    {
+        $failure = LlmRequestFailed::permanent(LlmProvider::Gemini, 'HTTP 403: The billing account is closed.');
+
+        $coverLetterService = self::createStub(CoverLetterServiceInterface::class);
+        $coverLetterService->method('generate')->willThrowException($failure);
+
+        try {
+            self::handler(self::repositoryFinding(self::coverLetter()), $coverLetterService)(
+                new GenerateCoverLetter(self::ID),
+            );
+            self::fail('Expected the permanent LLM failure not to be retried.');
+        } catch (UnrecoverableMessageHandlingException $exception) {
+            self::assertSame($failure, $exception->getPrevious());
         }
     }
 
