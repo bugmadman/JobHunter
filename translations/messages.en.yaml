@@ -106,7 +106,7 @@ cv:
     show:
         title: CV analysis
         pending: The CV is being analysed. This page updates by itself.
-        failed: The analysis failed. Check the CV analysis model and key in the settings, then upload the CV again.
+        failed: The analysis failed. Fix the cause, then upload the CV again.
         unknown: Not stated
         years_experience: Experience, years
         seniority: Seniority
@@ -159,6 +159,15 @@ llm:
         prompt_generation: Prompt generation
         matching: Matching
         cover_letter: Cover letter
+    failure:
+        reason: 'Reason: %reason%'
+        cause:
+            model_not_selected: No model is selected for this task in the settings.
+            api_key_not_set: The provider key is not set in the settings.
+            api_key_unreadable: The stored provider key can't be decrypted. Check the server's encryption key, then enter the provider key again.
+            file_unreadable: The uploaded file can't be read or is empty.
+            invalid_response: The model's answer doesn't have the expected structure. Try again or choose another model.
+            unexpected: An unexpected error. The details are in the worker log.
     settings_missing:
         model_not_selected: 'Choose a model for the "%task%" task in the settings first.'
         api_key_not_set: 'Add the %provider% key in the settings first.'

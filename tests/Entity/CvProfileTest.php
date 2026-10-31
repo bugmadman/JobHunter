@@ -11,6 +11,8 @@ use App\Domain\Cv\LanguageLevel;
 use App\Domain\Cv\LanguageProficiency;
 use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Cv\Seniority;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Skill\SkillName;
 use App\Entity\CvProfile;
@@ -26,6 +28,7 @@ final class CvProfileTest extends TestCase
         self::assertSame(LlmOperationStatus::Pending, $profile->getAnalysisStatus());
         self::assertNull($profile->getAnalysis());
         self::assertNull($profile->getRawLlmResponse());
+        self::assertNull($profile->getAnalysisFailure());
         self::assertSame('3f9a1c.pdf', $profile->getFile()->storedName);
         self::assertSame('My CV.pdf', $profile->getFile()->originalName);
     }
@@ -54,6 +57,7 @@ final class CvProfileTest extends TestCase
 
         self::assertSame(LlmOperationStatus::Done, $profile->getAnalysisStatus());
         self::assertSame('{"seniority":"senior"}', $profile->getRawLlmResponse());
+        self::assertNull($profile->getAnalysisFailure());
         $analysis = $profile->getAnalysis();
         self::assertNotNull($analysis);
         self::assertSame('Анализ', $analysis->originalLanguageText);
@@ -89,24 +93,27 @@ final class CvProfileTest extends TestCase
         self::assertSame([], $profile->getSkills());
     }
 
-    public function testFailedAnalysisKeepsTheRawResponse(): void
+    public function testFailedAnalysisKeepsTheCauseAndTheRawResponse(): void
     {
         $profile = self::pendingProfile();
 
-        $profile->markAnalysisFailed('{"broken":');
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse), '{"broken":');
 
         self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());
+        self::assertEquals(LlmFailure::create(LlmFailureCause::InvalidResponse), $profile->getAnalysisFailure());
         self::assertSame('{"broken":', $profile->getRawLlmResponse());
         self::assertNull($profile->getAnalysis());
     }
 
-    public function testFailedAnalysisWithoutResponse(): void
+    public function testFailedAnalysisKeepsTheProviderMessageWithoutResponse(): void
     {
         $profile = self::pendingProfile();
+        $failure = LlmFailure::create(LlmFailureCause::Provider, 'The gemini request failed: HTTP 403');
 
-        $profile->markAnalysisFailed();
+        $profile->markAnalysisFailed($failure);
 
         self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());
+        self::assertEquals($failure, $profile->getAnalysisFailure());
         self::assertNull($profile->getRawLlmResponse());
     }
 
@@ -116,11 +123,12 @@ final class CvProfileTest extends TestCase
         $profile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', 5, null, null), [], '{"first":true}');
 
         try {
-            $profile->markAnalysisFailed('{"second":true}');
+            $profile->markAnalysisFailed(self::failure(), '{"second":true}');
             self::fail('A done analysis was marked failed.');
         } catch (CvAnalysisAlreadyFinished) {
             self::assertSame(LlmOperationStatus::Done, $profile->getAnalysisStatus());
             self::assertSame('{"first":true}', $profile->getRawLlmResponse());
+            self::assertNull($profile->getAnalysisFailure());
         }
 
         $this->expectException(CvAnalysisAlreadyFinished::class);
@@ -130,7 +138,7 @@ final class CvProfileTest extends TestCase
     public function testFailedAnalysisCannotBeFinishedAgain(): void
     {
         $profile = self::pendingProfile();
-        $profile->markAnalysisFailed('{"first":true}');
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse), '{"first":true}');
 
         try {
             $profile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', 5, null, null), [], '{}');
@@ -142,7 +150,12 @@ final class CvProfileTest extends TestCase
         }
 
         $this->expectException(CvAnalysisAlreadyFinished::class);
-        $profile->markAnalysisFailed();
+        $profile->markAnalysisFailed(self::failure());
+    }
+
+    private static function failure(): LlmFailure
+    {
+        return LlmFailure::create(LlmFailureCause::Unexpected);
     }
 
     private static function pendingProfile(): CvProfile

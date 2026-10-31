@@ -6,6 +6,8 @@ namespace App\Tests\Repository;
 
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvFile;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Entity\CvProfile;
 use App\Repository\CvProfileRepository;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -18,7 +20,7 @@ final class CvProfileRepositoryTest extends KernelTestCase
         $latestAnalysed = self::analysed('latest.pdf');
         $this->repository()->save($latestAnalysed);
         $failed = new CvProfile(CvFile::create('failed.pdf', 'CV.pdf'));
-        $failed->markAnalysisFailed();
+        $failed->markAnalysisFailed(LlmFailure::create(LlmFailureCause::Unexpected));
         $this->repository()->save($failed);
         $this->repository()->save(new CvProfile(CvFile::create('pending.pdf', 'CV.pdf')));
 

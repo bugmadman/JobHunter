@@ -6,6 +6,8 @@ namespace App\Domain\Cv;
 
 use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmClientNotFound;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Llm\LlmServiceInterface;
@@ -75,42 +77,51 @@ final readonly class CvService implements CvServiceInterface
                 ),
                 responseSchema: $this->parser->schema(),
             ));
+        } catch (CvFileUnreadable|EmptyLlmAttachment $exception) {
+            $this->failAnalysis($cvProfile, LlmFailure::create(LlmFailureCause::FileUnreadable), $exception);
         } catch (
-            CvFileUnreadable
-            |EmptyLlmAttachment
-            |LlmModelNotSelected
+            LlmModelNotSelected
             |LlmClientNotFound
             |ApiKeyNotSet
             |ApiKeyDecryptionFailed
             |InvalidEncryptionKey $exception
         ) {
-            $this->failAnalysis($cvProfile, null, $exception);
+            $this->failAnalysis($cvProfile, LlmFailure::fromThrowable($exception), $exception);
         }
 
         try {
             $parsed = $this->parser->parse($response->text);
             $skillNames = self::canonicalSkillNames($parsed->skillNames);
         } catch (InvalidCvAnalysisResponse|InvalidSkillName $exception) {
-            $this->failAnalysis($cvProfile, $response->text, $exception);
+            $this->failAnalysis(
+                $cvProfile,
+                LlmFailure::create(LlmFailureCause::InvalidResponse),
+                $exception,
+                $response->text,
+            );
         }
 
         $cvProfile->markAnalysisDone($parsed->analysis, $this->findOrCreateSkills($skillNames), $response->text);
         $this->cvProfiles->save($cvProfile);
     }
 
-    public function giveUpAnalysis(CvProfile $cvProfile): void
+    public function giveUpAnalysis(CvProfile $cvProfile, LlmFailure $failure): void
     {
         if (LlmOperationStatus::Pending !== $cvProfile->getAnalysisStatus()) {
             return;
         }
 
-        $cvProfile->markAnalysisFailed();
+        $cvProfile->markAnalysisFailed($failure);
         $this->cvProfiles->save($cvProfile);
     }
 
-    private function failAnalysis(CvProfile $cvProfile, ?string $rawLlmResponse, \Throwable $cause): never
-    {
-        $cvProfile->markAnalysisFailed($rawLlmResponse);
+    private function failAnalysis(
+        CvProfile $cvProfile,
+        LlmFailure $failure,
+        \Throwable $cause,
+        ?string $rawLlmResponse = null,
+    ): never {
+        $cvProfile->markAnalysisFailed($failure, $rawLlmResponse);
         $this->cvProfiles->save($cvProfile);
 
         throw CvAnalysisFailed::because($cause);

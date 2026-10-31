@@ -1,0 +1,8 @@
+<div class="alert alert-danger" role="alert">
+    {{ message|trans }}
+    <div class="mt-2">
+        {{- 'llm.failure.reason'|trans({
+            '%reason%': failure.providerMessage ?? ('llm.failure.cause.' ~ failure.cause.value)|trans,
+        }) -}}
+    </div>
+</div>

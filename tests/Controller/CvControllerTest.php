@@ -14,6 +14,8 @@ use App\Domain\Cv\LanguageProficiency;
 use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Cv\Seniority;
 use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmProvider;
 use App\Domain\Llm\LlmTask;
@@ -243,18 +245,38 @@ final class CvControllerTest extends WebTestCase
         self::assertSelectorTextContains('turbo-frame#cv-analysis', 'The CV is being analysed.');
     }
 
-    public function testShowsAFailedAnalysisWithoutReloading(): void
+    public function testShowsAFailedAnalysisWithItsTranslatedCauseWithoutReloading(): void
     {
         $profile = $this->profile(7);
-        $profile->markAnalysisFailed();
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
         $client = $this->loggedInClient();
         $this->stubCvProfiles($client)->method('findById')->willReturn($profile);
 
         $client->request('GET', '/cv/7');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('turbo-frame#cv-analysis .alert-danger', 'The analysis failed.');
+        $alert = 'turbo-frame#cv-analysis .alert-danger';
+        self::assertSelectorTextContains($alert, 'The analysis failed.');
+        self::assertSelectorTextContains(
+            $alert,
+            "Reason: The model's answer doesn't have the expected structure.",
+        );
         self::assertSelectorNotExists('[data-controller="frame-reload"]');
+    }
+
+    public function testShowsTheProviderTextOfAFailedAnalysisAsGiven(): void
+    {
+        $profile = $this->profile(7);
+        $providerText = 'The gemini request failed: HTTP 403: <b>billing</b> account has an outstanding balance';
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::Provider, $providerText));
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findById')->willReturn($profile);
+
+        $client->request('GET', '/cv/7');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('turbo-frame#cv-analysis .alert-danger', 'Reason: '.$providerText);
+        self::assertSelectorNotExists('turbo-frame#cv-analysis .alert-danger b');
     }
 
     public function testShowsADoneAnalysis(): void

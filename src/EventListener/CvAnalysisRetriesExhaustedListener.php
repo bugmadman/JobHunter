@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use App\Domain\Cv\CvServiceInterface;
+use App\Domain\Llm\LlmFailure;
 use App\Message\AnalyzeCv;
 use App\Repository\CvProfileRepositoryInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -39,7 +40,7 @@ final readonly class CvAnalysisRetriesExhaustedListener
 
         $cvProfile = $this->cvProfiles->findById($message->cvProfileId);
         if (null !== $cvProfile) {
-            $this->cvService->giveUpAnalysis($cvProfile);
+            $this->cvService->giveUpAnalysis($cvProfile, LlmFailure::fromThrowable($event->getThrowable()));
         }
     }
 }

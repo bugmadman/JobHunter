@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Cv;
 
 use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmFailure;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Entity\CvProfile;
 use App\Infrastructure\Llm\LlmRequestFailed;
@@ -30,7 +31,8 @@ interface CvServiceInterface
      * Sends the stored PDF to the LLM and saves the analysis with the profile marked done.
      *
      * A failed LLM request leaves the profile pending, so the call can be retried. Any other failure (an invalid
-     * response, the LLM settings missing, the stored file unreadable) marks the profile failed and saves it first.
+     * response, the LLM settings missing, the stored file unreadable) marks the profile failed with its cause and
+     * saves it first.
      *
      * @throws CvAnalysisAlreadyFinished the profile is not pending; nothing is called or saved
      * @throws CvAnalysisFailed
@@ -39,7 +41,7 @@ interface CvServiceInterface
     public function analyze(CvProfile $cvProfile): void;
 
     /**
-     * Marks a still pending analysis failed once its retries are used up; a finished one is left as it is.
+     * Marks a still pending analysis failed once its retries are used up; a finished one keeps its own result.
      */
-    public function giveUpAnalysis(CvProfile $cvProfile): void;
+    public function giveUpAnalysis(CvProfile $cvProfile, LlmFailure $failure): void;
 }

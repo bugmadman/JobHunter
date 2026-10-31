@@ -17,6 +17,8 @@ use App\Domain\Cv\ParsedCvAnalysis;
 use App\Domain\Cv\Seniority;
 use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmClientNotFound;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Llm\LlmProvider;
@@ -224,6 +226,7 @@ final class CvServiceTest extends TestCase
 
         self::assertSame($invalid, $exception->getPrevious());
         self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());
+        self::assertEquals(LlmFailure::create(LlmFailureCause::InvalidResponse), $profile->getAnalysisFailure());
         self::assertSame(self::RAW, $profile->getRawLlmResponse());
     }
 
@@ -246,6 +249,7 @@ final class CvServiceTest extends TestCase
 
         self::assertInstanceOf(InvalidSkillName::class, $exception->getPrevious());
         self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());
+        self::assertEquals(LlmFailure::create(LlmFailureCause::InvalidResponse), $profile->getAnalysisFailure());
         self::assertSame(self::RAW, $profile->getRawLlmResponse());
     }
 
@@ -268,11 +272,14 @@ final class CvServiceTest extends TestCase
         }
 
         self::assertSame(LlmOperationStatus::Pending, $profile->getAnalysisStatus());
+        self::assertNull($profile->getAnalysisFailure());
     }
 
     #[DataProvider('settingsFailures')]
-    public function testMissingLlmSettingsMarkTheProfileFailed(\Throwable $failure): void
-    {
+    public function testMissingLlmSettingsMarkTheProfileFailedWithTheirCause(
+        \Throwable $failure,
+        LlmFailureCause $cause,
+    ): void {
         $profile = self::pendingProfile();
 
         $llm = self::createStub(LlmServiceInterface::class);
@@ -285,19 +292,23 @@ final class CvServiceTest extends TestCase
 
         self::assertSame($failure, $exception->getPrevious());
         self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());
+        self::assertEquals(LlmFailure::create($cause), $profile->getAnalysisFailure());
         self::assertNull($profile->getRawLlmResponse());
     }
 
     /**
-     * @return iterable<string, array{\Throwable}>
+     * @return iterable<string, array{\Throwable, LlmFailureCause}>
      */
     public static function settingsFailures(): iterable
     {
-        yield 'no model selected' => [LlmModelNotSelected::forTask(LlmTask::CvAnalysis)];
-        yield 'no client' => [LlmClientNotFound::forProvider(LlmProvider::Gemini)];
-        yield 'no api key' => [ApiKeyNotSet::forProvider(LlmProvider::Gemini)];
-        yield 'undecryptable api key' => [ApiKeyDecryptionFailed::create()];
-        yield 'no encryption key' => [InvalidEncryptionKey::notSet()];
+        yield 'no model selected' => [
+            LlmModelNotSelected::forTask(LlmTask::CvAnalysis),
+            LlmFailureCause::ModelNotSelected,
+        ];
+        yield 'no client' => [LlmClientNotFound::forProvider(LlmProvider::Gemini), LlmFailureCause::Unexpected];
+        yield 'no api key' => [ApiKeyNotSet::forProvider(LlmProvider::Gemini), LlmFailureCause::ApiKeyNotSet];
+        yield 'undecryptable api key' => [ApiKeyDecryptionFailed::create(), LlmFailureCause::ApiKeyUnreadable];
+        yield 'no encryption key' => [InvalidEncryptionKey::notSet(), LlmFailureCause::ApiKeyUnreadable];
     }
 
     /**
@@ -327,6 +338,7 @@ final class CvServiceTest extends TestCase
 
         self::assertInstanceOf($expectedCause, $exception->getPrevious());
         self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());
+        self::assertEquals(LlmFailure::create(LlmFailureCause::FileUnreadable), $profile->getAnalysisFailure());
         self::assertNull($profile->getRawLlmResponse());
     }
 
@@ -345,7 +357,7 @@ final class CvServiceTest extends TestCase
     public function testFinishedProfileIsNotAnalyzedAgain(): void
     {
         $profile = self::pendingProfile();
-        $profile->markAnalysisFailed('{"first":true}');
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse), '{"first":true}');
 
         $storage = $this->createMock(CvStorageInterface::class);
         $storage->expects(self::never())->method('read');
@@ -365,30 +377,33 @@ final class CvServiceTest extends TestCase
         }
     }
 
-    public function testGivingUpMarksAPendingAnalysisFailed(): void
+    public function testGivingUpMarksAPendingAnalysisFailedWithTheGivenFailure(): void
     {
         $profile = self::pendingProfile();
+        $failure = LlmFailure::create(LlmFailureCause::Provider, 'The gemini request failed: HTTP 429');
 
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
         $cvProfiles->expects(self::once())->method('save')->with($profile);
 
-        self::service($cvProfiles)->giveUpAnalysis($profile);
+        self::service($cvProfiles)->giveUpAnalysis($profile, $failure);
 
         self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());
+        self::assertEquals($failure, $profile->getAnalysisFailure());
         self::assertNull($profile->getRawLlmResponse());
     }
 
     public function testGivingUpLeavesAFinishedAnalysisAsItIs(): void
     {
         $profile = self::pendingProfile();
-        $profile->markAnalysisFailed('{"first":true}');
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse), '{"first":true}');
 
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
         $cvProfiles->expects(self::never())->method('save');
 
-        self::service($cvProfiles)->giveUpAnalysis($profile);
+        self::service($cvProfiles)->giveUpAnalysis($profile, LlmFailure::create(LlmFailureCause::Unexpected));
 
         self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());
+        self::assertEquals(LlmFailure::create(LlmFailureCause::InvalidResponse), $profile->getAnalysisFailure());
         self::assertSame('{"first":true}', $profile->getRawLlmResponse());
     }
 

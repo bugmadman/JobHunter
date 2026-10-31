@@ -6,8 +6,12 @@ namespace App\Tests\EventListener;
 
 use App\Domain\Cv\CvFile;
 use App\Domain\Cv\CvServiceInterface;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
+use App\Domain\Llm\LlmProvider;
 use App\Entity\CvProfile;
 use App\EventListener\CvAnalysisRetriesExhaustedListener;
+use App\Infrastructure\Llm\LlmRequestFailed;
 use App\Message\AnalyzeCv;
 use App\Repository\CvProfileRepositoryInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -15,6 +19,7 @@ use Doctrine\Persistence\ObjectManager;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
 
 final class CvAnalysisRetriesExhaustedListenerTest extends TestCase
 {
@@ -47,7 +52,7 @@ final class CvAnalysisRetriesExhaustedListenerTest extends TestCase
         $cvService = $this->createMock(CvServiceInterface::class);
         $cvService->expects(self::once())
             ->method('giveUpAnalysis')
-            ->with($profile)
+            ->with($profile, LlmFailure::create(LlmFailureCause::Unexpected))
             ->willReturnCallback(static function () use (&$calls): void {
                 $calls[] = 'give up';
             });
@@ -57,6 +62,25 @@ final class CvAnalysisRetriesExhaustedListenerTest extends TestCase
         );
 
         self::assertSame(['reset', 'find', 'give up'], $calls);
+    }
+
+    public function testGivesUpWithTheProviderFailureOfTheLastAttempt(): void
+    {
+        $profile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
+        $failure = LlmRequestFailed::transient(LlmProvider::Gemini, 'HTTP 429: quota exceeded');
+
+        $cvProfiles = self::createStub(CvProfileRepositoryInterface::class);
+        $cvProfiles->method('findById')->willReturn($profile);
+
+        $cvService = $this->createMock(CvServiceInterface::class);
+        $cvService->expects(self::once())
+            ->method('giveUpAnalysis')
+            ->with($profile, LlmFailure::create(LlmFailureCause::Provider, $failure->getMessage()));
+
+        $message = new AnalyzeCv(self::ID);
+        new CvAnalysisRetriesExhaustedListener(self::createStub(ManagerRegistry::class), $cvProfiles, $cvService)(
+            self::failedEvent($message, throwable: new HandlerFailedException(new Envelope($message), [$failure])),
+        );
     }
 
     public function testAMissingProfileIsSkipped(): void
@@ -96,9 +120,12 @@ final class CvAnalysisRetriesExhaustedListenerTest extends TestCase
         new CvAnalysisRetriesExhaustedListener($doctrine, $cvProfiles, $cvService)($event);
     }
 
-    private static function failedEvent(object $message, bool $willRetry = false): WorkerMessageFailedEvent
-    {
-        $event = new WorkerMessageFailedEvent(new Envelope($message), 'async', new \RuntimeException('failed'));
+    private static function failedEvent(
+        object $message,
+        bool $willRetry = false,
+        \Throwable $throwable = new \RuntimeException('failed'),
+    ): WorkerMessageFailedEvent {
+        $event = new WorkerMessageFailedEvent(new Envelope($message), 'async', $throwable);
         if ($willRetry) {
             $event->setForRetry();
         }

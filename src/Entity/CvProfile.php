@@ -10,6 +10,8 @@ use App\Domain\Cv\CvFile;
 use App\Domain\Cv\LanguageProficiency;
 use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Cv\Seniority;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Repository\CvProfileRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -33,6 +35,12 @@ final class CvProfile
 
     #[ORM\Column(length: 32, enumType: LlmOperationStatus::class)]
     private LlmOperationStatus $analysisStatus = LlmOperationStatus::Pending;
+
+    #[ORM\Column(length: 32, nullable: true, enumType: LlmFailureCause::class)]
+    private ?LlmFailureCause $analysisFailureCause = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $analysisFailureMessage = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $analysisOriginal = null;
@@ -117,6 +125,19 @@ final class CvProfile
         );
     }
 
+    public function getAnalysisFailure(): ?LlmFailure
+    {
+        if (LlmOperationStatus::Failed !== $this->analysisStatus) {
+            return null;
+        }
+
+        if (null === $this->analysisFailureCause) {
+            throw new \LogicException('A failed CV analysis has no failure cause.');
+        }
+
+        return LlmFailure::create($this->analysisFailureCause, $this->analysisFailureMessage);
+    }
+
     /**
      * @return list<Skill>
      */
@@ -161,11 +182,13 @@ final class CvProfile
     /**
      * The raw response is kept when there is one: a response that failed the schema is what needs debugging.
      */
-    public function markAnalysisFailed(?string $rawLlmResponse = null): void
+    public function markAnalysisFailed(LlmFailure $failure, ?string $rawLlmResponse = null): void
     {
         $this->assertAnalysisPending();
 
         $this->analysisStatus = LlmOperationStatus::Failed;
+        $this->analysisFailureCause = $failure->cause;
+        $this->analysisFailureMessage = $failure->providerMessage;
         $this->rawLlmResponse = $rawLlmResponse;
     }
 

@@ -15,7 +15,7 @@
                 {{- 'cv.show.pending'|trans -}}
             </div>
         {% elseif status == 'failed' %}
-            <div class="alert alert-danger" role="alert">{{ 'cv.show.failed'|trans }}</div>
+            {{ include('llm/_failure.html.twig', {message: 'cv.show.failed', failure: cvProfile.analysisFailure}) }}
         {% else %}
             {% set analysis = cvProfile.analysis %}
             <dl class="row">

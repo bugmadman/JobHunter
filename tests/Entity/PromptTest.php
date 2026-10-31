@@ -6,6 +6,8 @@ namespace App\Tests\Entity;
 
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvFile;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Platform\PlatformAccessType;
 use App\Domain\Prompt\CvProfileNotAnalysed;
@@ -44,7 +46,7 @@ final class PromptTest extends TestCase
     public function testFailedCvProfileIsRejected(): void
     {
         $cvProfile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
-        $cvProfile->markAnalysisFailed();
+        $cvProfile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::Unexpected));
 
         $this->expectException(CvProfileNotAnalysed::class);
 
