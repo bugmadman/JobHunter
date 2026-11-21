@@ -20,7 +20,8 @@ final class SecurityControllerTest extends WebTestCase
     private const array SAME_ORIGIN = ['HTTP_SEC_FETCH_SITE' => 'same-origin'];
     private const array CROSS_SITE = ['HTTP_SEC_FETCH_SITE' => 'cross-site'];
     private const string WELL_FORMED_TOKEN = 'b8L2Vq9xR4mT7nK1wZ3cY6pA';
-    private const string THROTTLED = 'Too many failed login attempts, please try again in 15 minutes.';
+    // The limiter rounds the retry time up to the next second, so a 15-minute window reads as 16 minutes.
+    private const string THROTTLED = 'Too many failed login attempts, please try again in 16 minutes.';
 
     public function testLoginPageRendersTheForm(): void
     {

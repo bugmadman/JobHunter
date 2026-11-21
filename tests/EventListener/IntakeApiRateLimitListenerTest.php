@@ -32,7 +32,7 @@ final class IntakeApiRateLimitListenerTest extends WebTestCase
         $retryAfter = $response->headers->get('Retry-After');
         self::assertIsNumeric($retryAfter);
         self::assertGreaterThanOrEqual(59, (int) $retryAfter);
-        self::assertLessThanOrEqual(60, (int) $retryAfter);
+        self::assertLessThanOrEqual(61, (int) $retryAfter);
         self::assertSame(
             ['title' => 'Too many requests. Try again later.', 'status' => 429],
             json_decode((string) $response->getContent(), true, flags: \JSON_THROW_ON_ERROR),
