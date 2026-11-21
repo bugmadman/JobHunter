@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\CoverLetter;
 
 use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmFailure;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Entity\CoverLetter;
 use App\Entity\JobPosting;
@@ -36,7 +37,8 @@ interface CoverLetterServiceInterface
      * there is one), and saves it as the letter's text, marked done.
      *
      * A failed LLM request leaves the generation pending, so the call can be retried. Any other failure (no analysed
-     * CV profile, an empty response, the LLM settings missing) marks the generation failed and saves it first.
+     * CV profile, an empty response, the LLM settings missing) marks the generation failed with its cause and saves it
+     * first.
      *
      * @throws CoverLetterGenerationAlreadyFinished the generation is not pending; nothing is called or saved
      * @throws CoverLetterGenerationFailed
@@ -52,7 +54,7 @@ interface CoverLetterServiceInterface
     public function edit(CoverLetter $coverLetter, CoverLetterText $text): void;
 
     /**
-     * Marks a still pending generation failed once its retries are used up; a finished one is left as it is.
+     * Marks a still pending generation failed once its retries are used up; a finished one keeps its own result.
      */
-    public function giveUpGeneration(CoverLetter $coverLetter): void;
+    public function giveUpGeneration(CoverLetter $coverLetter, LlmFailure $failure): void;
 }

@@ -168,6 +168,7 @@ llm:
             file_unreadable: The uploaded file can't be read or is empty.
             invalid_response: The model's answer doesn't have the expected structure. Try again or choose another model.
             empty_response: The model returned an empty answer. Try again or choose another model.
+            cv_not_analysed: There is no analysed CV. Upload a CV and wait for its analysis, then try again.
             unexpected: An unexpected error. The details are in the worker log.
     settings_missing:
         model_not_selected: 'Choose a model for the "%task%" task in the settings first.'
@@ -220,7 +221,7 @@ cover_letter:
         title: Cover letter
         none: No cover letter yet.
         pending: The letter is being generated. This part of the page updates by itself.
-        failed: The generation failed. Check that the CV is analysed and that the cover letter model and key are set in the settings, then try again.
+        failed: The generation failed. Fix the cause, then try again.
         generate: Generate cover letter
         regenerate: Generate a new version
         save: Save the letter

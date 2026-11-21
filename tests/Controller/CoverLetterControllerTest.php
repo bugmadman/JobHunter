@@ -10,6 +10,8 @@ use App\Domain\CoverLetter\CoverLetterServiceInterface;
 use App\Domain\CoverLetter\CoverLetterText;
 use App\Domain\JobPosting\JobPostingDetails;
 use App\Domain\Llm\ApiKeyNotSet;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Llm\LlmProvider;
@@ -102,15 +104,37 @@ final class CoverLetterControllerTest extends WebTestCase
         $this->mockCoverLetterService($client)->expects(self::once())->method('assertCanGenerate');
         $posting = $this->posting(7);
         $coverLetter = $this->coverLetter($posting);
-        $coverLetter->markGenerationFailed();
+        $coverLetter->markGenerationFailed(LlmFailure::create(LlmFailureCause::CvNotAnalysed));
         $this->stubPostings($client)->method('findById')->willReturn($posting);
         $this->stubCoverLetters($client)->method('findLatestByJobPosting')->willReturn($coverLetter);
 
         $client->request('GET', '/postings/7/cover-letter');
 
-        self::assertSelectorTextContains('turbo-frame#posting-cover-letter .alert-danger', 'The generation failed.');
+        $alert = 'turbo-frame#posting-cover-letter .alert-danger';
+        self::assertSelectorTextContains($alert, 'The generation failed.');
+        self::assertSelectorTextContains($alert, 'Reason: There is no analysed CV.');
         self::assertSelectorNotExists('#cover-letter-text');
         self::assertSelectorExists('turbo-frame#posting-cover-letter form button');
+    }
+
+    public function testShowsTheProviderTextOfAFailedGenerationAsGiven(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockCoverLetterService($client)->expects(self::once())->method('assertCanGenerate');
+        $posting = $this->posting(7);
+        $coverLetter = $this->coverLetter($posting);
+        $providerText = 'The gemini request failed: HTTP 403: <b>billing</b> account has an outstanding balance';
+        $coverLetter->markGenerationFailed(LlmFailure::create(LlmFailureCause::Provider, $providerText));
+        $this->stubPostings($client)->method('findById')->willReturn($posting);
+        $this->stubCoverLetters($client)->method('findLatestByJobPosting')->willReturn($coverLetter);
+
+        $client->request('GET', '/postings/7/cover-letter');
+
+        self::assertResponseIsSuccessful();
+        $alert = 'turbo-frame#posting-cover-letter .alert-danger';
+        self::assertSelectorTextContains($alert, 'The generation failed.');
+        self::assertSelectorTextContains($alert, 'Reason: '.$providerText);
+        self::assertSelectorNotExists($alert.' b');
     }
 
     public function testShowsTheMissingModelWithALinkToTheSettingsInsteadOfTheGenerateButton(): void

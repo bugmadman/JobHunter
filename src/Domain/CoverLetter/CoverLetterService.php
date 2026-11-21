@@ -8,6 +8,8 @@ use App\Domain\Cv\LanguageProficiency;
 use App\Domain\JobPosting\JobPostingFence;
 use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmClientNotFound;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Llm\LlmServiceInterface;
@@ -104,7 +106,7 @@ final readonly class CoverLetterService implements CoverLetterServiceInterface
 
         $cvProfile = $this->cvProfiles->findLatestAnalysed();
         if (null === $cvProfile) {
-            $this->fail($coverLetter);
+            $this->fail($coverLetter, LlmFailure::create(LlmFailureCause::CvNotAnalysed));
 
             throw CoverLetterGenerationFailed::withoutAnalysedCvProfile();
         }
@@ -117,17 +119,16 @@ final readonly class CoverLetterService implements CoverLetterServiceInterface
                 systemInstruction: $this->instruction($posting, $cvProfile),
             ));
             $text = CoverLetterText::fromString($response->text);
+        } catch (EmptyCoverLetterText $exception) {
+            $this->failGeneration($coverLetter, LlmFailure::create(LlmFailureCause::EmptyResponse), $exception);
         } catch (
-            EmptyCoverLetterText
-            |LlmModelNotSelected
+            LlmModelNotSelected
             |LlmClientNotFound
             |ApiKeyNotSet
             |ApiKeyDecryptionFailed
             |InvalidEncryptionKey $exception
         ) {
-            $this->fail($coverLetter);
-
-            throw CoverLetterGenerationFailed::because($exception);
+            $this->failGeneration($coverLetter, LlmFailure::fromThrowable($exception), $exception);
         }
 
         $coverLetter->markGenerated($text);
@@ -140,19 +141,26 @@ final readonly class CoverLetterService implements CoverLetterServiceInterface
         $this->coverLetters->save($coverLetter);
     }
 
-    public function giveUpGeneration(CoverLetter $coverLetter): void
+    public function giveUpGeneration(CoverLetter $coverLetter, LlmFailure $failure): void
     {
         if (LlmOperationStatus::Pending !== $coverLetter->getStatus()) {
             return;
         }
 
-        $this->fail($coverLetter);
+        $this->fail($coverLetter, $failure);
     }
 
-    private function fail(CoverLetter $coverLetter): void
+    private function fail(CoverLetter $coverLetter, LlmFailure $failure): void
     {
-        $coverLetter->markGenerationFailed();
+        $coverLetter->markGenerationFailed($failure);
         $this->coverLetters->save($coverLetter);
+    }
+
+    private function failGeneration(CoverLetter $coverLetter, LlmFailure $failure, \Throwable $cause): never
+    {
+        $this->fail($coverLetter, $failure);
+
+        throw CoverLetterGenerationFailed::because($cause);
     }
 
     /**

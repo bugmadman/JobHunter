@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use App\Domain\CoverLetter\CoverLetterServiceInterface;
+use App\Domain\Llm\LlmFailure;
 use App\Message\GenerateCoverLetter;
 use App\Repository\CoverLetterRepositoryInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -40,7 +41,10 @@ final readonly class CoverLetterGenerationRetriesExhaustedListener
 
         $coverLetter = $this->coverLetters->findById($message->coverLetterId);
         if (null !== $coverLetter) {
-            $this->coverLetterService->giveUpGeneration($coverLetter);
+            $this->coverLetterService->giveUpGeneration(
+                $coverLetter,
+                LlmFailure::fromThrowable($event->getThrowable()),
+            );
         }
     }
 }

@@ -14,7 +14,10 @@
                 {{- 'cover_letter.show.pending'|trans -}}
             </div>
         {% elseif status == 'failed' %}
-            <div class="alert alert-danger" role="alert">{{ 'cover_letter.show.failed'|trans }}</div>
+            {{ include('llm/_failure.html.twig', {
+                message: 'cover_letter.show.failed',
+                failure: cover_letter.failure,
+            }) }}
         {% elseif status == 'done' %}
             <p class="small text-body-secondary mb-1">
                 <time datetime="{{ cover_letter.createdAt|date('c') }}">

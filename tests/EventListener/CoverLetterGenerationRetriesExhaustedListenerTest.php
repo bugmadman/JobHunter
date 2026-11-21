@@ -6,11 +6,15 @@ namespace App\Tests\EventListener;
 
 use App\Domain\CoverLetter\CoverLetterServiceInterface;
 use App\Domain\JobPosting\JobPostingDetails;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
+use App\Domain\Llm\LlmProvider;
 use App\Domain\Platform\PlatformAccessType;
 use App\Entity\CoverLetter;
 use App\Entity\JobPosting;
 use App\Entity\Platform;
 use App\EventListener\CoverLetterGenerationRetriesExhaustedListener;
+use App\Infrastructure\Llm\LlmRequestFailed;
 use App\Message\GenerateCoverLetter;
 use App\Repository\CoverLetterRepositoryInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -18,6 +22,8 @@ use Doctrine\Persistence\ObjectManager;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
+use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
 
 final class CoverLetterGenerationRetriesExhaustedListenerTest extends TestCase
 {
@@ -50,7 +56,7 @@ final class CoverLetterGenerationRetriesExhaustedListenerTest extends TestCase
         $coverLetterService = $this->createMock(CoverLetterServiceInterface::class);
         $coverLetterService->expects(self::once())
             ->method('giveUpGeneration')
-            ->with($coverLetter)
+            ->with($coverLetter, LlmFailure::create(LlmFailureCause::Unexpected))
             ->willReturnCallback(static function () use (&$calls): void {
                 $calls[] = 'give up';
             });
@@ -60,6 +66,33 @@ final class CoverLetterGenerationRetriesExhaustedListenerTest extends TestCase
         );
 
         self::assertSame(['reset', 'find', 'give up'], $calls);
+    }
+
+    public function testGivesUpWithTheProviderFailureOfTheLastAttempt(): void
+    {
+        $coverLetter = self::coverLetter();
+        $failure = LlmRequestFailed::transient(LlmProvider::Gemini, 'HTTP 429: quota exceeded');
+
+        $this->assertGivesUpWith(
+            $coverLetter,
+            new HandlerFailedException(new Envelope(new GenerateCoverLetter(self::ID)), [$failure]),
+            LlmFailure::create(LlmFailureCause::Provider, $failure->getMessage()),
+        );
+    }
+
+    public function testGivesUpAtOnceWithThePermanentProviderFailure(): void
+    {
+        $coverLetter = self::coverLetter();
+        $failure = LlmRequestFailed::permanent(LlmProvider::Gemini, 'HTTP 403: outstanding balance');
+
+        $this->assertGivesUpWith(
+            $coverLetter,
+            new HandlerFailedException(
+                new Envelope(new GenerateCoverLetter(self::ID)),
+                [new UnrecoverableMessageHandlingException($failure->getMessage(), 0, $failure)],
+            ),
+            LlmFailure::create(LlmFailureCause::Provider, $failure->getMessage()),
+        );
     }
 
     public function testAMissingLetterIsSkipped(): void
@@ -87,6 +120,21 @@ final class CoverLetterGenerationRetriesExhaustedListenerTest extends TestCase
         $this->assertIgnored(self::failedEvent(new \stdClass()));
     }
 
+    private function assertGivesUpWith(CoverLetter $coverLetter, \Throwable $throwable, LlmFailure $expected): void
+    {
+        $coverLetters = self::createStub(CoverLetterRepositoryInterface::class);
+        $coverLetters->method('findById')->willReturn($coverLetter);
+
+        $coverLetterService = $this->createMock(CoverLetterServiceInterface::class);
+        $coverLetterService->expects(self::once())->method('giveUpGeneration')->with($coverLetter, $expected);
+
+        new CoverLetterGenerationRetriesExhaustedListener(
+            self::createStub(ManagerRegistry::class),
+            $coverLetters,
+            $coverLetterService,
+        )(self::failedEvent(new GenerateCoverLetter(self::ID), throwable: $throwable));
+    }
+
     private function assertIgnored(WorkerMessageFailedEvent $event): void
     {
         $doctrine = $this->createMock(ManagerRegistry::class);
@@ -101,9 +149,12 @@ final class CoverLetterGenerationRetriesExhaustedListenerTest extends TestCase
         new CoverLetterGenerationRetriesExhaustedListener($doctrine, $coverLetters, $coverLetterService)($event);
     }
 
-    private static function failedEvent(object $message, bool $willRetry = false): WorkerMessageFailedEvent
-    {
-        $event = new WorkerMessageFailedEvent(new Envelope($message), 'async', new \RuntimeException('failed'));
+    private static function failedEvent(
+        object $message,
+        bool $willRetry = false,
+        \Throwable $throwable = new \RuntimeException('failed'),
+    ): WorkerMessageFailedEvent {
+        $event = new WorkerMessageFailedEvent(new Envelope($message), 'async', $throwable);
         if ($willRetry) {
             $event->setForRetry();
         }

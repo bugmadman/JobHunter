@@ -12,6 +12,7 @@ enum LlmFailureCause: string
     case FileUnreadable = 'file_unreadable';
     case InvalidResponse = 'invalid_response';
     case EmptyResponse = 'empty_response';
+    case CvNotAnalysed = 'cv_not_analysed';
     case Provider = 'provider';
     case Unexpected = 'unexpected';
 }

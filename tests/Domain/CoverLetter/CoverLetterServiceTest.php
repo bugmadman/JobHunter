@@ -20,6 +20,8 @@ use App\Domain\Cv\Seniority;
 use App\Domain\JobPosting\JobPostingDetails;
 use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmClientNotFound;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Llm\LlmProvider;
@@ -70,7 +72,7 @@ final class CoverLetterServiceTest extends TestCase
     {
         $posting = self::posting();
         $previous = new CoverLetter($posting, new \DateTimeImmutable('2026-10-14 10:00'));
-        $previous->markGenerationFailed();
+        $previous->markGenerationFailed(LlmFailure::create(LlmFailureCause::Unexpected));
 
         $coverLetters = $this->createMock(CoverLetterRepositoryInterface::class);
         $coverLetters->method('findLatestByJobPosting')->willReturn($previous);
@@ -80,6 +82,8 @@ final class CoverLetterServiceTest extends TestCase
 
         self::assertNotSame($previous, $coverLetter);
         self::assertSame(LlmOperationStatus::Pending, $coverLetter->getStatus());
+        self::assertNull($coverLetter->getFailure());
+        self::assertEquals(LlmFailure::create(LlmFailureCause::Unexpected), $previous->getFailure());
     }
 
     public function testRequestWhileTheLatestLetterIsPendingIsRejected(): void
@@ -264,7 +268,7 @@ final class CoverLetterServiceTest extends TestCase
             ->generate(self::coverLetter());
     }
 
-    public function testWithoutAnAnalysedProfileTheGenerationFails(): void
+    public function testWithoutAnAnalysedProfileTheGenerationFailsWithItsCause(): void
     {
         $coverLetter = self::coverLetter();
 
@@ -281,6 +285,7 @@ final class CoverLetterServiceTest extends TestCase
         }
 
         self::assertSame(LlmOperationStatus::Failed, $coverLetter->getStatus());
+        self::assertEquals(LlmFailure::create(LlmFailureCause::CvNotAnalysed), $coverLetter->getFailure());
     }
 
     public function testAFailedLlmRequestLeavesTheGenerationPendingForARetry(): void
@@ -301,14 +306,18 @@ final class CoverLetterServiceTest extends TestCase
         }
 
         self::assertSame(LlmOperationStatus::Pending, $coverLetter->getStatus());
+        self::assertNull($coverLetter->getFailure());
     }
 
     /**
      * @param class-string<\Throwable> $expectedCause
      */
     #[DataProvider('permanentFailures')]
-    public function testPermanentFailureMarksTheGenerationFailed(?\Throwable $llmFailure, string $expectedCause): void
-    {
+    public function testPermanentFailureMarksTheGenerationFailedWithItsCause(
+        ?\Throwable $llmFailure,
+        string $expectedCause,
+        LlmFailureCause $cause,
+    ): void {
         $llm = self::createStub(LlmServiceInterface::class);
         if (null === $llmFailure) {
             $llm->method('generate')->willReturn(new LlmResponse(" \n\t"));
@@ -330,23 +339,41 @@ final class CoverLetterServiceTest extends TestCase
         }
 
         self::assertSame(LlmOperationStatus::Failed, $coverLetter->getStatus());
+        self::assertEquals(LlmFailure::create($cause), $coverLetter->getFailure());
         self::assertNull($coverLetter->getText());
     }
 
     /**
-     * @return iterable<string, array{?\Throwable, class-string<\Throwable>}>
+     * @return iterable<string, array{?\Throwable, class-string<\Throwable>, LlmFailureCause}>
      */
     public static function permanentFailures(): iterable
     {
         yield 'no model selected' => [
             LlmModelNotSelected::forTask(LlmTask::CoverLetter),
             LlmModelNotSelected::class,
+            LlmFailureCause::ModelNotSelected,
         ];
-        yield 'no client' => [LlmClientNotFound::forProvider(LlmProvider::Gemini), LlmClientNotFound::class];
-        yield 'no api key' => [ApiKeyNotSet::forProvider(LlmProvider::Gemini), ApiKeyNotSet::class];
-        yield 'undecryptable api key' => [ApiKeyDecryptionFailed::create(), ApiKeyDecryptionFailed::class];
-        yield 'no encryption key' => [InvalidEncryptionKey::notSet(), InvalidEncryptionKey::class];
-        yield 'blank response' => [null, EmptyCoverLetterText::class];
+        yield 'no client' => [
+            LlmClientNotFound::forProvider(LlmProvider::Gemini),
+            LlmClientNotFound::class,
+            LlmFailureCause::Unexpected,
+        ];
+        yield 'no api key' => [
+            ApiKeyNotSet::forProvider(LlmProvider::Gemini),
+            ApiKeyNotSet::class,
+            LlmFailureCause::ApiKeyNotSet,
+        ];
+        yield 'undecryptable api key' => [
+            ApiKeyDecryptionFailed::create(),
+            ApiKeyDecryptionFailed::class,
+            LlmFailureCause::ApiKeyUnreadable,
+        ];
+        yield 'no encryption key' => [
+            InvalidEncryptionKey::notSet(),
+            InvalidEncryptionKey::class,
+            LlmFailureCause::ApiKeyUnreadable,
+        ];
+        yield 'blank response' => [null, EmptyCoverLetterText::class, LlmFailureCause::EmptyResponse];
     }
 
     public function testFinishedGenerationIsNotRunAgain(): void
@@ -389,16 +416,18 @@ final class CoverLetterServiceTest extends TestCase
         self::service($coverLetters)->edit(self::coverLetter(), CoverLetterText::fromString('Edited.'));
     }
 
-    public function testGivingUpMarksAPendingGenerationFailed(): void
+    public function testGivingUpMarksAPendingGenerationFailedWithTheGivenFailure(): void
     {
         $coverLetter = self::coverLetter();
+        $failure = LlmFailure::create(LlmFailureCause::Provider, 'The gemini request failed: HTTP 429');
 
         $coverLetters = $this->createMock(CoverLetterRepositoryInterface::class);
         $coverLetters->expects(self::once())->method('save')->with($coverLetter);
 
-        self::service($coverLetters)->giveUpGeneration($coverLetter);
+        self::service($coverLetters)->giveUpGeneration($coverLetter, $failure);
 
         self::assertSame(LlmOperationStatus::Failed, $coverLetter->getStatus());
+        self::assertEquals($failure, $coverLetter->getFailure());
     }
 
     public function testGivingUpLeavesAFinishedGenerationAsItIs(): void
@@ -409,9 +438,10 @@ final class CoverLetterServiceTest extends TestCase
         $coverLetters = $this->createMock(CoverLetterRepositoryInterface::class);
         $coverLetters->expects(self::never())->method('save');
 
-        self::service($coverLetters)->giveUpGeneration($coverLetter);
+        self::service($coverLetters)->giveUpGeneration($coverLetter, LlmFailure::create(LlmFailureCause::Unexpected));
 
         self::assertSame(LlmOperationStatus::Done, $coverLetter->getStatus());
+        self::assertNull($coverLetter->getFailure());
         self::assertSame(self::LETTER, $coverLetter->getText());
     }
 

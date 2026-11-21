@@ -7,6 +7,8 @@ namespace App\Entity;
 use App\Domain\CoverLetter\CoverLetterGenerationAlreadyFinished;
 use App\Domain\CoverLetter\CoverLetterNotGenerated;
 use App\Domain\CoverLetter\CoverLetterText;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Repository\CoverLetterRepository;
 use Doctrine\DBAL\Types\Types;
@@ -29,6 +31,12 @@ final class CoverLetter
 
     #[ORM\Column(length: 32, enumType: LlmOperationStatus::class)]
     private LlmOperationStatus $status = LlmOperationStatus::Pending;
+
+    #[ORM\Column(length: 32, nullable: true, enumType: LlmFailureCause::class)]
+    private ?LlmFailureCause $failureCause = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $failureMessage = null;
 
     public function __construct(
         #[ORM\ManyToOne(targetEntity: JobPosting::class)]
@@ -59,6 +67,19 @@ final class CoverLetter
         return $this->status;
     }
 
+    public function getFailure(): ?LlmFailure
+    {
+        if (LlmOperationStatus::Failed !== $this->status) {
+            return null;
+        }
+
+        if (null === $this->failureCause) {
+            throw new \LogicException('A failed cover letter has no failure cause.');
+        }
+
+        return LlmFailure::create($this->failureCause, $this->failureMessage);
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
@@ -78,11 +99,13 @@ final class CoverLetter
     /**
      * @throws CoverLetterGenerationAlreadyFinished
      */
-    public function markGenerationFailed(): void
+    public function markGenerationFailed(LlmFailure $failure): void
     {
         $this->assertGenerationPending();
 
         $this->status = LlmOperationStatus::Failed;
+        $this->failureCause = $failure->cause;
+        $this->failureMessage = $failure->providerMessage;
     }
 
     /**

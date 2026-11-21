@@ -8,6 +8,8 @@ use App\Domain\CoverLetter\CoverLetterGenerationAlreadyFinished;
 use App\Domain\CoverLetter\CoverLetterNotGenerated;
 use App\Domain\CoverLetter\CoverLetterText;
 use App\Domain\JobPosting\JobPostingDetails;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Platform\PlatformAccessType;
 use App\Entity\CoverLetter;
@@ -28,6 +30,7 @@ final class CoverLetterTest extends TestCase
         self::assertSame($createdAt, $coverLetter->getCreatedAt());
         self::assertSame(LlmOperationStatus::Pending, $coverLetter->getStatus());
         self::assertNull($coverLetter->getText());
+        self::assertNull($coverLetter->getFailure());
     }
 
     public function testGeneratedLetterIsDoneWithTheText(): void
@@ -38,15 +41,18 @@ final class CoverLetterTest extends TestCase
 
         self::assertSame(LlmOperationStatus::Done, $coverLetter->getStatus());
         self::assertSame('I fit.', $coverLetter->getText());
+        self::assertNull($coverLetter->getFailure());
     }
 
-    public function testFailedLetterHasNoText(): void
+    public function testFailedLetterKeepsTheCauseAndHasNoText(): void
     {
         $coverLetter = self::coverLetter();
+        $failure = LlmFailure::create(LlmFailureCause::Provider, 'The gemini request failed: HTTP 403');
 
-        $coverLetter->markGenerationFailed();
+        $coverLetter->markGenerationFailed($failure);
 
         self::assertSame(LlmOperationStatus::Failed, $coverLetter->getStatus());
+        self::assertEquals($failure, $coverLetter->getFailure());
         self::assertNull($coverLetter->getText());
     }
 
@@ -66,22 +72,37 @@ final class CoverLetterTest extends TestCase
         $coverLetter->markGenerated(CoverLetterText::fromString('I fit.'));
 
         try {
-            $coverLetter->markGenerationFailed();
+            $coverLetter->markGenerationFailed(self::failure());
             self::fail('Expected a finished generation to stay as it is.');
         } catch (CoverLetterGenerationAlreadyFinished) {
         }
 
         self::assertSame(LlmOperationStatus::Done, $coverLetter->getStatus());
+        self::assertNull($coverLetter->getFailure());
     }
 
     public function testAFailedLetterIsNotGeneratedLater(): void
     {
         $coverLetter = self::coverLetter();
-        $coverLetter->markGenerationFailed();
+        $coverLetter->markGenerationFailed(self::failure());
 
         $this->expectException(CoverLetterGenerationAlreadyFinished::class);
 
         $coverLetter->markGenerated(CoverLetterText::fromString('I fit.'));
+    }
+
+    public function testAFailedLetterKeepsItsFirstCause(): void
+    {
+        $coverLetter = self::coverLetter();
+        $coverLetter->markGenerationFailed(LlmFailure::create(LlmFailureCause::EmptyResponse));
+
+        try {
+            $coverLetter->markGenerationFailed(self::failure());
+            self::fail('A failed generation was marked failed again.');
+        } catch (CoverLetterGenerationAlreadyFinished) {
+        }
+
+        self::assertEquals(LlmFailure::create(LlmFailureCause::EmptyResponse), $coverLetter->getFailure());
     }
 
     public function testEditingReplacesTheGeneratedText(): void
@@ -111,11 +132,21 @@ final class CoverLetterTest extends TestCase
     public function testAFailedLetterCannotBeEdited(): void
     {
         $coverLetter = self::coverLetter();
-        $coverLetter->markGenerationFailed();
+        $coverLetter->markGenerationFailed(self::failure());
 
-        $this->expectException(CoverLetterNotGenerated::class);
+        try {
+            $coverLetter->edit(CoverLetterText::fromString('I fit.'));
+            self::fail('Expected a failed letter to refuse an edit.');
+        } catch (CoverLetterNotGenerated) {
+        }
 
-        $coverLetter->edit(CoverLetterText::fromString('I fit.'));
+        self::assertNull($coverLetter->getText());
+        self::assertEquals(self::failure(), $coverLetter->getFailure());
+    }
+
+    private static function failure(): LlmFailure
+    {
+        return LlmFailure::create(LlmFailureCause::Unexpected);
     }
 
     private static function coverLetter(): CoverLetter
