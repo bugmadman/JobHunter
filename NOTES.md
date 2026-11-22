@@ -233,6 +233,7 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 
 The owner writes new thoughts here as is, without structure. After discussion they are moved into the sections above (superseded decisions go to "Rejected alternatives" with the reason), and this section is cleared.
 
+- If a message dispatch fails after the DB change (CV upload, "retry analysis", cover letter), the record stays pending with no message behind it and no button recovers it; the CV upload and retry are refused for a pending CV. Decide whether a stale pending needs a way out.
 - CV: editing it in the system after the one-time import, and the missing fields (experience per employer, education, etc.): a separate task, discuss and detail it.
 - Messenger has no `failed` transport: after the retries (3 by default) a failed message is lost. For LLM calls it may be worth keeping them to inspect and retry (`failure_transport` + `doctrine://default?queue_name=failed`).
 - Mercure (built into FrankenPHP) is undecided: it could push live updates to the page (an LLM operation finished, new job postings arrived) instead of refreshing a Turbo frame until done. Turbo's Mercure parts are off for now (`assets/controllers.json`).

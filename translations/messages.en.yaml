@@ -105,7 +105,9 @@ cv:
         invalid_file_name: This file name can't be used. Rename the file and upload it again.
     show:
         pending: The CV is being analysed. This page updates by itself.
-        failed: The analysis failed. Fix the cause, then upload the CV again.
+        failed: The analysis failed. Fix the cause, then retry the analysis or upload the CV again.
+        retry: Retry analysis
+        retried: The CV analysis is restarted.
         unknown: Not stated
         years_experience: Experience, years
         seniority: Seniority

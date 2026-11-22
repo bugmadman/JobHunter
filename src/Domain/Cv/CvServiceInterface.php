@@ -31,6 +31,15 @@ interface CvServiceInterface
     public function upload(CvUpload $upload): CvProfile;
 
     /**
+     * Sets a failed analysis pending again for the same stored file; the caller queues the analysis.
+     *
+     * @throws LlmModelNotSelected
+     * @throws ApiKeyNotSet
+     * @throws CvAnalysisNotFailed the analysis is pending or done
+     */
+    public function restartAnalysis(CvProfile $cvProfile): void;
+
+    /**
      * Sends the stored PDF to the LLM and saves the analysis with the profile marked done.
      *
      * A failed LLM request leaves the profile pending, so the call can be retried. Any other failure (an invalid

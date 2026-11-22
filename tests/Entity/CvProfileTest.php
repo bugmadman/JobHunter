@@ -6,6 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvAnalysisAlreadyFinished;
+use App\Domain\Cv\CvAnalysisNotFailed;
 use App\Domain\Cv\CvFile;
 use App\Domain\Cv\LanguageLevel;
 use App\Domain\Cv\LanguageProficiency;
@@ -151,6 +152,46 @@ final class CvProfileTest extends TestCase
 
         $this->expectException(CvAnalysisAlreadyFinished::class);
         $profile->markAnalysisFailed(self::failure());
+    }
+
+    public function testRestartingAFailedAnalysisMakesItPendingWithoutTheFailure(): void
+    {
+        $profile = self::pendingProfile();
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::Provider, 'HTTP 403'), '{"broken":');
+
+        $profile->restartAnalysis();
+
+        self::assertSame(LlmOperationStatus::Pending, $profile->getAnalysisStatus());
+        self::assertNull($profile->getAnalysisFailure());
+        self::assertNull($profile->getRawLlmResponse());
+        self::assertSame('3f9a1c.pdf', $profile->getFile()->storedName);
+
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
+        self::assertEquals(LlmFailure::create(LlmFailureCause::InvalidResponse), $profile->getAnalysisFailure());
+        self::assertNull($profile->getRawLlmResponse());
+    }
+
+    public function testAPendingAnalysisCannotBeRestarted(): void
+    {
+        $profile = self::pendingProfile();
+
+        $this->expectException(CvAnalysisNotFailed::class);
+        $profile->restartAnalysis();
+    }
+
+    public function testADoneAnalysisCannotBeRestarted(): void
+    {
+        $profile = self::pendingProfile();
+        $profile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', 5, null, null), [], '{"first":true}');
+
+        try {
+            $profile->restartAnalysis();
+            self::fail('A done analysis was restarted.');
+        } catch (CvAnalysisNotFailed) {
+            self::assertSame(LlmOperationStatus::Done, $profile->getAnalysisStatus());
+            self::assertNotNull($profile->getAnalysis());
+            self::assertSame('{"first":true}', $profile->getRawLlmResponse());
+        }
     }
 
     private static function failure(): LlmFailure

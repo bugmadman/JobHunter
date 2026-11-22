@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvAnalysisAlreadyFinished;
+use App\Domain\Cv\CvAnalysisNotFailed;
 use App\Domain\Cv\CvFile;
 use App\Domain\Cv\LanguageProficiency;
 use App\Domain\Cv\SalaryExpectation;
@@ -190,6 +191,21 @@ final class CvProfile
         $this->analysisFailureCause = $failure->cause;
         $this->analysisFailureMessage = $failure->providerMessage;
         $this->rawLlmResponse = $rawLlmResponse;
+    }
+
+    /**
+     * @throws CvAnalysisNotFailed
+     */
+    public function restartAnalysis(): void
+    {
+        if (LlmOperationStatus::Failed !== $this->analysisStatus) {
+            throw CvAnalysisNotFailed::withStatus($this->analysisStatus);
+        }
+
+        $this->analysisStatus = LlmOperationStatus::Pending;
+        $this->analysisFailureCause = null;
+        $this->analysisFailureMessage = null;
+        $this->rawLlmResponse = null;
     }
 
     /**

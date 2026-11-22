@@ -6,6 +6,7 @@ namespace App\Tests\Controller;
 
 use App\Domain\Cv\CvAlreadyUploaded;
 use App\Domain\Cv\CvAnalysis;
+use App\Domain\Cv\CvAnalysisNotFailed;
 use App\Domain\Cv\CvFile;
 use App\Domain\Cv\CvServiceInterface;
 use App\Domain\Cv\CvUpload;
@@ -42,6 +43,9 @@ final class CvControllerTest extends WebTestCase
     private const string URL = '/cv';
     private const array SAME_ORIGIN = ['HTTP_SEC_FETCH_SITE' => 'same-origin'];
     private const array CROSS_SITE = ['HTTP_SEC_FETCH_SITE' => 'cross-site'];
+    private const string WELL_FORMED_TOKEN = 'b8L2Vq9xR4mT7nK1wZ3cY6pA';
+    private const string RETRY_URL = '/cv/retry';
+    private const string RETRY_FORM = 'form[method="post"][action="/cv/retry"]';
 
     private Filesystem $filesystem;
     private string $uploadDir;
@@ -276,7 +280,101 @@ final class CvControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('turbo-frame#cv-analysis .alert-danger');
         self::assertSelectorNotExists('form[name="cv_upload"]');
+        self::assertSelectorNotExists(self::RETRY_FORM);
         self::assertSelectorExists('.alert-warning');
+    }
+
+    public function testShowsARetryButtonNextToAFailedAnalysis(): void
+    {
+        $profile = $this->profile(7);
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn($profile);
+        $this->mockCvService($client)->expects(self::once())->method('assertCanUpload');
+
+        $client->request('GET', self::URL);
+
+        self::assertResponseIsSuccessful();
+        $form = 'turbo-frame#cv-analysis '.self::RETRY_FORM.'[data-turbo-frame="_top"]';
+        self::assertSelectorExists($form.' input[type="hidden"][name="_csrf_token"]');
+        self::assertSelectorTextContains($form.' button[type="submit"]', 'Retry analysis');
+    }
+
+    public function testRetriesTheFailedAnalysisOfTheSameCvAndQueuesIt(): void
+    {
+        $profile = $this->profile(7);
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn($profile);
+        $cvService = $this->mockCvService($client);
+        $cvService->expects(self::once())->method('restartAnalysis')->with($profile);
+        $cvService->expects(self::never())->method('upload');
+
+        $this->retry($client);
+
+        self::assertResponseRedirects('/cv', 303);
+        self::assertEquals([new AnalyzeCv(7)], $this->queuedMessages($client));
+        $client->followRedirect();
+        self::assertSelectorTextContains('#flash-messages .alert-success', 'The CV analysis is restarted.');
+    }
+
+    public function testARetryOfAnAnalysisThatIsNotFailedGoesBackToTheCvQueueingNothing(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn($this->profile(7));
+        $this->mockCvService($client)
+            ->expects(self::once())
+            ->method('restartAnalysis')
+            ->willThrowException(CvAnalysisNotFailed::withStatus(LlmOperationStatus::Pending));
+
+        $this->retry($client);
+
+        self::assertResponseRedirects('/cv', 303);
+        self::assertSame([], $this->queuedMessages($client));
+    }
+
+    public function testARetryWithoutACvGoesBackToTheCvQueueingNothing(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn(null);
+        $this->mockCvService($client)->expects(self::never())->method('restartAnalysis');
+
+        $this->retry($client);
+
+        self::assertResponseRedirects('/cv', 303);
+        self::assertSame([], $this->queuedMessages($client));
+    }
+
+    public function testARetryRefusedForMissingSettingsShowsTheHintInsteadOfTheButton(): void
+    {
+        $profile = $this->profile(7);
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn($profile);
+        $this->mockCvService($client)
+            ->expects(self::once())
+            ->method('restartAnalysis')
+            ->willThrowException(ApiKeyNotSet::forProvider(LlmProvider::Gemini));
+
+        $this->retry($client);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorExists('turbo-frame#cv-analysis .alert-danger');
+        self::assertSelectorNotExists(self::RETRY_FORM);
+        self::assertSelectorTextContains('.alert-warning', 'Add the Gemini key in the settings first.');
+        self::assertSelectorExists('a[href="/admin/llm-provider-key/new"]');
+        self::assertSame([], $this->queuedMessages($client));
+    }
+
+    public function testRejectsACrossSiteRetry(): void
+    {
+        $client = $this->loggedInClient();
+        $this->mockCvService($client)->expects(self::never())->method('restartAnalysis');
+
+        $this->retry($client, self::CROSS_SITE);
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame([], $this->queuedMessages($client));
     }
 
     public function testGoesBackToTheCvWhenTheServiceRefusesASubmit(): void
@@ -309,6 +407,7 @@ final class CvControllerTest extends WebTestCase
             'turbo-frame#cv-analysis [data-controller="frame-reload"][data-frame-reload-url-value="/cv"]',
         );
         self::assertSelectorTextContains('turbo-frame#cv-analysis', 'The CV is being analysed.');
+        self::assertSelectorNotExists(self::RETRY_FORM);
     }
 
     public function testShowsAFailedAnalysisWithItsTranslatedCauseWithoutReloading(): void
@@ -378,12 +477,21 @@ final class CvControllerTest extends WebTestCase
         self::assertStringContainsString('EN (C1)', $text);
         self::assertSame('php', $frame->filter('.badge')->text());
         self::assertStringContainsString('Backend developer.<br>', $frame->html());
+        self::assertSelectorNotExists(self::RETRY_FORM);
     }
 
     public function testRedirectsAnonymousToLogin(): void
     {
         $client = self::createClient();
         $client->request('GET', self::URL);
+
+        self::assertResponseRedirects('/login');
+    }
+
+    public function testRedirectsAnAnonymousRetryToLogin(): void
+    {
+        $client = self::createClient();
+        $this->retry($client);
 
         self::assertResponseRedirects('/login');
     }
@@ -420,6 +528,14 @@ final class CvControllerTest extends WebTestCase
         }
 
         $client->submit($form, [], $server);
+    }
+
+    /**
+     * @param array<string, string> $server
+     */
+    private function retry(KernelBrowser $client, array $server = self::SAME_ORIGIN): void
+    {
+        $client->request('POST', self::RETRY_URL, ['_csrf_token' => self::WELL_FORMED_TOKEN], server: $server);
     }
 
     /**

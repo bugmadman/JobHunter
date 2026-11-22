@@ -8,6 +8,7 @@ use App\Domain\Cv\CvAlreadyUploaded;
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvAnalysisAlreadyFinished;
 use App\Domain\Cv\CvAnalysisFailed;
+use App\Domain\Cv\CvAnalysisNotFailed;
 use App\Domain\Cv\CvAnalysisResponseParserInterface;
 use App\Domain\Cv\CvFile;
 use App\Domain\Cv\CvService;
@@ -272,6 +273,74 @@ final class CvServiceTest extends TestCase
     {
         yield 'no model selected' => [LlmModelNotSelected::forTask(LlmTask::CvAnalysis)];
         yield 'no api key' => [ApiKeyNotSet::forProvider(LlmProvider::Gemini)];
+    }
+
+    public function testRestartingAFailedAnalysisChecksTheSettingsAndSavesItPending(): void
+    {
+        $profile = self::failedProfile();
+
+        $llm = $this->createMock(LlmServiceInterface::class);
+        $llm->expects(self::once())->method('assertConfigured')->with(LlmTask::CvAnalysis);
+        $llm->expects(self::never())->method('generate');
+
+        $storage = $this->createMock(CvStorageInterface::class);
+        $storage->expects(self::never())->method('store');
+        $storage->expects(self::never())->method('delete');
+
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->expects(self::once())->method('save')->with($profile);
+        $cvProfiles->expects(self::never())->method('replace');
+
+        self::service(cvProfiles: $cvProfiles, storage: $storage, llm: $llm)->restartAnalysis($profile);
+
+        self::assertSame(LlmOperationStatus::Pending, $profile->getAnalysisStatus());
+        self::assertNull($profile->getAnalysisFailure());
+    }
+
+    #[DataProvider('missingSettings')]
+    public function testARestartIsRefusedWhileTheLlmSettingsAreMissing(\Throwable $missing): void
+    {
+        $profile = self::failedProfile();
+
+        $llm = self::createStub(LlmServiceInterface::class);
+        $llm->method('assertConfigured')->willThrowException($missing);
+
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->expects(self::never())->method('save');
+
+        try {
+            self::service(cvProfiles: $cvProfiles, llm: $llm)->restartAnalysis($profile);
+            self::fail('A restart was accepted without the LLM settings.');
+        } catch (LlmModelNotSelected|ApiKeyNotSet $exception) {
+            self::assertSame($missing, $exception);
+            self::assertSame(LlmOperationStatus::Failed, $profile->getAnalysisStatus());
+        }
+    }
+
+    #[DataProvider('unreplaceableProfiles')]
+    public function testOnlyAFailedAnalysisIsRestarted(CvProfile $profile): void
+    {
+        $status = $profile->getAnalysisStatus();
+
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->expects(self::never())->method('save');
+
+        try {
+            self::service(cvProfiles: $cvProfiles)->restartAnalysis($profile);
+            self::fail('A finished or pending analysis was restarted.');
+        } catch (CvAnalysisNotFailed) {
+            self::assertSame($status, $profile->getAnalysisStatus());
+        }
+    }
+
+    public function testANotFailedAnalysisIsRefusedBeforeTheLlmSettingsAreChecked(): void
+    {
+        $llm = $this->createMock(LlmServiceInterface::class);
+        $llm->expects(self::never())->method('assertConfigured');
+
+        $this->expectException(CvAnalysisNotFailed::class);
+
+        self::service(llm: $llm)->restartAnalysis(self::pendingProfile());
     }
 
     public function testAnalysisSendsTheStoredPdfWithTheParserSchemaAndSavesTheResult(): void

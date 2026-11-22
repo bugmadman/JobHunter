@@ -75,6 +75,17 @@ final readonly class CvService implements CvServiceInterface
         return $cvProfile;
     }
 
+    public function restartAnalysis(CvProfile $cvProfile): void
+    {
+        if (LlmOperationStatus::Failed !== $cvProfile->getAnalysisStatus()) {
+            throw CvAnalysisNotFailed::withStatus($cvProfile->getAnalysisStatus());
+        }
+
+        $this->llm->assertConfigured(LlmTask::CvAnalysis);
+        $cvProfile->restartAnalysis();
+        $this->cvProfiles->save($cvProfile);
+    }
+
     public function analyze(CvProfile $cvProfile): void
     {
         $cvProfile->assertAnalysisPending();

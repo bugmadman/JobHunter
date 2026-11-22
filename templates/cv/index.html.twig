@@ -18,6 +18,13 @@
                 </div>
             {% elseif status == 'failed' %}
                 {{ include('llm/_failure.html.twig', {message: 'cv.show.failed', failure: cvProfile.analysisFailure}) }}
+                {% if settings_missing is not defined %}
+                    <form method="post" action="{{ path('app_cv_retry') }}" data-turbo-frame="_top" class="mb-3">
+                        <input type="hidden" name="_csrf_token" data-controller="csrf-protection"
+                               value="{{ csrf_token('cv_retry') }}">
+                        <button type="submit" class="btn btn-primary">{{ 'cv.show.retry'|trans }}</button>
+                    </form>
+                {% endif %}
             {% else %}
                 {% set analysis = cvProfile.analysis %}
                 <dl class="row">
