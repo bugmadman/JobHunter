@@ -8,12 +8,15 @@ use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvAnalysisAlreadyFinished;
 use App\Domain\Cv\CvAnalysisNotFailed;
 use App\Domain\Cv\CvFile;
+use App\Domain\Cv\CvSkillAlreadyAdded;
 use App\Domain\Cv\LanguageProficiency;
 use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Cv\Seniority;
+use App\Domain\Cv\SkillLevel;
 use App\Domain\Llm\LlmFailure;
 use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmOperationStatus;
+use App\Domain\Skill\SkillName;
 use App\Repository\CvProfileRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -76,10 +79,17 @@ final class CvProfile
     #[ORM\ManyToMany(targetEntity: Skill::class)]
     private Collection $skills;
 
+    /**
+     * @var Collection<int, CvSkill>
+     */
+    #[ORM\OneToMany(targetEntity: CvSkill::class, mappedBy: 'cvProfile', cascade: ['persist'], orphanRemoval: true)]
+    private Collection $cvSkills;
+
     public function __construct(CvFile $file)
     {
         $this->languages = new ArrayCollection();
         $this->skills = new ArrayCollection();
+        $this->cvSkills = new ArrayCollection();
         $this->storedFileName = $file->storedName;
         $this->originalFileName = $file->originalName;
     }
@@ -141,6 +151,28 @@ final class CvProfile
     public function getSkills(): array
     {
         return array_values($this->skills->toArray());
+    }
+
+    /**
+     * @return list<CvSkill>
+     */
+    public function getCvSkills(): array
+    {
+        return array_values($this->cvSkills->toArray());
+    }
+
+    /**
+     * @throws CvSkillAlreadyAdded
+     */
+    public function addCvSkill(SkillName $name, SkillLevel $level): void
+    {
+        foreach ($this->cvSkills as $cvSkill) {
+            if ($cvSkill->getName()->value === $name->value) {
+                throw CvSkillAlreadyAdded::withName($name);
+            }
+        }
+
+        $this->cvSkills->add(new CvSkill($this, $name, $level));
     }
 
     public function getRawLlmResponse(): ?string

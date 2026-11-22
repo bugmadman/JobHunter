@@ -265,10 +265,10 @@ Goal — as many automated checks as possible, so that errors are caught without
 ## Phase 22 — CV skills with levels
 
 - [x] [S] 22.1 `SkillLevel` backed enum 1–5 (1 heard of or used a little, 2 basic, 3 working, 4 strong, 5 expert) + its translation keys (en + ru)
-- [ ] [C] 22.2 `CvSkill` entity (profile, `SkillName`, `SkillLevel`; unique per profile), created only through `CvProfile`; a migration creates `cv_skill` and copies the rows of `cv_profile_skill` with level 1
+- [x] [C] 22.2 `CvSkill` entity (profile, `SkillName`, `SkillLevel`; unique per profile), created only through `CvProfile`; a migration creates `cv_skill` and copies the rows of `cv_profile_skill` with level 1
 - [ ] [C] 22.3 The CV analysis schema, prompt (the level scale is spelled out for the model), parser and `CvService::analyze()` produce `CvSkill` with a level; the skill names are canonicalised and deduplicated as before
 - [ ] [C] 22.4 The keyword filter, prompt, cover letter and posting services read `CvSkill` instead of `Skill`; the prompt and letter show the level
-- [ ] [S] 22.5 Remove the `Skill` entity, `SkillRepository`, `CvProfile` ↔ `Skill`, their tests; a migration drops `skill` and `cv_profile_skill`
+- [ ] [S] 22.5 Move `MAX_NAME_LENGTH` to `SkillName`; remove the `Skill` entity, `SkillRepository`, `CvProfile` ↔ `Skill` and their tests; a migration drops `skill` and `cv_profile_skill`
 
 ## Phase 23 — CV languages as a description
 

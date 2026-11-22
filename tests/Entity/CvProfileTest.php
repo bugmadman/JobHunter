@@ -8,10 +8,12 @@ use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvAnalysisAlreadyFinished;
 use App\Domain\Cv\CvAnalysisNotFailed;
 use App\Domain\Cv\CvFile;
+use App\Domain\Cv\CvSkillAlreadyAdded;
 use App\Domain\Cv\LanguageLevel;
 use App\Domain\Cv\LanguageProficiency;
 use App\Domain\Cv\SalaryExpectation;
 use App\Domain\Cv\Seniority;
+use App\Domain\Cv\SkillLevel;
 use App\Domain\Llm\LlmFailure;
 use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmOperationStatus;
@@ -22,6 +24,31 @@ use PHPUnit\Framework\TestCase;
 
 final class CvProfileTest extends TestCase
 {
+    public function testSkillIsAddedWithItsLevel(): void
+    {
+        $profile = self::pendingProfile();
+
+        $profile->addCvSkill(SkillName::fromString('PHP'), SkillLevel::Expert);
+        $profile->addCvSkill(SkillName::fromString('Node.js'), SkillLevel::Familiar);
+
+        $skills = $profile->getCvSkills();
+        self::assertCount(2, $skills);
+        self::assertSame('php', $skills[0]->getName()->value);
+        self::assertSame(SkillLevel::Expert, $skills[0]->getLevel());
+        self::assertSame('node.js', $skills[1]->getName()->value);
+        self::assertSame(SkillLevel::Familiar, $skills[1]->getLevel());
+    }
+
+    public function testSameSkillIsRefusedWhateverTheSpellingOrLevel(): void
+    {
+        $profile = self::pendingProfile();
+        $profile->addCvSkill(SkillName::fromString('PHP'), SkillLevel::Expert);
+
+        $this->expectException(CvSkillAlreadyAdded::class);
+
+        $profile->addCvSkill(SkillName::fromString(' php '), SkillLevel::Basic);
+    }
+
     public function testNewProfileIsPendingWithoutAnalysis(): void
     {
         $profile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
