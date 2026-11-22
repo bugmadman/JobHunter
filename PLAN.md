@@ -262,15 +262,65 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] 21.1 One analysis text: `original_language_text` is dropped from the response schema, the prompt (always English, whatever the CV's language), `CvAnalysis`, `CvProfile` and the tests; `english_text`/`analysisEnglish` becomes `analysis`; a migration drops `analysis_original` and renames `analysis_english`
 - [x] [S] 21.2 `/cv` shows the single analysis block instead of two; the two translation keys become one (en + ru)
 
+## Phase 22 — CV skills with levels
+
+- [ ] [S] 22.1 `SkillLevel` backed enum 1–5 (1 heard of or used a little, 2 basic, 3 working, 4 strong, 5 expert) + its translation keys (en + ru)
+- [ ] [C] 22.2 `CvSkill` entity (profile, `SkillName`, `SkillLevel`; unique per profile), created only through `CvProfile`; a migration creates `cv_skill` and copies the rows of `cv_profile_skill` with level 1
+- [ ] [C] 22.3 The CV analysis schema, prompt (the level scale is spelled out for the model), parser and `CvService::analyze()` produce `CvSkill` with a level; the skill names are canonicalised and deduplicated as before
+- [ ] [C] 22.4 The keyword filter, prompt, cover letter and posting services read `CvSkill` instead of `Skill`; the prompt and letter show the level
+- [ ] [S] 22.5 Remove the `Skill` entity, `SkillRepository`, `CvProfile` ↔ `Skill`, their tests; a migration drops `skill` and `cv_profile_skill`
+
+## Phase 23 — CV languages as a description
+
+- [ ] [C] 23.1 `CvLanguage`: `level` (`LanguageLevel`) becomes a free-text description (non-blank, length-capped VO); `LanguageLevel` is removed; the schema, parser, prompts, the CV page and the tests follow; a migration converts the column (old levels become their text)
+
+## Phase 24 — CV structure model
+
+- [ ] [C] 24.1 `CvProfile` header: name, headline, location, email, phone (nullable columns, VOs where they carry validation) + migration
+- [ ] [S] 24.2 `CvLink` (label, URL) + migration
+- [ ] [C] 24.3 `CvExperience` (company, position, location, period: start, end or current; the period VO refuses an end before the start) + migration
+- [ ] [C] 24.4 `CvProject` (experience, name, description) + migration
+- [ ] [C] 24.5 `CvBullet` (experience, optional project, text, many-to-many to `CvSkill`; the tagged skills must belong to the same profile) + migration
+- [ ] [S] 24.6 `CvEducation` (institution, degree or field, period) + migration
+- [ ] [C] 24.7 Display order: every child has a position; `CvProfile` adds a child at the end and moves it up or down, so the order stays consistent
+
+## Phase 25 — Import into the full structure
+
+- [ ] [C] 25.1 The analysis response schema covers the whole structure (header, summary, skills with levels, languages, the experience → projects → bullets tree with skill tags by name, education, links, seniority, years, salary); built in PHP, within what Gemini enforces
+- [ ] [C] 25.2 The parser validates the response into DTOs/VOs; a bullet tag naming a skill that isn't in the skills list is an invalid response or adds the skill (decide in the task)
+- [ ] [C] 25.3 The analysis prompt: extract everything the PDF says and invent nothing, English whatever the CV's language, one fact per bullet, keep numbers and technologies, set levels by the scale
+- [ ] [C] 25.4 `CvProfile::markAnalysisDone()` and `CvService::analyze()` save the whole tree; the output-token limit is checked on a real CV
+- [ ] [C] 25.5 "Re-import" for a finished CV: replaces the structure from the stored PDF (the page warns that manual edits are lost), through the service and the existing message
+
+## Phase 26 — Viewing and editing the CV
+
+Each task: the form and DTO, a `CvService` method, translations (en + ru).
+
+- [ ] [S] 26.1 `/cv` shows the whole structure read-only: header, summary, skills with levels, languages, the experience tree, education, links
+- [ ] [S] 26.2 Edit the header and the summary
+- [ ] [S] 26.3 Skills: add, change the level, remove
+- [ ] [S] 26.4 Languages: add, edit the description, remove
+- [ ] [C] 26.5 Experience: add, edit, remove (period rules)
+- [ ] [S] 26.6 Projects: add, edit, remove
+- [ ] [C] 26.7 Bullets: add, edit, remove, tag skills
+- [ ] [S] 26.8 Education and links: add, edit, remove
+- [ ] [S] 26.9 Move any child up or down (24.7)
+
+## Phase 27 — Matching by skill levels
+
+- [ ] [C] 27.1 The keyword filter counts only `CvSkill` at or above the minimum level (default 3); where the minimum is configured is decided in the task
+- [ ] [C] 27.2 The matching prompt gets the levelled skills and the experience in short (companies, positions, periods), and says that a low-level skill alone is not a match
+
 ## Open questions
 
-- Final field schema of `CvProfile` (to be clarified in Phase 6)
+- CV maker: see the "CV maker" lines in the NOTES inbox (the project level, the summary text, the scale wording, the minimum level, a direction tag, certificates, re-import)
 
 ## Backlog (deliberately not now)
 
 - A "Translate" button: shows a text stored in English (the CV analysis, a cover letter, etc.) in the interface language chosen in the platform (English or Russian); the translation is requested on demand, not stored in advance. Detail it before starting
 
-- CV tailored to a specific job posting: full CV structure in the DB (experience per employer, projects, education), the uploaded PDF becomes an import; a button in the job posting card → the LLM assembles a version for the posting → editing → PDF export (dompdf). The next phase after deployment, detail it before starting
+- CV tailored to a specific job posting, on top of the structure from Phases 22–27: a button in the job posting card → the LLM picks, orders and rewords the bullets for the posting (never adds experience) → editing → PDF export (dompdf). The next phase after deployment, detail it before starting
+- Editing the CV with the LLM (a command in words, a proposed change the owner accepts). After the CV maker phases, detail it before starting
 
 - Automatic job collection: a "Check job postings" button in the UI → a headless browser on the server (Panther/Playwright). A separate phase, start with the simplest platform, not LinkedIn
 - Additional LLM providers (Anthropic, OpenAI…)

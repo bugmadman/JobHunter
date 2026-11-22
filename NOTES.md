@@ -37,10 +37,15 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 - The analysis is a single text, always in English, whatever language the CV is in: the system works with English only (it is easier for the LLM, and the same text feeds the prompt, matching and the cover letter). The system keeps no record of the CV's language. Showing a text in the interface language (the analysis, a cover letter, etc.) is a later "Translate" button, see the backlog in PLAN.md.
 - One LLM call per CV → both the English text analysis and structured output following a single fixed schema via structured output/JSON schema in the API, not arbitrary JSON at the model's discretion — otherwise the fields aren't comparable.
 - The LLM response is validated against this schema with `justinrainbow/json-schema` (in the code, not only in tests).
-- Tentative schema fields: `stack[]`, `years_experience`, `seniority`, `languages[{lang, level}]`, `salary_expectation{min,max,currency}`. Open: the final set of fields — to be refined during implementation.
-- Storage without a JSON column for structured data — so it can be indexed/filtered and used in the keyword filter:
-  - scalars (`years_experience`, `seniority`, `salary_min/max/currency`) — regular columns;
-  - repeating structures — relational tables: `Skill` (many-to-many), `CvLanguage` (one-to-many). `Skill` as a separate entity allows reusing tags across platforms and in the keyword filter.
+- The CV is a full structured career base, not a digest: the import must lose nothing the PDF says, because every later CV is assembled from it, and the owner edits every field by hand in the system. Editing with the LLM is a later, separate step (see the backlog in PLAN.md). The English `analysis` text stays as the CV's editable summary (picked without discussion, confirm).
+- Storage without a JSON column for structured data — so it can be indexed/filtered and used in the keyword filter. Scalars are regular columns on `CvProfile`; every repeating part is its own table, subordinate to `CvProfile` (the aggregate root: children are created and changed only through it and `CvService`, with no repositories of their own):
+  - header: name, headline, location, email, phone (columns), `CvLink` (label, URL);
+  - `CvSkill`: a canonical `SkillName` and a level 1–5 (`SkillLevel`: 1 heard of or used a little … 5 expert), unique per profile. The LLM sets the level at import, the owner corrects it;
+  - `CvLanguage`: a language (ISO 639-1) and a free-text description of how the owner speaks it, not A1–C2;
+  - `CvExperience` (company, position, location, a period: start and end, or current) → optional `CvProject` (name, description) → `CvBullet`: one fact about what the owner did, tagged with `CvSkill`s. A bullet hangs on an experience, optionally on a project;
+  - `CvEducation`;
+  - every child has a position (display order).
+- The bullets' skill tags are what lets a later step keep a backend bullet and drop a frontend one for a given posting. A tailored CV only selects, orders and rewords what is in the base; it never adds experience that isn't there.
 - The raw LLM JSON response is stored in a separate technical field, just for debugging, outside the business model.
 - One CV: there is a single `CvProfile`, with no list of CVs. The PDF is uploaded once, as an import; the CV is then developed inside the system (editing, more fields: discussed separately). The upload is available only while there is no CV, or while its analysis has failed (the file may be the problem): the new profile then replaces the failed one and its file. A pending or done CV is never replaced. A failed analysis can also be retried on the same profile with a "retry analysis" button (`CvProfile::restartAnalysis()`, failed → pending, a new message). Everything that needs the CV (prompts, letters, matching) uses that one profile.
 
@@ -57,6 +62,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 - The API is versioned in the URL: `/api/v1`. Free while there are no clients; once the address is in the Claude Code instructions (and, in a multi-user version, in other people's setups), adding it would break them. An incompatible change gets `/api/v2` next to it; compatible changes (new fields, deprecations) stay in `v1`.
 - Queue: Symfony Messenger on the Doctrine transport (queue in PostgreSQL). Intake via the API → dispatching a message → a separate worker process (`messenger:consume`, the `worker` service) runs the handler.
 - The filter has two stages, regardless of the source (email/browser/API): first a rough keyword filter (stack, etc.), and only what passes goes to the LLM via the API — saves tokens.
+- Skill levels drive both stages: the keyword filter counts only CV skills at or above a minimum level (default 3), so a posting that mentions only a low-level skill is rejected; the LLM stage then gets the whole levelled skill list and decides whether the posting fits.
 - LLM matching uses the platform prompt; the result is like/dislike with a reason.
 - Full pipeline audit: everything scanned is saved in the DB, not just what made it to the end. For each job posting it records the stage it is at now or was cut off at (raw → keyword filter → LLM evaluation) and the reason for the cutoff (didn't pass the keywords / the LLM gave a dislike for such-and-such reason). I.e. a status pipeline with history, not a single final like/dislike field.
 
@@ -91,7 +97,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 ## Applications
 
 - Cover letter: a button in the job posting card → the LLM writes a letter based on `CvProfile` + the job posting + the platform prompt → editing → copying. Simple (one LLM call), we do it before the tailored CV.
-- CV tailored to a job posting (the market is like this now — each job posting needs its own CV version): a button in the job posting card → the LLM assembles a CV version for it → manual editing → PDF. Requires the full CV structure in the DB (experience per employer, etc.), the uploaded PDF becomes an import. A big feature — a separate phase after the core works.
+- CV tailored to a job posting (the market is like this now — each job posting needs its own CV version): a button in the job posting card → the LLM assembles a CV version for it → manual editing → PDF. Built on the full CV structure (Phases 22–27): it picks and orders the bullets, never invents. A big feature — a separate phase after the core works.
 
 ## Infrastructure and deployment
 
@@ -208,7 +214,10 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - Sending every job posting to the LLM → a keyword filter first, saves tokens.
 - Only a final like/dislike field → a status pipeline with history and the cutoff reason.
 - Arbitrary CV analysis JSON at the model's discretion → a fixed schema via structured output.
-- A JSON column/JSON blob for structured CV data → regular columns and relational tables (`Skill`, `CvLanguage`).
+- A JSON column/JSON blob for structured CV data → regular columns and relational tables (`CvSkill`, `CvLanguage`, the experience tree).
+- A shared `Skill` entity with a many-to-many to `CvProfile` → a `CvSkill` per profile with a level: nothing but the CV ever reused the shared tag (the keyword filter reads the CV's skills), and a many-to-many table can't carry a level. It also removes the find-or-create and its races.
+- CEFR language levels (A1–C2, native) → a free-text description of how the owner speaks the language, the owner's wish. Price: a posting's formal requirement ("English B2+") is no longer comparable by code, only by the LLM.
+- The CV as an analysis digest (a text and a few fields) → a full structured base: a digest can't produce a CV for a posting.
 - A PDF text extraction library → the PDF goes to the LLM directly.
 - DOCX → not now, PDF only.
 - Email alerts as a job posting source (and parsing the email format) → not now; for now manual collection via Claude Code.
@@ -235,7 +244,10 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 The owner writes new thoughts here as is, without structure. After discussion they are moved into the sections above (superseded decisions go to "Rejected alternatives" with the reason), and this section is cleared.
 
 - If a message dispatch fails after the DB change (CV upload, "retry analysis", cover letter), the record stays pending with no message behind it and no button recovers it; the CV upload and retry are refused for a pending CV. Decide whether a stale pending needs a way out.
-- CV: editing it in the system after the one-time import, and the missing fields (experience per employer, education, etc.): a separate task, discuss and detail it.
+- CV maker (Phases 22–27), picked without discussion, confirm: a `CvProject` level between the experience and its bullets (a bullet may also hang on the experience directly); the English `analysis` text as the editable summary rather than a text rebuilt from the structure; the `SkillLevel` scale wording; the minimum skill level for the keyword filter (default 3) and where it is configured.
+- CV maker, open: do bullets also need a direction tag (backend, frontend, devops…) beside the skill tags; certificates and courses beside `CvEducation`; whether a "re-import" (replaces the structure from the stored PDF, losing manual edits) is the only way to refresh an existing CV.
+- CV maker risk: a full-structure extraction is a long answer; the output-token limit (and a thinking model using it up) may cut it, see the `MAX_TOKENS` note. Check on the owner's real CV when the import lands, raise the limit if needed.
+- The inbox notes below about `Skill` (canonical names kept in `SkillName`, `CvProfile` ↔ `Skill`, saving skills one by one and its race, the keyword filter reading skills) describe the model that Phase 22 replaces by `CvSkill`; revise them then.
 - Messenger has no `failed` transport: after the retries (3 by default) a failed message is lost. For LLM calls it may be worth keeping them to inspect and retry (`failure_transport` + `doctrine://default?queue_name=failed`).
 - Mercure (built into FrankenPHP) is undecided: it could push live updates to the page (an LLM operation finished, new job postings arrived) instead of refreshing a Turbo frame until done. Turbo's Mercure parts are off for now (`assets/controllers.json`).
 - Unused translation keys (in `translations/messages.*.yaml` but used nowhere) aren't caught: `debug:translation --only-unused` lists them, but keys built dynamically in code (e.g. from an enum value) would show up as unused too. Decide whether to check this and how.
