@@ -115,8 +115,7 @@ cv:
         per_month: в месяц
         languages: Языки
         skills: Навыки
-        analysis_original: Анализ на языке резюме
-        analysis_english: Анализ на английском
+        analysis: Анализ
     seniority:
         junior: Junior
         middle: Middle

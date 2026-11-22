@@ -260,7 +260,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 ## Phase 21 — The CV analysis in English only
 
 - [x] [C] 21.1 One analysis text: `original_language_text` is dropped from the response schema, the prompt (always English, whatever the CV's language), `CvAnalysis`, `CvProfile` and the tests; `english_text`/`analysisEnglish` becomes `analysis`; a migration drops `analysis_original` and renames `analysis_english`
-- [ ] [S] 21.2 `/cv` shows the single analysis block instead of two; the two translation keys become one (en + ru)
+- [x] [S] 21.2 `/cv` shows the single analysis block instead of two; the two translation keys become one (en + ru)
 
 ## Open questions
 

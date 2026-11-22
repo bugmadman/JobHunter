@@ -115,8 +115,7 @@ cv:
         per_month: per month
         languages: Languages
         skills: Skills
-        analysis_original: Analysis in the CV's language
-        analysis_english: Analysis in English
+        analysis: Analysis
     seniority:
         junior: Junior
         middle: Middle
