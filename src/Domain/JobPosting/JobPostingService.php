@@ -6,6 +6,8 @@ namespace App\Domain\JobPosting;
 
 use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmClientNotFound;
+use App\Domain\Llm\LlmFailure;
+use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
 use App\Domain\Llm\LlmServiceInterface;
 use App\Domain\Llm\LlmTask;
@@ -27,6 +29,7 @@ final readonly class JobPostingService implements JobPostingServiceInterface
     private const string NO_CV_SKILLS = 'The analysed CV has no skills';
     private const string NO_MATCHING_SKILLS = 'None of the CV skills appear in the posting';
     private const string NO_PROMPT = 'The %s platform has no prompt';
+    private const string UNEXPECTED_FAILURE = 'The processing failed unexpectedly, the worker log has the details';
 
     /**
      * Appended to the platform prompt, which leaves the answer format and the handling of the posting to matching.
@@ -133,6 +136,15 @@ final readonly class JobPostingService implements JobPostingServiceInterface
         $this->postings->save($posting);
     }
 
+    public function giveUpProcessing(JobPosting $posting, LlmFailure $failure): void
+    {
+        if (!\in_array($posting->getStatus(), [JobPostingStatus::Raw, JobPostingStatus::Filtered], true)) {
+            return;
+        }
+
+        $this->fail($posting, $this->failureReason($failure));
+    }
+
     public function overrideVerdict(JobPosting $posting, JobPostingVerdict $verdict): void
     {
         $posting->overrideVerdict($verdict);
@@ -160,5 +172,15 @@ final readonly class JobPostingService implements JobPostingServiceInterface
     {
         $posting->markFailed(StatusReason::fromString($reason), $this->clock->now());
         $this->postings->save($posting);
+    }
+
+    /**
+     * The stage log is English and not translated: the provider's text is kept as given, anything else is fixed text.
+     */
+    private function failureReason(LlmFailure $failure): string
+    {
+        return LlmFailureCause::Provider === $failure->cause && null !== $failure->providerMessage
+            ? $failure->providerMessage
+            : self::UNEXPECTED_FAILURE;
     }
 }

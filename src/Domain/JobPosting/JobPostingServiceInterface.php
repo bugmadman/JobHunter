@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\JobPosting;
 
+use App\Domain\Llm\LlmFailure;
 use App\Entity\JobPosting;
 use App\Entity\Platform;
 use App\Infrastructure\Llm\LlmRequestFailed;
@@ -20,9 +21,14 @@ interface JobPostingServiceInterface
      * filtered one (just now, or by an earlier delivery whose LLM request failed) through the LLM evaluation. A
      * posting in a final status is left alone, so a redelivered message changes nothing.
      *
-     * @throws LlmRequestFailed the posting stays filtered, so the call can be retried
+     * @throws LlmRequestFailed the posting stays filtered, so the call can be retried; giveUpProcessing() ends it
      */
     public function process(JobPosting $posting): void;
+
+    /**
+     * A posting in a final status keeps its own result: the failure can come after a redelivered message finished it.
+     */
+    public function giveUpProcessing(JobPosting $posting, LlmFailure $failure): void;
 
     /**
      * Runs a raw posting through the keyword filter against the skills of the latest analysed CV: filtered when it

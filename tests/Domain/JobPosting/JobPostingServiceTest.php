@@ -625,6 +625,51 @@ final class JobPostingServiceTest extends TestCase
         }
     }
 
+    public function testGivingUpMarksARawPostingFailedWithTheProviderText(): void
+    {
+        $posting = self::rawPosting();
+        $providerText = 'The gemini request failed: HTTP 403: billing account has an outstanding balance';
+
+        self::service($this->repositorySaving($posting))
+            ->giveUpProcessing($posting, LlmFailure::create(LlmFailureCause::Provider, $providerText));
+
+        self::assertFinalStatus($posting, JobPostingStatus::Failed, $providerText);
+    }
+
+    public function testGivingUpMarksAFilteredPostingFailedWithAGenericReasonForAnyOtherCause(): void
+    {
+        $posting = self::filteredPosting();
+
+        self::service($this->repositorySaving($posting))
+            ->giveUpProcessing($posting, LlmFailure::create(LlmFailureCause::Unexpected));
+
+        self::assertEvaluationFailed(
+            $posting,
+            'The processing failed unexpectedly, the worker log has the details',
+        );
+    }
+
+    /**
+     * @param \Closure(JobPosting): void $toStatus
+     */
+    #[DataProvider('finalStatuses')]
+    public function testGivingUpLeavesAPostingInAFinalStatusAsItIs(\Closure $toStatus, string $status): void
+    {
+        $posting = self::rawPosting();
+        $toStatus($posting);
+        $reason = $posting->getStatusReason();
+        $posting->releaseEvents();
+
+        $postings = $this->createMock(JobPostingRepositoryInterface::class);
+        $postings->expects(self::never())->method('save');
+
+        self::service($postings)->giveUpProcessing($posting, LlmFailure::create(LlmFailureCause::Unexpected));
+
+        self::assertSame($status, $posting->getStatus()->value);
+        self::assertSame($reason, $posting->getStatusReason());
+        self::assertSame([], $posting->releaseEvents());
+    }
+
     public function testOverridesTheVerdictAndSavesThePosting(): void
     {
         $posting = self::filteredPosting();
