@@ -15,5 +15,15 @@ interface CvProfileRepositoryInterface
      */
     public function findLatestAnalysed(): ?CvProfile;
 
+    /**
+     * The newest profile, whatever its analysis status.
+     */
+    public function findLatest(): ?CvProfile;
+
     public function save(CvProfile $cvProfile): void;
+
+    /**
+     * Removes the old profile and saves the new one in one flush, so either both happen or neither.
+     */
+    public function replace(CvProfile $old, CvProfile $new): void;
 }

@@ -21,4 +21,11 @@ interface CvStorageInterface
      * @throws CvFileUnreadable
      */
     public function read(CvFile $file): string;
+
+    /**
+     * A file that is already gone is not an error.
+     *
+     * @throws IOException
+     */
+    public function delete(CvFile $file): void;
 }

@@ -13,14 +13,17 @@ use App\Infrastructure\Llm\LlmRequestFailed;
 interface CvServiceInterface
 {
     /**
+     * @throws CvAlreadyUploaded
      * @throws LlmModelNotSelected
      * @throws ApiKeyNotSet
      */
     public function assertCanUpload(): void;
 
     /**
-     * Every upload is a new profile: the latest one is the current CV.
+     * There is one CV: an upload is allowed only while there is no profile or its analysis failed. The new profile
+     * replaces the failed one together with its file.
      *
+     * @throws CvAlreadyUploaded   a pending or done profile exists; nothing is stored or saved
      * @throws LlmModelNotSelected
      * @throws ApiKeyNotSet
      * @throws InvalidCvFile

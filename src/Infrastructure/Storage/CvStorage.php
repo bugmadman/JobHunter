@@ -33,4 +33,9 @@ final readonly class CvStorage implements CvStorageInterface
             throw CvFileUnreadable::create($file->storedName, $exception);
         }
     }
+
+    public function delete(CvFile $file): void
+    {
+        $this->filesystem->remove($this->directory.'/'.$file->storedName);
+    }
 }

@@ -42,7 +42,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
   - scalars (`years_experience`, `seniority`, `salary_min/max/currency`) — regular columns;
   - repeating structures — relational tables: `Skill` (many-to-many), `CvLanguage` (one-to-many). `Skill` as a separate entity allows reusing tags across platforms and in the keyword filter.
 - The raw LLM JSON response is stored in a separate technical field, just for debugging, outside the business model.
-- One CV: there is a single `CvProfile`, with no list of CVs and no re-upload. The PDF is uploaded once, as an import; the CV is then developed inside the system (editing, more fields: discussed separately). The upload is available only while there is no CV, or while its analysis has failed (the upload replaces the failed profile). Everything that needs the CV (prompts, letters, matching) uses that one profile.
+- One CV: there is a single `CvProfile`, with no list of CVs and no re-upload. The PDF is uploaded once, as an import; the CV is then developed inside the system (editing, more fields: discussed separately). The upload is available only while there is no CV, or while its analysis has failed (the file may be the problem): the new profile then replaces the failed one and its file. A pending or done CV is never replaced. A failed analysis can also be retried on the same profile with a "retry analysis" button (`CvProfile::restartAnalysis()`, failed → pending, a new message). Everything that needs the CV (prompts, letters, matching) uses that one profile.
 
 ## Prompts
 

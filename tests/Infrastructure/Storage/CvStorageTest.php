@@ -73,6 +73,24 @@ final class CvStorageTest extends TestCase
         );
     }
 
+    public function testDeletesAStoredFile(): void
+    {
+        $this->filesystem->dumpFile($this->root.'/3f9a1c.pdf', '%PDF-1.4');
+        $this->filesystem->dumpFile($this->root.'/other.pdf', '%PDF-1.4');
+
+        new CvStorage($this->root, $this->filesystem)->delete(CvFile::create('3f9a1c.pdf', 'cv.pdf'));
+
+        self::assertFileDoesNotExist($this->root.'/3f9a1c.pdf');
+        self::assertFileExists($this->root.'/other.pdf');
+    }
+
+    public function testDeletingAMissingFileIsNotAnError(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        new CvStorage($this->root, $this->filesystem)->delete(CvFile::create('3f9a1c.pdf', 'cv.pdf'));
+    }
+
     public function testMissingFileCannotBeRead(): void
     {
         $this->expectException(CvFileUnreadable::class);

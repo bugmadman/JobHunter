@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Domain\Cv\CvAlreadyUploaded;
 use App\Domain\Cv\CvServiceInterface;
 use App\Domain\Cv\CvUpload;
 use App\Domain\Cv\InvalidCvFile;
@@ -37,6 +38,12 @@ final class CvController extends AbstractController
     {
         try {
             return $this->handleUpload($request);
+        } catch (CvAlreadyUploaded) {
+            // A stopgap until 20.2, where /cv itself shows the single CV
+            $cvProfileId = $this->cvProfiles->findLatest()?->getId();
+            \assert(null !== $cvProfileId);
+
+            return $this->redirectToRoute('app_cv_show', ['id' => $cvProfileId]);
         } catch (LlmModelNotSelected|ApiKeyNotSet $e) {
             // A refused submit must not answer 200: Turbo drops a successful form response that doesn't redirect
             $status = $request->isMethod('POST') ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK;
@@ -58,6 +65,7 @@ final class CvController extends AbstractController
     }
 
     /**
+     * @throws CvAlreadyUploaded
      * @throws LlmModelNotSelected
      * @throws ApiKeyNotSet
      */

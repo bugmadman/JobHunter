@@ -34,6 +34,33 @@ final class CvProfileRepositoryTest extends KernelTestCase
         self::assertNull($this->repository()->findLatestAnalysed());
     }
 
+    public function testFindsTheNewestProfileWhateverItsStatus(): void
+    {
+        $this->repository()->save(self::analysed('older.pdf'));
+        $pending = new CvProfile(CvFile::create('pending.pdf', 'CV.pdf'));
+        $this->repository()->save($pending);
+
+        self::assertSame($pending, $this->repository()->findLatest());
+    }
+
+    public function testFindsNoLatestProfileWithoutAnyProfile(): void
+    {
+        self::assertNull($this->repository()->findLatest());
+    }
+
+    public function testReplacesAProfileWithANewOne(): void
+    {
+        $old = new CvProfile(CvFile::create('old.pdf', 'CV.pdf'));
+        $this->repository()->save($old);
+        $new = new CvProfile(CvFile::create('new.pdf', 'CV.pdf'));
+
+        $this->repository()->replace($old, $new);
+
+        self::assertNotNull($new->getId());
+        self::assertSame($new, $this->repository()->findLatest());
+        self::assertCount(1, $this->repository()->findAll());
+    }
+
     private static function analysed(string $storedName): CvProfile
     {
         $cvProfile = new CvProfile(CvFile::create($storedName, 'CV.pdf'));

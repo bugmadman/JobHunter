@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller;
 
+use App\Domain\Cv\CvAlreadyUploaded;
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvFile;
 use App\Domain\Cv\CvServiceInterface;
@@ -17,6 +18,7 @@ use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmFailure;
 use App\Domain\Llm\LlmFailureCause;
 use App\Domain\Llm\LlmModelNotSelected;
+use App\Domain\Llm\LlmOperationStatus;
 use App\Domain\Llm\LlmProvider;
 use App\Domain\Llm\LlmTask;
 use App\Domain\Skill\SkillName;
@@ -227,6 +229,35 @@ final class CvControllerTest extends WebTestCase
         self::assertSelectorNotExists('form[name="cv_upload"]');
         self::assertSelectorTextContains('.alert-warning', 'Add the Gemini key in the settings first.');
         self::assertSelectorExists('a[href="/admin/llm-provider-key/new"]');
+        self::assertSame([], $this->queuedMessages($client));
+    }
+
+    public function testOpensTheUploadedCvInsteadOfTheFormWhileAnUploadIsNotAllowed(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findLatest')->willReturn($this->profile(7));
+        $this->mockCvService($client)
+            ->expects(self::once())
+            ->method('assertCanUpload')
+            ->willThrowException(CvAlreadyUploaded::withStatus(LlmOperationStatus::Done));
+
+        $client->request('GET', self::URL);
+
+        self::assertResponseRedirects('/cv/7');
+    }
+
+    public function testOpensTheUploadedCvWhenTheServiceRefusesASubmit(): void
+    {
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findLatest')->willReturn($this->profile(7));
+        $this->mockCvService($client)
+            ->expects(self::once())
+            ->method('upload')
+            ->willThrowException(CvAlreadyUploaded::withStatus(LlmOperationStatus::Pending));
+
+        $this->submit($client, $this->pdf('cv.pdf'));
+
+        self::assertResponseRedirects('/cv/7');
         self::assertSame([], $this->queuedMessages($client));
     }
 

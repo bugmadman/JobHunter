@@ -48,18 +48,29 @@ final readonly class CvService implements CvServiceInterface
 
     public function assertCanUpload(): void
     {
+        $this->findReplaceableProfile();
         $this->llm->assertConfigured(LlmTask::CvAnalysis);
     }
 
     public function upload(CvUpload $upload): CvProfile
     {
-        $this->assertCanUpload();
+        $failed = $this->findReplaceableProfile();
+        $this->llm->assertConfigured(LlmTask::CvAnalysis);
 
         $file = CvFile::create(bin2hex(random_bytes(16)).'.pdf', $upload->originalName);
         $this->storage->store($upload, $file);
 
         $cvProfile = new CvProfile($file);
-        $this->cvProfiles->save($cvProfile);
+        if (null === $failed) {
+            $this->cvProfiles->save($cvProfile);
+
+            return $cvProfile;
+        }
+
+        // The old file goes before the rows switch: nothing reads a failed profile's file, so a failure here keeps
+        // the failed profile for a retry, while a failure after the commit would skip queueing the new analysis
+        $this->storage->delete($failed->getFile());
+        $this->cvProfiles->replace($failed, $cvProfile);
 
         return $cvProfile;
     }
@@ -113,6 +124,19 @@ final readonly class CvService implements CvServiceInterface
 
         $cvProfile->markAnalysisFailed($failure);
         $this->cvProfiles->save($cvProfile);
+    }
+
+    /**
+     * @throws CvAlreadyUploaded
+     */
+    private function findReplaceableProfile(): ?CvProfile
+    {
+        $existing = $this->cvProfiles->findLatest();
+        if (null === $existing || LlmOperationStatus::Failed === $existing->getAnalysisStatus()) {
+            return $existing;
+        }
+
+        throw CvAlreadyUploaded::withStatus($existing->getAnalysisStatus());
     }
 
     private function failAnalysis(

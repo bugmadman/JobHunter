@@ -255,6 +255,7 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [ ] [C] 20.1 `CvService::upload()` allows an upload only while there is no `CvProfile`, or the existing one failed its analysis (the new profile replaces the failed one and its file); otherwise it refuses
 - [ ] [S] 20.2 `/cv` shows the single CV (or the upload form when an upload is allowed); the `/cv/{id}` page is removed
 - [ ] [S] 20.3 `CvProfileRepository::findLatestAnalysed()` becomes a lookup of the single profile; the prompt, cover letter and posting services use it
+- [ ] [C] 20.4 "Retry analysis" for a failed CV: `CvProfile::restartAnalysis()` (failed → pending, clears the failure) through the service, a button on the CV page dispatching `AnalyzeCv`
 
 ## Open questions
 

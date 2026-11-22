@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Domain\Cv;
 
+use App\Domain\Cv\CvAlreadyUploaded;
 use App\Domain\Cv\CvAnalysis;
 use App\Domain\Cv\CvAnalysisAlreadyFinished;
 use App\Domain\Cv\CvAnalysisFailed;
@@ -41,6 +42,7 @@ use App\Repository\CvProfileRepositoryInterface;
 use App\Repository\SkillRepositoryInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Filesystem\Exception\IOException;
 
 final class CvServiceTest extends TestCase
 {
@@ -60,8 +62,12 @@ final class CvServiceTest extends TestCase
                 $storedFile = $file;
             });
 
+        $storage->expects(self::never())->method('delete');
+
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->method('findLatest')->willReturn(null);
         $cvProfiles->expects(self::once())->method('save')->with(self::isInstanceOf(CvProfile::class));
+        $cvProfiles->expects(self::never())->method('replace');
 
         $cvProfile = self::service(cvProfiles: $cvProfiles, storage: $storage)->upload($upload);
 
@@ -69,6 +75,143 @@ final class CvServiceTest extends TestCase
         self::assertSame('My CV.pdf', $cvProfile->getFile()->originalName);
         self::assertEquals($storedFile, $cvProfile->getFile());
         self::assertSame(LlmOperationStatus::Pending, $cvProfile->getAnalysisStatus());
+    }
+
+    public function testAnUploadReplacesAFailedProfileAndDeletesItsFileBeforeSwitchingTheRows(): void
+    {
+        $failed = self::failedProfile();
+        $upload = new CvUpload('/tmp/phpUpload', 'New CV.pdf');
+        $calls = [];
+
+        $storage = $this->createMock(CvStorageInterface::class);
+        $storage->expects(self::once())
+            ->method('store')
+            ->willReturnCallback(static function () use (&$calls): void {
+                $calls[] = 'store';
+            });
+        $storage->expects(self::once())
+            ->method('delete')
+            ->with($failed->getFile())
+            ->willReturnCallback(static function () use (&$calls): void {
+                $calls[] = 'delete';
+            });
+
+        $replacement = null;
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->method('findLatest')->willReturn($failed);
+        $cvProfiles->expects(self::never())->method('save');
+        $cvProfiles->expects(self::once())
+            ->method('replace')
+            ->with($failed, self::isInstanceOf(CvProfile::class))
+            ->willReturnCallback(static function (CvProfile $old, CvProfile $new) use (&$calls, &$replacement): void {
+                $calls[] = 'replace';
+                $replacement = $new;
+            });
+
+        $cvProfile = self::service(cvProfiles: $cvProfiles, storage: $storage)->upload($upload);
+
+        self::assertSame(['store', 'delete', 'replace'], $calls);
+        self::assertSame($replacement, $cvProfile);
+        self::assertSame('New CV.pdf', $cvProfile->getFile()->originalName);
+        self::assertNotSame($failed->getFile()->storedName, $cvProfile->getFile()->storedName);
+        self::assertSame(LlmOperationStatus::Pending, $cvProfile->getAnalysisStatus());
+    }
+
+    public function testAFailedOldFileDeletionKeepsTheFailedProfile(): void
+    {
+        $failure = new IOException('Permission denied');
+
+        $storage = self::createStub(CvStorageInterface::class);
+        $storage->method('delete')->willThrowException($failure);
+
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->method('findLatest')->willReturn(self::failedProfile());
+        $cvProfiles->expects(self::never())->method('save');
+        $cvProfiles->expects(self::never())->method('replace');
+
+        $this->expectExceptionObject($failure);
+
+        self::service(cvProfiles: $cvProfiles, storage: $storage)->upload(new CvUpload('/tmp/phpUpload', 'cv.pdf'));
+    }
+
+    public function testAnUploadOverAFailedProfileTouchesNothingWhileTheLlmSettingsAreMissing(): void
+    {
+        $missing = LlmModelNotSelected::forTask(LlmTask::CvAnalysis);
+        $llm = self::createStub(LlmServiceInterface::class);
+        $llm->method('assertConfigured')->willThrowException($missing);
+
+        $storage = $this->createMock(CvStorageInterface::class);
+        $storage->expects(self::never())->method('store');
+        $storage->expects(self::never())->method('delete');
+
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->method('findLatest')->willReturn(self::failedProfile());
+        $cvProfiles->expects(self::never())->method('save');
+        $cvProfiles->expects(self::never())->method('replace');
+
+        $this->expectExceptionObject($missing);
+
+        self::service(cvProfiles: $cvProfiles, storage: $storage, llm: $llm)
+            ->upload(new CvUpload('/tmp/phpUpload', 'cv.pdf'));
+    }
+
+    #[DataProvider('unreplaceableProfiles')]
+    public function testRefusesAnUploadBeforeCheckingOrStoringAnythingWhileACvIsPendingOrDone(
+        CvProfile $existing,
+    ): void {
+        $llm = $this->createMock(LlmServiceInterface::class);
+        $llm->expects(self::never())->method('assertConfigured');
+
+        $storage = $this->createMock(CvStorageInterface::class);
+        $storage->expects(self::never())->method('store');
+        $storage->expects(self::never())->method('delete');
+
+        $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
+        $cvProfiles->method('findLatest')->willReturn($existing);
+        $cvProfiles->expects(self::never())->method('save');
+        $cvProfiles->expects(self::never())->method('replace');
+
+        $this->expectException(CvAlreadyUploaded::class);
+
+        self::service(cvProfiles: $cvProfiles, storage: $storage, llm: $llm)
+            ->upload(new CvUpload('/tmp/phpUpload', 'cv.pdf'));
+    }
+
+    #[DataProvider('unreplaceableProfiles')]
+    public function testAnUploadIsNotAllowedWhileACvIsPendingOrDone(CvProfile $existing): void
+    {
+        $llm = $this->createMock(LlmServiceInterface::class);
+        $llm->expects(self::never())->method('assertConfigured');
+
+        $cvProfiles = self::createStub(CvProfileRepositoryInterface::class);
+        $cvProfiles->method('findLatest')->willReturn($existing);
+
+        $this->expectException(CvAlreadyUploaded::class);
+
+        self::service(cvProfiles: $cvProfiles, llm: $llm)->assertCanUpload();
+    }
+
+    /**
+     * @return iterable<string, array{CvProfile}>
+     */
+    public static function unreplaceableProfiles(): iterable
+    {
+        yield 'pending' => [self::pendingProfile()];
+
+        $done = self::pendingProfile();
+        $done->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', 12, Seniority::Senior, null), [], self::RAW);
+        yield 'done' => [$done];
+    }
+
+    public function testAnUploadIsAllowedOverAFailedCvOnceTheLlmIsConfigured(): void
+    {
+        $llm = $this->createMock(LlmServiceInterface::class);
+        $llm->expects(self::once())->method('assertConfigured')->with(LlmTask::CvAnalysis);
+
+        $cvProfiles = self::createStub(CvProfileRepositoryInterface::class);
+        $cvProfiles->method('findLatest')->willReturn(self::failedProfile());
+
+        self::service(cvProfiles: $cvProfiles, llm: $llm)->assertCanUpload();
     }
 
     public function testEveryUploadGetsItsOwnStoredName(): void
@@ -475,5 +618,13 @@ final class CvServiceTest extends TestCase
     private static function pendingProfile(): CvProfile
     {
         return new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
+    }
+
+    private static function failedProfile(): CvProfile
+    {
+        $profile = self::pendingProfile();
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
+
+        return $profile;
     }
 }
