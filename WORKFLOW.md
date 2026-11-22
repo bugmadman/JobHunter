@@ -15,6 +15,7 @@ How the work is run. The method doesn't depend on the project: it relies on two 
 2. After discussion, each thought is moved from the inbox into the right section of `NOTES.md` (a superseded decision moves to "Rejected alternatives" with the reason), and the inbox is cleared. Based on `NOTES.md` (and the existing `PLAN.md`), the plan is updated — tasks are added/changed/removed.
 3. Tasks from `PLAN.md` are done one at a time and marked as done.
 4. If new considerations come up during implementation, they go back into the `NOTES.md` inbox as one line, unverified, and the cycle repeats.
+   Every observation, suggestion, doubt or open question raised in a session (by the user, the main session, an agent or a review) that the user has not answered or settled is recorded this way too, before the commit that closes the step: a commit leaves none of them only in the chat.
 
 Don't start implementing a task unless it is recorded in `PLAN.md` and the user has explicitly asked to start it. Agreeing to a task or a decision is not that request: it is recorded in `NOTES.md`/`PLAN.md`, and those changes may be committed on their own, but no code is written until the user asks. Never start a task while the user is still checking the previous one: the working tree holds only the task under check. Don't turn `PLAN.md` into a dumping ground — if an item from `NOTES.md` hasn't been thought through yet and isn't ready to become a task, discuss it with the user before adding it to the plan.
 
