@@ -257,11 +257,18 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [S] 20.3 `CvProfileRepository::findLatestAnalysed()` becomes a lookup of the single profile; the prompt, cover letter and posting services use it
 - [x] [C] 20.4 "Retry analysis" for a failed CV: `CvProfile::restartAnalysis()` (failed → pending, clears the failure) through the service, a button on the CV page dispatching `AnalyzeCv`
 
+## Phase 21 — The CV analysis in English only
+
+- [ ] [C] 21.1 One analysis text: `original_language_text` is dropped from the response schema, the prompt (always English, whatever the CV's language), `CvAnalysis`, `CvProfile` and the tests; `english_text`/`analysisEnglish` becomes `analysis`; a migration drops `analysis_original` and renames `analysis_english`
+- [ ] [S] 21.2 `/cv` shows the single analysis block instead of two; the two translation keys become one (en + ru)
+
 ## Open questions
 
 - Final field schema of `CvProfile` (to be clarified in Phase 6)
 
 ## Backlog (deliberately not now)
+
+- A "Translate" button: shows a text stored in English (the CV analysis, a cover letter, etc.) in the interface language chosen in the platform (English or Russian); the translation is requested on demand, not stored in advance. Detail it before starting
 
 - CV tailored to a specific job posting: full CV structure in the DB (experience per employer, projects, education), the uploaded PDF becomes an import; a button in the job posting card → the LLM assembles a version for the posting → editing → PDF export (dompdf). The next phase after deployment, detail it before starting
 

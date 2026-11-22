@@ -34,8 +34,8 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
 - CV upload format — PDF only. The PDF is passed to the LLM directly (Gemini reads PDFs), without a text extraction library.
 - PHP's `upload_max_filesize` (10M, `.docker/php/php.ini`) is the hard ceiling for the CV upload: the form's limit can be lower, not higher.
 - Flow: the owner uploads the CV → the original file is saved → a cheap LLM analyzes the resume → the result is saved to the DB and shown to the owner.
-- The analysis comes in two versions: in the resume's original language (for the owner to read) and in English (canonical, used for comparison with job postings).
-- One LLM call per CV → both the text analysis (in 2 languages) and structured output following a single fixed schema via structured output/JSON schema in the API, not arbitrary JSON at the model's discretion — otherwise the fields aren't comparable.
+- The analysis is a single text, always in English, whatever language the CV is in: the system works with English only (it is easier for the LLM, and the same text feeds the prompt, matching and the cover letter). The system keeps no record of the CV's language. Showing a text in the interface language (the analysis, a cover letter, etc.) is a later "Translate" button, see the backlog in PLAN.md.
+- One LLM call per CV → both the English text analysis and structured output following a single fixed schema via structured output/JSON schema in the API, not arbitrary JSON at the model's discretion — otherwise the fields aren't comparable.
 - The LLM response is validated against this schema with `justinrainbow/json-schema` (in the code, not only in tests).
 - Tentative schema fields: `stack[]`, `years_experience`, `seniority`, `languages[{lang, level}]`, `salary_expectation{min,max,currency}`. Open: the final set of fields — to be refined during implementation.
 - Storage without a JSON column for structured data — so it can be indexed/filtered and used in the keyword filter:
@@ -228,6 +228,7 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - Recording manual verification and the commit hash per task (a column in PLAN.md or a separate file) → stable task numbers, a `Task:` trailer in the commit, and a `reviewed` mark only on tasks whose code the owner reviewed. A hash can't go into its own commit (amend changes it) and goes stale after a rebase; a separate file duplicates the plan and drifts from it.
 - Retrying every `LlmRequestFailed`, an invalid key and a safety block included (cheap for one CV) → permanent and transient failures told apart: a permanent one can't change on a retry, the retries only delay the failed status, and matching at volume multiplies the wasted requests.
 - A new `CvProfile` per upload, the latest analysed one is current, old ones kept → a single `CvProfile` uploaded once: a single-user project has one CV, the old profiles were never used, and the CV is meant to be developed in the system, not re-uploaded.
+- The CV analysis in two versions (the CV's original language for the owner to read, and English) → a single English text: the owner doesn't need to see the CV's language, and reading in the interface language is a later "Translate" button on demand, not a second stored text.
 
 ## Inbox
 
