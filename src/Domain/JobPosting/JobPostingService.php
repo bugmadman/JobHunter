@@ -77,7 +77,7 @@ final readonly class JobPostingService implements JobPostingServiceInterface
             throw JobPostingAlreadyFiltered::withStatus($posting->getStatus());
         }
 
-        $cvProfile = $this->cvProfiles->findLatestAnalysed();
+        $cvProfile = $this->cvProfiles->findAnalysed();
         $skills = array_map(
             static fn (Skill $skill): SkillName => SkillName::fromString($skill->getName()),
             $cvProfile?->getSkills() ?? [],

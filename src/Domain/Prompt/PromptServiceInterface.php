@@ -20,7 +20,7 @@ interface PromptServiceInterface
     public function assertCanGenerate(): void;
 
     /**
-     * Marks the platform's prompt pending for a generation from the latest analysed CV profile (creating the prompt
+     * Marks the platform's prompt pending for a generation from the analysed CV profile (creating the prompt
      * on the first request) and saves it. The caller dispatches the generation for the returned prompt.
      *
      * The LLM settings are checked first, as the prompt page hides the button while they are missing: their hint

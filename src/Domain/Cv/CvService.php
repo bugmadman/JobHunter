@@ -131,7 +131,7 @@ final readonly class CvService implements CvServiceInterface
      */
     private function findReplaceableProfile(): ?CvProfile
     {
-        $existing = $this->cvProfiles->findLatest();
+        $existing = $this->cvProfiles->findCurrent();
         if (null === $existing || LlmOperationStatus::Failed === $existing->getAnalysisStatus()) {
             return $existing;
         }

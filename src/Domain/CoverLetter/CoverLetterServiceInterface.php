@@ -33,7 +33,7 @@ interface CoverLetterServiceInterface
     public function requestGeneration(JobPosting $posting): CoverLetter;
 
     /**
-     * Asks the LLM for a letter from the latest analysed CV profile, the job posting and its platform's prompt (if
+     * Asks the LLM for a letter from the analysed CV profile, the job posting and its platform's prompt (if
      * there is one), and saves it as the letter's text, marked done.
      *
      * A failed LLM request leaves the generation pending, so the call can be retried. Any other failure (no analysed

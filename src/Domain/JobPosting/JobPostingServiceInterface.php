@@ -31,7 +31,7 @@ interface JobPostingServiceInterface
     public function giveUpProcessing(JobPosting $posting, LlmFailure $failure): void;
 
     /**
-     * Runs a raw posting through the keyword filter against the skills of the latest analysed CV: filtered when it
+     * Runs a raw posting through the keyword filter against the skills of the analysed CV: filtered when it
      * names at least one of them, rejected when it names none, failed for good when there are no CV skills to match.
      *
      * @throws JobPostingAlreadyFiltered when the posting is no longer raw (a redelivered message)

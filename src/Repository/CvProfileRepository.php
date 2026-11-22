@@ -24,12 +24,12 @@ final class CvProfileRepository extends ServiceEntityRepository implements CvPro
         return $this->find($id);
     }
 
-    public function findLatestAnalysed(): ?CvProfile
+    public function findAnalysed(): ?CvProfile
     {
         return $this->findOneBy(['analysisStatus' => LlmOperationStatus::Done], ['id' => 'DESC']);
     }
 
-    public function findLatest(): ?CvProfile
+    public function findCurrent(): ?CvProfile
     {
         return $this->findOneBy([], ['id' => 'DESC']);
     }

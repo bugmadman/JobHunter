@@ -104,7 +104,7 @@ final readonly class CoverLetterService implements CoverLetterServiceInterface
     {
         $coverLetter->assertGenerationPending();
 
-        $cvProfile = $this->cvProfiles->findLatestAnalysed();
+        $cvProfile = $this->cvProfiles->findAnalysed();
         if (null === $cvProfile) {
             $this->fail($coverLetter, LlmFailure::create(LlmFailureCause::CvNotAnalysed));
 
@@ -182,7 +182,7 @@ final readonly class CoverLetterService implements CoverLetterServiceInterface
     private static function describe(CvProfile $cvProfile): string
     {
         $analysis = $cvProfile->getAnalysis()
-            ?? throw new \LogicException('The latest analysed CV profile has no analysis.');
+            ?? throw new \LogicException('The analysed CV profile has no analysis.');
 
         $skills = array_map(static fn (Skill $skill): string => $skill->getName(), $cvProfile->getSkills());
         $languages = array_map(

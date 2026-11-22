@@ -463,7 +463,7 @@ final class CoverLetterServiceTest extends TestCase
     private static function cvProfilesFinding(?CvProfile $cvProfile): CvProfileRepositoryInterface
     {
         $cvProfiles = self::createStub(CvProfileRepositoryInterface::class);
-        $cvProfiles->method('findLatestAnalysed')->willReturn($cvProfile);
+        $cvProfiles->method('findAnalysed')->willReturn($cvProfile);
 
         return $cvProfiles;
     }

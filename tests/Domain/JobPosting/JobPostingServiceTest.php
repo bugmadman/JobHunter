@@ -162,7 +162,7 @@ final class JobPostingServiceTest extends TestCase
         $postings = $this->createMock(JobPostingRepositoryInterface::class);
         $postings->expects(self::never())->method('save');
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
-        $cvProfiles->expects(self::never())->method('findLatestAnalysed');
+        $cvProfiles->expects(self::never())->method('findAnalysed');
 
         try {
             self::service($postings, $cvProfiles, self::keywordFilterNeverCalled())->filter($posting);
@@ -541,7 +541,7 @@ final class JobPostingServiceTest extends TestCase
     {
         $posting = self::filteredPosting();
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
-        $cvProfiles->expects(self::never())->method('findLatestAnalysed');
+        $cvProfiles->expects(self::never())->method('findAnalysed');
         $llm = self::createStub(LlmServiceInterface::class);
         $llm->method('generate')->willReturn(new LlmResponse(self::LLM_RESPONSE));
 
@@ -603,7 +603,7 @@ final class JobPostingServiceTest extends TestCase
         $postings = $this->createMock(JobPostingRepositoryInterface::class);
         $postings->expects(self::never())->method('save');
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
-        $cvProfiles->expects(self::never())->method('findLatestAnalysed');
+        $cvProfiles->expects(self::never())->method('findAnalysed');
         $llm = $this->createMock(LlmServiceInterface::class);
         $llm->expects(self::never())->method('generate');
 
@@ -766,7 +766,7 @@ final class JobPostingServiceTest extends TestCase
     private function cvProfilesFinding(?CvProfile $cvProfile): CvProfileRepositoryInterface
     {
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
-        $cvProfiles->expects(self::once())->method('findLatestAnalysed')->willReturn($cvProfile);
+        $cvProfiles->expects(self::once())->method('findAnalysed')->willReturn($cvProfile);
 
         return $cvProfiles;
     }

@@ -36,7 +36,7 @@ final class CvController extends AbstractController
     #[Route('/cv', name: 'app_cv', methods: ['GET', 'POST'])]
     public function index(Request $request): Response
     {
-        $cvProfile = $this->cvProfiles->findLatest();
+        $cvProfile = $this->cvProfiles->findCurrent();
 
         try {
             return $this->handleUpload($request, $cvProfile);

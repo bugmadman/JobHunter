@@ -234,7 +234,7 @@ final class CvControllerTest extends WebTestCase
     public function testShowsTheUploadedCvWithoutTheFormWhileAnUploadIsNotAllowed(): void
     {
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findLatest')->willReturn($this->profile(7));
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn($this->profile(7));
         $this->mockCvService($client)
             ->method('assertCanUpload')
             ->willThrowException(CvAlreadyUploaded::withStatus(LlmOperationStatus::Done));
@@ -251,7 +251,7 @@ final class CvControllerTest extends WebTestCase
         $profile = $this->profile(7);
         $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findLatest')->willReturn($profile);
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn($profile);
         $this->mockCvService($client)->expects(self::once())->method('assertCanUpload');
 
         $client->request('GET', self::URL);
@@ -266,7 +266,7 @@ final class CvControllerTest extends WebTestCase
         $profile = $this->profile(7);
         $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findLatest')->willReturn($profile);
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn($profile);
         $this->mockCvService($client)
             ->method('assertCanUpload')
             ->willThrowException(LlmModelNotSelected::forTask(LlmTask::CvAnalysis));
@@ -296,7 +296,7 @@ final class CvControllerTest extends WebTestCase
     public function testShowsAPendingAnalysisInAFrameThatReloadsItself(): void
     {
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findLatest')->willReturn($this->profile(7));
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn($this->profile(7));
         $this->mockCvService($client)
             ->method('assertCanUpload')
             ->willThrowException(CvAlreadyUploaded::withStatus(LlmOperationStatus::Pending));
@@ -316,7 +316,7 @@ final class CvControllerTest extends WebTestCase
         $profile = $this->profile(7);
         $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findLatest')->willReturn($profile);
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn($profile);
 
         $client->request('GET', self::URL);
 
@@ -336,7 +336,7 @@ final class CvControllerTest extends WebTestCase
         $providerText = 'The gemini request failed: HTTP 403: <b>billing</b> account has an outstanding balance';
         $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::Provider, $providerText));
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findLatest')->willReturn($profile);
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn($profile);
 
         $client->request('GET', self::URL);
 
@@ -361,7 +361,7 @@ final class CvControllerTest extends WebTestCase
             '{}',
         );
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findLatest')->willReturn($profile);
+        $this->stubCvProfiles($client)->method('findCurrent')->willReturn($profile);
         $this->mockCvService($client)
             ->method('assertCanUpload')
             ->willThrowException(CvAlreadyUploaded::withStatus(LlmOperationStatus::Done));

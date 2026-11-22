@@ -47,7 +47,7 @@ final class PromptServiceTest extends TestCase
 {
     private const string DRAFT = 'Like senior PHP roles.';
 
-    public function testFirstRequestCreatesAPendingPromptFromTheLatestAnalysedProfile(): void
+    public function testFirstRequestCreatesAPendingPromptFromTheAnalysedProfile(): void
     {
         $platform = self::platform();
         $cvProfile = self::analysedProfile();
@@ -63,7 +63,7 @@ final class PromptServiceTest extends TestCase
         self::assertSame(LlmOperationStatus::Pending, $prompt->getGenerationStatus());
     }
 
-    public function testRegenerationKeepsTheCurrentTextAndTakesTheLatestAnalysedProfile(): void
+    public function testRegenerationKeepsTheCurrentTextAndTakesTheAnalysedProfile(): void
     {
         $platform = self::platform();
         $prompt = new Prompt($platform, self::analysedProfile());
@@ -421,7 +421,7 @@ final class PromptServiceTest extends TestCase
     private static function cvProfilesFinding(?CvProfile $cvProfile): CvProfileRepositoryInterface
     {
         $cvProfiles = self::createStub(CvProfileRepositoryInterface::class);
-        $cvProfiles->method('findLatestAnalysed')->willReturn($cvProfile);
+        $cvProfiles->method('findAnalysed')->willReturn($cvProfile);
 
         return $cvProfiles;
     }

@@ -72,7 +72,7 @@ final readonly class PromptService implements PromptServiceInterface
     {
         $this->assertCanGenerate();
 
-        $cvProfile = $this->cvProfiles->findLatestAnalysed() ?? throw AnalysedCvProfileNotFound::create();
+        $cvProfile = $this->cvProfiles->findAnalysed() ?? throw AnalysedCvProfileNotFound::create();
 
         $prompt = $this->prompts->findByPlatform($platform);
         if (null === $prompt) {

@@ -11,14 +11,14 @@ interface CvProfileRepositoryInterface
     public function findById(int $id): ?CvProfile;
 
     /**
-     * The newest profile whose analysis is done; a newer pending or failed upload is skipped.
+     * The CV, once its analysis is done (a pending or failed one is not usable).
      */
-    public function findLatestAnalysed(): ?CvProfile;
+    public function findAnalysed(): ?CvProfile;
 
     /**
-     * The newest profile, whatever its analysis status.
+     * The CV, whatever its analysis status.
      */
-    public function findLatest(): ?CvProfile;
+    public function findCurrent(): ?CvProfile;
 
     public function save(CvProfile $cvProfile): void;
 

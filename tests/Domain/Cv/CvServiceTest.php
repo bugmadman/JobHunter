@@ -65,7 +65,7 @@ final class CvServiceTest extends TestCase
         $storage->expects(self::never())->method('delete');
 
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
-        $cvProfiles->method('findLatest')->willReturn(null);
+        $cvProfiles->method('findCurrent')->willReturn(null);
         $cvProfiles->expects(self::once())->method('save')->with(self::isInstanceOf(CvProfile::class));
         $cvProfiles->expects(self::never())->method('replace');
 
@@ -98,7 +98,7 @@ final class CvServiceTest extends TestCase
 
         $replacement = null;
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
-        $cvProfiles->method('findLatest')->willReturn($failed);
+        $cvProfiles->method('findCurrent')->willReturn($failed);
         $cvProfiles->expects(self::never())->method('save');
         $cvProfiles->expects(self::once())
             ->method('replace')
@@ -125,7 +125,7 @@ final class CvServiceTest extends TestCase
         $storage->method('delete')->willThrowException($failure);
 
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
-        $cvProfiles->method('findLatest')->willReturn(self::failedProfile());
+        $cvProfiles->method('findCurrent')->willReturn(self::failedProfile());
         $cvProfiles->expects(self::never())->method('save');
         $cvProfiles->expects(self::never())->method('replace');
 
@@ -145,7 +145,7 @@ final class CvServiceTest extends TestCase
         $storage->expects(self::never())->method('delete');
 
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
-        $cvProfiles->method('findLatest')->willReturn(self::failedProfile());
+        $cvProfiles->method('findCurrent')->willReturn(self::failedProfile());
         $cvProfiles->expects(self::never())->method('save');
         $cvProfiles->expects(self::never())->method('replace');
 
@@ -167,7 +167,7 @@ final class CvServiceTest extends TestCase
         $storage->expects(self::never())->method('delete');
 
         $cvProfiles = $this->createMock(CvProfileRepositoryInterface::class);
-        $cvProfiles->method('findLatest')->willReturn($existing);
+        $cvProfiles->method('findCurrent')->willReturn($existing);
         $cvProfiles->expects(self::never())->method('save');
         $cvProfiles->expects(self::never())->method('replace');
 
@@ -184,7 +184,7 @@ final class CvServiceTest extends TestCase
         $llm->expects(self::never())->method('assertConfigured');
 
         $cvProfiles = self::createStub(CvProfileRepositoryInterface::class);
-        $cvProfiles->method('findLatest')->willReturn($existing);
+        $cvProfiles->method('findCurrent')->willReturn($existing);
 
         $this->expectException(CvAlreadyUploaded::class);
 
@@ -209,7 +209,7 @@ final class CvServiceTest extends TestCase
         $llm->expects(self::once())->method('assertConfigured')->with(LlmTask::CvAnalysis);
 
         $cvProfiles = self::createStub(CvProfileRepositoryInterface::class);
-        $cvProfiles->method('findLatest')->willReturn(self::failedProfile());
+        $cvProfiles->method('findCurrent')->willReturn(self::failedProfile());
 
         self::service(cvProfiles: $cvProfiles, llm: $llm)->assertCanUpload();
     }
