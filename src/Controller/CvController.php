@@ -10,6 +10,7 @@ use App\Domain\Cv\CvUpload;
 use App\Domain\Cv\InvalidCvFile;
 use App\Domain\Llm\ApiKeyNotSet;
 use App\Domain\Llm\LlmModelNotSelected;
+use App\Entity\CvProfile;
 use App\Form\CvUploadData;
 use App\Form\CvUploadType;
 use App\Message\AnalyzeCv;
@@ -20,7 +21,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CvController extends AbstractController
@@ -33,35 +33,27 @@ final class CvController extends AbstractController
     ) {
     }
 
-    #[Route('/cv', name: 'app_cv_upload', methods: ['GET', 'POST'])]
-    public function upload(Request $request): Response
+    #[Route('/cv', name: 'app_cv', methods: ['GET', 'POST'])]
+    public function index(Request $request): Response
     {
-        try {
-            return $this->handleUpload($request);
-        } catch (CvAlreadyUploaded) {
-            // A stopgap until 20.2, where /cv itself shows the single CV
-            $cvProfileId = $this->cvProfiles->findLatest()?->getId();
-            \assert(null !== $cvProfileId);
+        $cvProfile = $this->cvProfiles->findLatest();
 
-            return $this->redirectToRoute('app_cv_show', ['id' => $cvProfileId]);
+        try {
+            return $this->handleUpload($request, $cvProfile);
+        } catch (CvAlreadyUploaded) {
+            return $request->isMethod('POST')
+                ? $this->redirectToRoute('app_cv')
+                : $this->render('cv/index.html.twig', ['cvProfile' => $cvProfile]);
         } catch (LlmModelNotSelected|ApiKeyNotSet $e) {
             // A refused submit must not answer 200: Turbo drops a successful form response that doesn't redirect
             $status = $request->isMethod('POST') ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK;
 
             return $this->render(
-                'cv/upload.html.twig',
-                ['settings_missing' => LlmSettingsHint::from($e)],
+                'cv/index.html.twig',
+                ['cvProfile' => $cvProfile, 'settings_missing' => LlmSettingsHint::from($e)],
                 new Response(status: $status),
             );
         }
-    }
-
-    #[Route('/cv/{id}', name: 'app_cv_show', requirements: ['id' => Requirement::POSITIVE_INT], methods: ['GET'])]
-    public function show(int $id): Response
-    {
-        $cvProfile = $this->cvProfiles->findById($id) ?? throw $this->createNotFoundException();
-
-        return $this->render('cv/show.html.twig', ['cvProfile' => $cvProfile]);
     }
 
     /**
@@ -69,7 +61,7 @@ final class CvController extends AbstractController
      * @throws LlmModelNotSelected
      * @throws ApiKeyNotSet
      */
-    private function handleUpload(Request $request): Response
+    private function handleUpload(Request $request, ?CvProfile $cvProfile): Response
     {
         $this->cvService->assertCanUpload();
 
@@ -82,21 +74,21 @@ final class CvController extends AbstractController
             \assert(null !== $file);
 
             try {
-                $cvProfile = $this->cvService->upload(
+                $uploaded = $this->cvService->upload(
                     new CvUpload($file->getPathname(), $file->getClientOriginalName()),
                 );
-                $cvProfileId = $cvProfile->getId();
-                \assert(null !== $cvProfileId);
-                $this->bus->dispatch(new AnalyzeCv($cvProfileId));
+                $uploadedId = $uploaded->getId();
+                \assert(null !== $uploadedId);
+                $this->bus->dispatch(new AnalyzeCv($uploadedId));
                 $this->addFlash('success', 'cv.upload.uploaded');
 
-                return $this->redirectToRoute('app_cv_show', ['id' => $cvProfileId]);
+                return $this->redirectToRoute('app_cv');
             } catch (InvalidCvFile) {
                 $error = $this->translator->trans('cv.upload.invalid_file_name');
                 $form->get('file')->addError(new FormError($error));
             }
         }
 
-        return $this->render('cv/upload.html.twig', ['form' => $form]);
+        return $this->render('cv/index.html.twig', ['cvProfile' => $cvProfile, 'form' => $form]);
     }
 }

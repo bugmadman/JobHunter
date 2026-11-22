@@ -79,7 +79,6 @@ final class CvControllerTest extends WebTestCase
         new \ReflectionProperty(CvProfile::class, 'id')->setValue($profile, 42);
 
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findById')->willReturnMap([[42, $profile]]);
         $this->mockCvService($client)
             ->expects(self::once())
             ->method('upload')
@@ -91,7 +90,7 @@ final class CvControllerTest extends WebTestCase
 
         $this->submit($client, $this->pdf('My CV.pdf'));
 
-        self::assertResponseRedirects('/cv/42');
+        self::assertResponseRedirects('/cv');
         self::assertEquals([new AnalyzeCv(42)], $this->queuedMessages($client));
         $client->followRedirect();
         self::assertSelectorTextContains('#flash-messages .alert-success', 'The CV is uploaded.');
@@ -232,24 +231,57 @@ final class CvControllerTest extends WebTestCase
         self::assertSame([], $this->queuedMessages($client));
     }
 
-    public function testOpensTheUploadedCvInsteadOfTheFormWhileAnUploadIsNotAllowed(): void
+    public function testShowsTheUploadedCvWithoutTheFormWhileAnUploadIsNotAllowed(): void
     {
         $client = $this->loggedInClient();
         $this->stubCvProfiles($client)->method('findLatest')->willReturn($this->profile(7));
         $this->mockCvService($client)
-            ->expects(self::once())
             ->method('assertCanUpload')
             ->willThrowException(CvAlreadyUploaded::withStatus(LlmOperationStatus::Done));
 
         $client->request('GET', self::URL);
 
-        self::assertResponseRedirects('/cv/7');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('main', 'My CV.pdf');
+        self::assertSelectorNotExists('form[name="cv_upload"]');
     }
 
-    public function testOpensTheUploadedCvWhenTheServiceRefusesASubmit(): void
+    public function testShowsTheFormBelowAFailedAnalysisSoTheCvCanBeUploadedAgain(): void
+    {
+        $profile = $this->profile(7);
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findLatest')->willReturn($profile);
+        $this->mockCvService($client)->expects(self::once())->method('assertCanUpload');
+
+        $client->request('GET', self::URL);
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('turbo-frame#cv-analysis .alert-danger');
+        self::assertSelectorExists('form[name="cv_upload"]');
+    }
+
+    public function testShowsTheMissingSettingsBelowAFailedAnalysis(): void
+    {
+        $profile = $this->profile(7);
+        $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
+        $client = $this->loggedInClient();
+        $this->stubCvProfiles($client)->method('findLatest')->willReturn($profile);
+        $this->mockCvService($client)
+            ->method('assertCanUpload')
+            ->willThrowException(LlmModelNotSelected::forTask(LlmTask::CvAnalysis));
+
+        $client->request('GET', self::URL);
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('turbo-frame#cv-analysis .alert-danger');
+        self::assertSelectorNotExists('form[name="cv_upload"]');
+        self::assertSelectorExists('.alert-warning');
+    }
+
+    public function testGoesBackToTheCvWhenTheServiceRefusesASubmit(): void
     {
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findLatest')->willReturn($this->profile(7));
         $this->mockCvService($client)
             ->expects(self::once())
             ->method('upload')
@@ -257,21 +289,24 @@ final class CvControllerTest extends WebTestCase
 
         $this->submit($client, $this->pdf('cv.pdf'));
 
-        self::assertResponseRedirects('/cv/7');
+        self::assertResponseRedirects('/cv');
         self::assertSame([], $this->queuedMessages($client));
     }
 
     public function testShowsAPendingAnalysisInAFrameThatReloadsItself(): void
     {
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findById')->willReturnMap([[7, $this->profile(7)]]);
+        $this->stubCvProfiles($client)->method('findLatest')->willReturn($this->profile(7));
+        $this->mockCvService($client)
+            ->method('assertCanUpload')
+            ->willThrowException(CvAlreadyUploaded::withStatus(LlmOperationStatus::Pending));
 
-        $client->request('GET', '/cv/7');
+        $client->request('GET', self::URL);
 
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('main', 'My CV.pdf');
         self::assertSelectorExists(
-            'turbo-frame#cv-analysis [data-controller="frame-reload"][data-frame-reload-url-value="/cv/7"]',
+            'turbo-frame#cv-analysis [data-controller="frame-reload"][data-frame-reload-url-value="/cv"]',
         );
         self::assertSelectorTextContains('turbo-frame#cv-analysis', 'The CV is being analysed.');
     }
@@ -281,9 +316,9 @@ final class CvControllerTest extends WebTestCase
         $profile = $this->profile(7);
         $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::InvalidResponse));
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findById')->willReturn($profile);
+        $this->stubCvProfiles($client)->method('findLatest')->willReturn($profile);
 
-        $client->request('GET', '/cv/7');
+        $client->request('GET', self::URL);
 
         self::assertResponseIsSuccessful();
         $alert = 'turbo-frame#cv-analysis .alert-danger';
@@ -301,9 +336,9 @@ final class CvControllerTest extends WebTestCase
         $providerText = 'The gemini request failed: HTTP 403: <b>billing</b> account has an outstanding balance';
         $profile->markAnalysisFailed(LlmFailure::create(LlmFailureCause::Provider, $providerText));
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findById')->willReturn($profile);
+        $this->stubCvProfiles($client)->method('findLatest')->willReturn($profile);
 
-        $client->request('GET', '/cv/7');
+        $client->request('GET', self::URL);
 
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('turbo-frame#cv-analysis .alert-danger', 'Reason: '.$providerText);
@@ -326,9 +361,12 @@ final class CvControllerTest extends WebTestCase
             '{}',
         );
         $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findById')->willReturn($profile);
+        $this->stubCvProfiles($client)->method('findLatest')->willReturn($profile);
+        $this->mockCvService($client)
+            ->method('assertCanUpload')
+            ->willThrowException(CvAlreadyUploaded::withStatus(LlmOperationStatus::Done));
 
-        $client->request('GET', '/cv/7');
+        $client->request('GET', self::URL);
 
         self::assertResponseIsSuccessful();
         self::assertSelectorNotExists('[data-controller="frame-reload"]');
@@ -340,16 +378,6 @@ final class CvControllerTest extends WebTestCase
         self::assertStringContainsString('EN (C1)', $text);
         self::assertSame('php', $frame->filter('.badge')->text());
         self::assertStringContainsString('Backend developer.<br>', $frame->html());
-    }
-
-    public function testShowReturns404ForAnUnknownProfile(): void
-    {
-        $client = $this->loggedInClient();
-        $this->stubCvProfiles($client)->method('findById')->willReturn(null);
-
-        $client->request('GET', '/cv/999');
-
-        self::assertResponseStatusCodeSame(404);
     }
 
     public function testRedirectsAnonymousToLogin(): void

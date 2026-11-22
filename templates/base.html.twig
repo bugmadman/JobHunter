@@ -17,7 +17,7 @@
                     <div class="d-flex flex-wrap align-items-center gap-3">
                         {{ include('_locale_switcher.html.twig') }}
                         <a class="nav-link" href="{{ path('app_job_posting_index') }}">{{ 'nav.job_postings'|trans }}</a>
-                        <a class="nav-link" href="{{ path('app_cv_upload') }}">{{ 'nav.cv'|trans }}</a>
+                        <a class="nav-link" href="{{ path('app_cv') }}">{{ 'nav.cv'|trans }}</a>
                         <a class="nav-link" href="{{ path('app_prompt_index') }}">{{ 'nav.prompts'|trans }}</a>
                         <a class="nav-link" href="{{ path('admin') }}">{{ 'nav.admin'|trans }}</a>
                         <form method="post" action="{{ logout_path() }}">
