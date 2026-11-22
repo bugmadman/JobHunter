@@ -250,6 +250,12 @@ Goal — as many automated checks as possible, so that errors are caught without
 - [x] [C] 19.4 Cover letter: the same for the cover letter — reviewed
 - [x] [C] 19.5 Job posting pipeline: a matching request that fails for good (a permanent provider failure, or the retries run out) marks the posting failed with the provider's reason in the stage log, instead of leaving it filtered for good
 
+## Phase 20 — A single CV
+
+- [ ] [C] 20.1 `CvService::upload()` allows an upload only while there is no `CvProfile`, or the existing one failed its analysis (the new profile replaces the failed one and its file); otherwise it refuses
+- [ ] [S] 20.2 `/cv` shows the single CV (or the upload form when an upload is allowed); the `/cv/{id}` page is removed
+- [ ] [S] 20.3 `CvProfileRepository::findLatestAnalysed()` becomes a lookup of the single profile; the prompt, cover letter and posting services use it
+
 ## Open questions
 
 - Final field schema of `CvProfile` (to be clarified in Phase 6)

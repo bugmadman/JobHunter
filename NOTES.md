@@ -42,6 +42,7 @@ Current project decisions, grouped by topic. Each item is the final decision (wi
   - scalars (`years_experience`, `seniority`, `salary_min/max/currency`) — regular columns;
   - repeating structures — relational tables: `Skill` (many-to-many), `CvLanguage` (one-to-many). `Skill` as a separate entity allows reusing tags across platforms and in the keyword filter.
 - The raw LLM JSON response is stored in a separate technical field, just for debugging, outside the business model.
+- One CV: there is a single `CvProfile`, with no list of CVs and no re-upload. The PDF is uploaded once, as an import; the CV is then developed inside the system (editing, more fields: discussed separately). The upload is available only while there is no CV, or while its analysis has failed (the upload replaces the failed profile). Everything that needs the CV (prompts, letters, matching) uses that one profile.
 
 ## Prompts
 
@@ -226,11 +227,13 @@ The API docs (`/api/v1/docs`) stay public in prod, as a guide to sending job pos
 - A PHPStan rule for exception base classes → not taken: whether a failure is a broken rule, the environment or our bug is a judgment call a tool can't make; the rule is in AGENTS.md and the review checks it.
 - Recording manual verification and the commit hash per task (a column in PLAN.md or a separate file) → stable task numbers, a `Task:` trailer in the commit, and a `reviewed` mark only on tasks whose code the owner reviewed. A hash can't go into its own commit (amend changes it) and goes stale after a rebase; a separate file duplicates the plan and drifts from it.
 - Retrying every `LlmRequestFailed`, an invalid key and a safety block included (cheap for one CV) → permanent and transient failures told apart: a permanent one can't change on a retry, the retries only delay the failed status, and matching at volume multiplies the wasted requests.
+- A new `CvProfile` per upload, the latest analysed one is current, old ones kept → a single `CvProfile` uploaded once: a single-user project has one CV, the old profiles were never used, and the CV is meant to be developed in the system, not re-uploaded.
 
 ## Inbox
 
 The owner writes new thoughts here as is, without structure. After discussion they are moved into the sections above (superseded decisions go to "Rejected alternatives" with the reason), and this section is cleared.
 
+- CV: editing it in the system after the one-time import, and the missing fields (experience per employer, education, etc.): a separate task, discuss and detail it.
 - Messenger has no `failed` transport: after the retries (3 by default) a failed message is lost. For LLM calls it may be worth keeping them to inspect and retry (`failure_transport` + `doctrine://default?queue_name=failed`).
 - Mercure (built into FrankenPHP) is undecided: it could push live updates to the page (an LLM operation finished, new job postings arrived) instead of refreshing a Turbo frame until done. Turbo's Mercure parts are off for now (`assets/controllers.json`).
 - Unused translation keys (in `translations/messages.*.yaml` but used nowhere) aren't caught: `debug:translation --only-unused` lists them, but keys built dynamically in code (e.g. from an enum value) would show up as unused too. Decide whether to check this and how.
@@ -275,7 +278,6 @@ The owner writes new thoughts here as is, without structure. After discussion th
 - `CvLanguage` rows are created only by `CvProfile::markAnalysisDone()` from `CvAnalysis::$languages` (the profile is the aggregate root, cascade persist, no repository). `CvAnalysis::$languages` defaults to an empty list.
 - `CvProfile` ↔ `Skill` is unidirectional (`Skill` knows nothing about profiles: it is a shared tag). Skills are attached only through `markAnalysisDone(CvAnalysis, list<Skill>, raw)`: the analysis service resolves names to `Skill` entities (find or create) and passes them in; a repeated skill is attached once.
 - `CvFile` original name as built: normalised, not rejected, so an odd name never blocks an upload: invalid UTF-8 bytes become `?` (`mb_scrub`), each run of control or invisible format characters (`\p{Cc}`, `\p{Cf}`, line/paragraph separators: NUL, newlines, a right-to-left override, zero-width spaces) becomes one space, then Unicode spaces (NBSP included) are trimmed; ZWJ/ZWNJ (Persian, Indic names, emoji) are replaced too, accepted for a single user; only a name left empty (or over 255 characters) is rejected, shown as a form error.
-- Picked by the upload task: a new `CvProfile` per upload, the latest (highest id) is the current CV. No `restartAnalysis()`: re-running the analysis means uploading again. Older profiles and their files are kept, nothing cleans them up. Resolves the "new profile vs replaced" question above; confirm.
 - CV files are stored in `app.cv_storage_dir` (`%kernel.project_dir%/var/storage/cv`, `config/services.yaml`): outside `public/`, and in dev under the bind mount, so it survives container recreation. The directory is created `0700`, stored names are `<32 hex chars>.pdf`. A prod deployment without the bind mount needs a volume at that path, and it belongs in the backups.
 - The upload moves PHP's temporary file with `Filesystem::rename()` (the path travels in the `CvUpload` VO), not `UploadedFile::move()`, so the domain service doesn't depend on HttpFoundation; the "is it a real upload" check is done earlier by the `File` constraint (`UploadedFile::isValid()`). Confirm.
 - If saving the `CvProfile` fails after the file was moved, the file stays in the storage as an orphan (no cleanup). Acceptable for a single user?
