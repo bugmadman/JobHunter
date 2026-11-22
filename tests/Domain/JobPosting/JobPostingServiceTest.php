@@ -856,7 +856,7 @@ final class JobPostingServiceTest extends TestCase
     {
         $cvProfile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
         $cvProfile->markAnalysisDone(
-            new CvAnalysis('Анализ', 'Analysis', null, null, null),
+            new CvAnalysis('Analysis', null, null, null),
             array_map(
                 static fn (string $skill): Skill => new Skill(SkillName::fromString($skill)),
                 array_values($skills),

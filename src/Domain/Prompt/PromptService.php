@@ -159,7 +159,7 @@ final readonly class PromptService implements PromptServiceInterface
             )),
             'Salary expectation per month: '.self::describeSalary($analysis),
             'Summary:',
-            $analysis->englishText,
+            $analysis->analysis,
         ]);
     }
 

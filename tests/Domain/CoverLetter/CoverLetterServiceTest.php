@@ -158,7 +158,6 @@ final class CoverLetterServiceTest extends TestCase
         )));
         $cvProfile = self::analysedProfile(
             new CvAnalysis(
-                'Анализ',
                 'A backend developer.',
                 12,
                 Seniority::Senior,
@@ -475,7 +474,7 @@ final class CoverLetterServiceTest extends TestCase
     {
         $cvProfile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
         $cvProfile->markAnalysisDone(
-            $analysis ?? new CvAnalysis('Анализ', 'Analysis', null, null, null),
+            $analysis ?? new CvAnalysis('Analysis', null, null, null),
             array_map(static fn (string $name): Skill => new Skill(SkillName::fromString($name)), $skillNames),
             '{}',
         );

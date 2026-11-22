@@ -13,28 +13,27 @@ use PHPUnit\Framework\TestCase;
 
 final class CvAnalysisTest extends TestCase
 {
-    public function testOnlyTheTextsAreRequired(): void
+    public function testOnlyTheTextIsRequired(): void
     {
-        $analysis = new CvAnalysis('Анализ', 'Analysis', null, null, null);
+        $analysis = new CvAnalysis('Analysis', null, null, null);
 
-        self::assertSame('Анализ', $analysis->originalLanguageText);
-        self::assertSame('Analysis', $analysis->englishText);
+        self::assertSame('Analysis', $analysis->analysis);
     }
 
-    #[TestWith(['', 'Analysis'])]
-    #[TestWith(['Анализ', " \n"])]
-    public function testEmptyTextIsRejected(string $original, string $english): void
+    #[TestWith([''])]
+    #[TestWith([" \n"])]
+    public function testEmptyTextIsRejected(string $text): void
     {
         $this->expectException(InvalidCvAnalysis::class);
 
-        new CvAnalysis($original, $english, null, null, null);
+        new CvAnalysis($text, null, null, null);
     }
 
     #[TestWith([0])]
     #[TestWith([CvAnalysis::MAX_YEARS_EXPERIENCE])]
     public function testYearsExperienceBoundsAreAccepted(int $years): void
     {
-        self::assertSame($years, new CvAnalysis('Анализ', 'Analysis', $years, null, null)->yearsExperience);
+        self::assertSame($years, new CvAnalysis('Analysis', $years, null, null)->yearsExperience);
     }
 
     #[TestWith([-1])]
@@ -43,14 +42,14 @@ final class CvAnalysisTest extends TestCase
     {
         $this->expectException(InvalidCvAnalysis::class);
 
-        new CvAnalysis('Анализ', 'Analysis', $years, null, null);
+        new CvAnalysis('Analysis', $years, null, null);
     }
 
     public function testDuplicateLanguageIsRejected(): void
     {
         $this->expectException(InvalidCvAnalysis::class);
 
-        new CvAnalysis('Анализ', 'Analysis', null, null, null, [
+        new CvAnalysis('Analysis', null, null, null, [
             LanguageProficiency::create('en', LanguageLevel::C1),
             LanguageProficiency::create('EN', LanguageLevel::B2),
         ]);

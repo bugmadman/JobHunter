@@ -48,8 +48,7 @@ final class CvAnalysisResponseParserTest extends TestCase
         $parsed = $this->parser->parse($this->encode(self::validResponse()));
         $analysis = $parsed->analysis;
 
-        self::assertSame('Анализ резюме', $analysis->originalLanguageText);
-        self::assertSame('CV analysis', $analysis->englishText);
+        self::assertSame('CV analysis', $analysis->analysis);
         self::assertSame(12, $analysis->yearsExperience);
         self::assertSame(Seniority::Senior, $analysis->seniority);
         $salary = $analysis->salaryExpectation;
@@ -114,7 +113,7 @@ final class CvAnalysisResponseParserTest extends TestCase
 
     #[TestWith([''])]
     #[TestWith(['not json'])]
-    #[TestWith(['{"original_language_text": "Анализ"'])]
+    #[TestWith(['{"analysis": "CV analysis"'])]
     public function testResponseThatIsNotJsonIsRejected(string $raw): void
     {
         $exception = $this->parseInvalid($raw);
@@ -122,8 +121,7 @@ final class CvAnalysisResponseParserTest extends TestCase
         self::assertStringStartsWith('Not valid JSON', $exception->errors[0]);
     }
 
-    #[TestWith(['original_language_text'])]
-    #[TestWith(['english_text'])]
+    #[TestWith(['analysis'])]
     #[TestWith(['skills'])]
     #[TestWith(['years_experience'])]
     #[TestWith(['seniority'])]
@@ -208,8 +206,7 @@ final class CvAnalysisResponseParserTest extends TestCase
      */
     public static function invalidValues(): iterable
     {
-        yield 'blank original text' => [['original_language_text' => ' '], InvalidCvAnalysis::class];
-        yield 'blank english text' => [['english_text' => ''], InvalidCvAnalysis::class];
+        yield 'blank analysis' => [['analysis' => ' '], InvalidCvAnalysis::class];
         yield 'duplicate language' => [
             ['languages' => [['language' => 'en', 'level' => 'b2'], ['language' => 'EN', 'level' => 'c1']]],
             InvalidCvAnalysis::class,
@@ -238,8 +235,7 @@ final class CvAnalysisResponseParserTest extends TestCase
     private static function validResponse(): array
     {
         return [
-            'original_language_text' => 'Анализ резюме',
-            'english_text' => 'CV analysis',
+            'analysis' => 'CV analysis',
             'skills' => ['PHP', 'Symfony', 'PostgreSQL'],
             'years_experience' => 12,
             'seniority' => 'senior',

@@ -141,7 +141,6 @@ final class PromptServiceTest extends TestCase
     {
         $prompt = new Prompt(self::platform(), self::analysedProfile(
             new CvAnalysis(
-                'Анализ',
                 'A backend developer.',
                 12,
                 Seniority::Senior,
@@ -221,7 +220,7 @@ final class PromptServiceTest extends TestCase
     public function testOneSidedSalaryIsDescribed(SalaryExpectation $salary, string $expected): void
     {
         $prompt = new Prompt(self::platform(), self::analysedProfile(
-            new CvAnalysis('Анализ', 'Analysis', null, null, $salary),
+            new CvAnalysis('Analysis', null, null, $salary),
         ));
 
         $llm = $this->createMock(LlmServiceInterface::class);
@@ -433,7 +432,7 @@ final class PromptServiceTest extends TestCase
     {
         $cvProfile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
         $cvProfile->markAnalysisDone(
-            $analysis ?? new CvAnalysis('Анализ', 'Analysis', null, null, null),
+            $analysis ?? new CvAnalysis('Analysis', null, null, null),
             array_map(static fn (string $name): Skill => new Skill(SkillName::fromString($name)), $skillNames),
             '{}',
         );

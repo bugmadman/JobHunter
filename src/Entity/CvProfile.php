@@ -44,10 +44,7 @@ final class CvProfile
     private ?string $analysisFailureMessage = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $analysisOriginal = null;
-
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $analysisEnglish = null;
+    private ?string $analysis = null;
 
     #[ORM\Column(nullable: true)]
     private ?int $yearsExperience = null;
@@ -108,13 +105,12 @@ final class CvProfile
             return null;
         }
 
-        if (null === $this->analysisOriginal || null === $this->analysisEnglish) {
+        if (null === $this->analysis) {
             throw new \LogicException('A done CV analysis has no text.');
         }
 
         return new CvAnalysis(
-            $this->analysisOriginal,
-            $this->analysisEnglish,
+            $this->analysis,
             $this->yearsExperience,
             $this->seniority,
             null === $this->salaryCurrency
@@ -160,8 +156,7 @@ final class CvProfile
         $this->assertAnalysisPending();
 
         $this->analysisStatus = LlmOperationStatus::Done;
-        $this->analysisOriginal = $analysis->originalLanguageText;
-        $this->analysisEnglish = $analysis->englishText;
+        $this->analysis = $analysis->analysis;
         $this->yearsExperience = $analysis->yearsExperience;
         $this->seniority = $analysis->seniority;
         $this->salaryMin = $analysis->salaryExpectation?->min;

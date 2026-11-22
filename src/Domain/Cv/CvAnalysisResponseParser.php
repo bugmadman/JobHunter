@@ -39,8 +39,7 @@ final readonly class CvAnalysisResponseParser implements CvAnalysisResponseParse
          * The shape is guaranteed by the schema validation above.
          *
          * @var array{
-         *     original_language_text: string,
-         *     english_text: string,
+         *     analysis: string,
          *     skills: list<non-empty-string>,
          *     years_experience: int|null,
          *     seniority: string|null,
@@ -55,8 +54,7 @@ final readonly class CvAnalysisResponseParser implements CvAnalysisResponseParse
 
             return new ParsedCvAnalysis(
                 new CvAnalysis(
-                    $data['original_language_text'],
-                    $data['english_text'],
+                    $data['analysis'],
                     $data['years_experience'],
                     null === $data['seniority'] ? null : Seniority::from($data['seniority']),
                     null === $salary ? null : SalaryExpectation::create(
@@ -94,13 +92,9 @@ final readonly class CvAnalysisResponseParser implements CvAnalysisResponseParse
         $amount = $nullable(['type' => 'integer', 'minimum' => 1, 'maximum' => SalaryExpectation::MAX_AMOUNT]);
 
         return $object([
-            'original_language_text' => [
+            'analysis' => [
                 'type' => 'string',
-                'description' => 'The CV analysis in the language the CV is written in',
-            ],
-            'english_text' => [
-                'type' => 'string',
-                'description' => 'The same analysis in English',
+                'description' => 'The CV analysis in English, whatever language the CV is in',
             ],
             'skills' => [
                 'type' => 'array',

@@ -166,7 +166,7 @@ final class PromptGenerationRetriesExhaustedListenerTest extends TestCase
     private static function prompt(): Prompt
     {
         $cvProfile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
-        $cvProfile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', null, null, null), [], '{}');
+        $cvProfile->markAnalysisDone(new CvAnalysis('Analysis', null, null, null), [], '{}');
 
         return new Prompt(new Platform('Upwork', PlatformAccessType::Browser), $cvProfile);
     }

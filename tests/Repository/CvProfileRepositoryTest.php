@@ -64,7 +64,7 @@ final class CvProfileRepositoryTest extends KernelTestCase
     private static function analysed(string $storedName): CvProfile
     {
         $cvProfile = new CvProfile(CvFile::create($storedName, 'CV.pdf'));
-        $cvProfile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', null, null, null), [], '{}');
+        $cvProfile->markAnalysisDone(new CvAnalysis('Analysis', null, null, null), [], '{}');
 
         return $cvProfile;
     }

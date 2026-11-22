@@ -450,7 +450,6 @@ final class CvControllerTest extends WebTestCase
         $profile->markAnalysisDone(
             new CvAnalysis(
                 "Backend developer.\nLoves PHP.",
-                'Backend developer.',
                 12,
                 Seniority::Senior,
                 SalaryExpectation::create(5000, null, 'EUR'),

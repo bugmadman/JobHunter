@@ -66,11 +66,8 @@
                     </dd>
                 </dl>
 
-                <h2 class="h5">{{ 'cv.show.analysis_original'|trans }}</h2>
-                <p>{{ analysis.originalLanguageText|nl2br }}</p>
-
                 <h2 class="h5">{{ 'cv.show.analysis_english'|trans }}</h2>
-                <p>{{ analysis.englishText|nl2br }}</p>
+                <p>{{ analysis.analysis|nl2br }}</p>
             {% endif %}
         </turbo-frame>
     {% endif %}

@@ -287,7 +287,7 @@ final class PromptTest extends TestCase
     private static function analysedProfile(): CvProfile
     {
         $cvProfile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
-        $cvProfile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', 10, null, null), [], '{}');
+        $cvProfile->markAnalysisDone(new CvAnalysis('Analysis', 10, null, null), [], '{}');
 
         return $cvProfile;
     }

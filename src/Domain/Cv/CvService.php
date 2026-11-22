@@ -30,8 +30,8 @@ use App\Repository\SkillRepositoryInterface;
 final readonly class CvService implements CvServiceInterface
 {
     private const string ANALYSIS_PROMPT = <<<'PROMPT'
-        Analyze the attached CV for a job search. Write the analysis twice with the same content: in the language
-        the CV is written in, and in English. Cover the candidate's main experience, strengths and the roles they fit.
+        Analyze the attached CV for a job search. Write the analysis in English, whatever language the CV is written
+        in. Cover the candidate's main experience, strengths and the roles they fit.
         Take the other fields only from what the CV states; use null or an empty list where it says nothing.
         List each skill (technology, programming language, framework, tool) once, under its usual name.
         Under languages list only spoken human languages with a CEFR level, never programming languages.

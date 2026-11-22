@@ -200,7 +200,7 @@ final class CvServiceTest extends TestCase
         yield 'pending' => [self::pendingProfile()];
 
         $done = self::pendingProfile();
-        $done->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', 12, Seniority::Senior, null), [], self::RAW);
+        $done->markAnalysisDone(new CvAnalysis('Analysis', 12, Seniority::Senior, null), [], self::RAW);
         yield 'done' => [$done];
     }
 
@@ -347,7 +347,7 @@ final class CvServiceTest extends TestCase
     {
         $profile = self::pendingProfile();
         $schema = JsonSchema::fromString('{"type":"object"}');
-        $analysis = new CvAnalysis('Анализ', 'Analysis', 12, Seniority::Senior, null);
+        $analysis = new CvAnalysis('Analysis', 12, Seniority::Senior, null);
 
         $storage = $this->createMock(CvStorageInterface::class);
         $storage->expects(self::once())->method('read')->with($profile->getFile())->willReturn(self::PDF);
@@ -670,7 +670,7 @@ final class CvServiceTest extends TestCase
         $parser = self::createStub(CvAnalysisResponseParserInterface::class);
         $parser->method('schema')->willReturn(JsonSchema::fromString('{}'));
         $parser->method('parse')->willReturn(
-            new ParsedCvAnalysis(new CvAnalysis('Анализ', 'Analysis', null, null, null), $skillNames),
+            new ParsedCvAnalysis(new CvAnalysis('Analysis', null, null, null), $skillNames),
         );
 
         return $parser;

@@ -375,7 +375,7 @@ final class PromptControllerTest extends WebTestCase
     private function analysedCv(): CvProfile
     {
         $cvProfile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
-        $cvProfile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', null, null, null), [], '{}');
+        $cvProfile->markAnalysisDone(new CvAnalysis('Analysis', null, null, null), [], '{}');
 
         return $cvProfile;
     }

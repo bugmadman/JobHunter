@@ -200,7 +200,7 @@ final readonly class CoverLetterService implements CoverLetterServiceInterface
             'Skills: '.([] === $skills ? self::NOT_STATED : implode(', ', $skills)),
             'Spoken languages: '.([] === $languages ? self::NOT_STATED : implode(', ', $languages)),
             'Summary:',
-            $analysis->englishText,
+            $analysis->analysis,
         ]);
     }
 }

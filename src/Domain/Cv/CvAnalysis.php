@@ -12,14 +12,13 @@ final readonly class CvAnalysis
      * @param list<LanguageProficiency> $languages
      */
     public function __construct(
-        public string $originalLanguageText,
-        public string $englishText,
+        public string $analysis,
         public ?int $yearsExperience,
         public ?Seniority $seniority,
         public ?SalaryExpectation $salaryExpectation,
         public array $languages = [],
     ) {
-        if ('' === trim($originalLanguageText) || '' === trim($englishText)) {
+        if ('' === trim($analysis)) {
             throw InvalidCvAnalysis::emptyText();
         }
 

@@ -196,7 +196,7 @@ final class PromptCrudControllerTest extends WebTestCase
         $container = $client->getContainer();
 
         $cvProfile = new CvProfile(CvFile::create('3f9a1c.pdf', 'My CV.pdf'));
-        $cvProfile->markAnalysisDone(new CvAnalysis('Анализ', 'Analysis', null, null, null), [], '{}');
+        $cvProfile->markAnalysisDone(new CvAnalysis('Analysis', null, null, null), [], '{}');
         $cvProfiles = $container->get(CvProfileRepositoryInterface::class);
         self::assertInstanceOf(CvProfileRepositoryInterface::class, $cvProfiles);
         $cvProfiles->save($cvProfile);
